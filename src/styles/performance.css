@@ -1,0 +1,62 @@
+/* Virtual list optimization */
+.vehicle-list-container {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Smooth scrolling */
+.vehicle-card {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Performance optimizations for virtual scrolling */
+.react-window-list {
+  will-change: transform;
+  contain: strict;
+}
+
+.react-window-list-item {
+  will-change: transform;
+  contain: layout style paint;
+}
+
+/* Smooth scrolling */
+.react-window-list::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.react-window-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.react-window-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.react-window-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Table optimizations */
+.table-row {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Reduce paint operations */
+.vehicle-card-container {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* GPU acceleration for animations */
+.transition-all {
+  transform: translateZ(0);
+}

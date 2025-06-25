@@ -1,0 +1,636 @@
+.custom-tooltip {
+  color: black;
+  border-radius: 20px;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+/* Vehicle Popup Styles */
+.vehicle-popup-enhanced {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 0;
+  width: 500px;
+}
+
+.popup-header {
+  background: linear-gradient(135deg, #00263e 0%, #003d5c 100%);
+  padding: 10px;
+  border-radius: 6px 6px 0 0;
+  position: relative;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.status-moving {
+  background-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+.status-idle {
+  background-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+}
+
+.status-stopped {
+  background-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+}
+
+.popup-content {
+  padding: 12px;
+  background: white;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.metric-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  transition: all 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.metric-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.action-btn {
+  flex: 1;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+  color: white;
+}
+
+.btn-zoom {
+  background: #00263e;
+}
+
+.btn-zoom:hover {
+  background: #003d5c;
+}
+
+.btn-street {
+  background: #6366f1;
+}
+
+.btn-street:hover {
+  background: #4f46e5;
+}
+
+/* Leaflet popup overrides */
+.leaflet-popup-close-button {
+  color: white !important;
+  font-size: 18px !important;
+  font-weight: bold !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50% !important;
+  width: 22px !important;
+  height: 22px !important;
+  line-height: 20px !important;
+  text-align: center !important;
+  top: 8px !important;
+  right: 8px !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s ease !important;
+}
+
+.leaflet-popup-close-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  color: white !important;
+  transform: scale(1.1) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: auto !important;
+}
+
+.leaflet-popup-tip {
+  background: white !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Geofence Popup Styles */
+
+.custom-tooltip {
+  color: black;
+  border-radius: 20px;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+/* Vehicle Popup Styles */
+.vehicle-popup-enhanced {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 0;
+  min-width: 250px;
+  max-width: 290px;
+}
+
+.popup-header {
+  background: linear-gradient(135deg, #00263e 0%, #003d5c 100%);
+  padding: 10px;
+  border-radius: 6px 6px 0 0;
+  position: relative;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.status-moving {
+  background-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+.status-idle {
+  background-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+}
+
+.status-stopped {
+  background-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+}
+
+.popup-content {
+  padding: 12px;
+  background: white;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.metric-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  transition: all 0.2s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.metric-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.action-btn {
+  flex: 1;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+  color: white;
+}
+
+.btn-zoom {
+  background: #00263e;
+}
+
+.btn-zoom:hover {
+  background: #003d5c;
+}
+
+.btn-street {
+  background: #6366f1;
+}
+
+.btn-street:hover {
+  background: #4f46e5;
+}
+
+/* GEOFENCE STYLES - Using existing color scheme */
+
+/* Geofence Marker Icon */
+.geofence-marker {
+  z-index: 1000 !important;
+}
+
+.geofence-icon-wrapper {
+  width: 24px;
+  height: 24px;
+  background: #00263e; /* Using existing primary color */
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.geofence-icon-wrapper:hover {
+  transform: scale(1.1);
+}
+
+.geofence-icon-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.geofence-icon-dot {
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+}
+
+.geofence-icon-indicator {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444; /* Using existing error color */
+  border-radius: 50%;
+  border: 1px solid white;
+}
+
+/* Geofence Tooltip - Compact design */
+.geofence-tooltip {
+  background: rgba(
+    0,
+    38,
+    62,
+    0.9
+  ) !important; /* Using existing primary color */
+  border: none !important;
+  border-radius: 6px !important;
+  color: white !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  padding: 6px 12px !important; /* Compact padding - width wise zyada, height wise kam */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  max-width: 200px !important; /* Width wise zyada */
+  min-height: auto !important; /* Height wise kam */
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.geofence-tooltip::before {
+  border-top-color: rgba(0, 38, 62, 0.9) !important;
+}
+
+/* Geofence Popup Styles - Simplified Version */
+.geofence-popup-enhanced {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 0;
+  min-width: 280px;
+  max-width: 320px;
+}
+
+.geofence-popup-header {
+  background: linear-gradient(135deg, #00263e 0%, #003d5c 100%);
+  padding: 12px;
+  border-radius: 6px 6px 0 0;
+  position: relative;
+}
+
+.geofence-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.geofence-header-text {
+  flex: 1;
+  text-align: center;
+}
+
+.geofence-title {
+  font-size: 14px; /* Smaller font size */
+  font-weight: 600;
+  margin: 0;
+  color: white;
+  line-height: 1.2;
+}
+
+.geofence-popup-content {
+  padding: 14px;
+  background: white;
+}
+
+/* Info Section Styles */
+.geofence-info-section {
+  margin-bottom: 12px;
+}
+
+.geofence-info-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.geofence-info-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.geofence-info-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  min-width: 80px;
+  margin-right: 8px;
+}
+
+.geofence-info-value {
+  font-size: 12px;
+  color: #1e293b;
+  flex: 1;
+  word-wrap: break-word;
+}
+
+.geofence-action-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.geofence-btn {
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  color: white;
+}
+
+.geofence-btn-primary {
+  background: #3b82f6;
+}
+
+.geofence-btn-primary:hover {
+  background: #2563eb;
+}
+
+.geofence-btn-success {
+  background: #10b981;
+}
+
+.geofence-btn-success:hover {
+  background: #059669;
+}
+
+.geofence-btn-warning {
+  background: #f59e0b; /* Using existing warning color */
+}
+
+.geofence-btn-warning:hover {
+  background: #d97706;
+}
+
+/* Geofence popup animations */
+.geofence-popup .leaflet-popup-content-wrapper {
+  animation: geofencePopupSlideIn 0.3s ease-out;
+}
+
+@keyframes geofencePopupSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Leaflet popup overrides for geofences */
+.geofence-popup .leaflet-popup-close-button {
+  color: white !important;
+  font-size: 18px !important;
+  font-weight: bold !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50% !important;
+  width: 22px !important;
+  height: 22px !important;
+  line-height: 20px !important;
+  text-align: center !important;
+  top: 8px !important;
+  right: 8px !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s ease !important;
+}
+
+.geofence-popup .leaflet-popup-close-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  color: white !important;
+  transform: scale(1.1) !important;
+}
+
+.geofence-popup .leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.geofence-popup .leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: auto !important;
+}
+
+.geofence-popup .leaflet-popup-tip {
+  background: white !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Original Leaflet popup overrides */
+.leaflet-popup-close-button {
+  color: white !important;
+  font-size: 18px !important;
+  font-weight: bold !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50% !important;
+  width: 22px !important;
+  height: 22px !important;
+  line-height: 20px !important;
+  text-align: center !important;
+  top: 8px !important;
+  right: 8px !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s ease !important;
+}
+
+.leaflet-popup-close-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  color: white !important;
+  transform: scale(1.1) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: auto !important;
+}
+
+.leaflet-popup-tip {
+  background: white !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.geofence-category-section {
+  margin-bottom: 12px;
+}
+
+.geofence-category-info {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border-left: 3px solid #00263e;
+  margin-bottom: 8px;
+}
+
+.geofence-category-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  margin-right: 8px;
+}
+
+.geofence-category-value {
+  font-size: 12px;
+  color: #1e293b;
+  font-weight: 600;
+  background: rgba(0, 38, 62, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.geofence-correction-notice {
+  display: flex;
+  justify-content: center;
+}
+
+.geofence-correction-badge {
+  background: #ef4444;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 9px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Add this CSS to your MapContainer.jsx file or in a separate CSS file */
+.map-context-menu {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  min-width: 180px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
