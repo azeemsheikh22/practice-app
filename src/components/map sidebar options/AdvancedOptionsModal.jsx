@@ -11,6 +11,13 @@ import {
   fetchGeofenceCatList,
   setShowShapes,
 } from "../../features/geofenceSlice";
+// Import route actions
+import {
+  fetchRouteListForUser,
+  setSelectedRouteNames,
+  applyRouteFilters,
+  resetRouteFilters,
+} from "../../features/routeSlice";
 
 const AdvancedOptionsModal = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState("geofence");
@@ -20,10 +27,13 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
   const [localSelectedCategories, setLocalSelectedCategories] = useState(
     new Set()
   );
+  const [localSelectedRouteNames, setLocalSelectedRouteNames] = useState(
+    new Set()
+  );
 
-  // ✅ ADD SEARCH STATE FOR PERFORMANCE
+  // Search state
   const [searchTerm, setSearchTerm] = useState("");
-  const [visibleItems, setVisibleItems] = useState(50); // Virtual scrolling
+  const [visibleItems, setVisibleItems] = useState(50);
 
   const {
     userGeofences,
@@ -34,14 +44,22 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
     showShapes,
   } = useSelector((state) => state.geofence);
 
+  // Route selectors
+  const {
+    routes,
+    selectedRouteNames: reduxSelectedRouteNames,
+    routeFiltersApplied,
+    loading: routesLoading,
+  } = useSelector((state) => state.route);
+
   const dispatch = useDispatch();
 
-  // ✅ Handle show shapes toggle
+  // Handle show shapes toggle
   const handleShowShapesToggle = (e) => {
     dispatch(setShowShapes(e.target.checked));
   };
 
-  // FETCH DATA ON COMPONENT MOUNT
+  // ✅ FETCH DATA ON COMPONENT MOUNT - but NOT routes automatically
   useEffect(() => {
     if (!userGeofences || userGeofences.length === 0) {
       dispatch(fetchGeofenceForUser());
@@ -49,7 +67,20 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
     if (!geofenceCatList || geofenceCatList.length === 0) {
       dispatch(fetchGeofenceCatList());
     }
+    // ✅ DON'T fetch routes automatically
   }, [dispatch, userGeofences, geofenceCatList]);
+
+  // ✅ FETCH ROUTES ONLY WHEN ROUTE TAB IS CLICKED
+  const handleRouteTabClick = () => {
+    setActiveTab("route");
+    setSearchTerm("");
+    setVisibleItems(50);
+
+    // ✅ Fetch routes only when tab is clicked
+    if (!routes || routes.length === 0) {
+      dispatch(fetchRouteListForUser());
+    }
+  };
 
   // Extract categories from geofenceCatList API
   const extractCategoriesFromAPI = (catListData) => {
@@ -88,32 +119,61 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
       .sort((a, b) => a.name.localeCompare(b.name));
   };
 
-  // Get data from new APIs
+  // Extract route data from routes API
+  const extractRouteFromAPI = (routesData) => {
+    if (!routesData || !Array.isArray(routesData)) return [];
+
+    return routesData
+      .filter((route) => route.routeName && route.routeName.trim() !== "")
+      .map((route) => ({
+        routeName: route.routeName,
+        originLatLng: route.originLatLng,
+        destinationLatLng: route.destinationLatLng,
+        routeString: route.routeString,
+        OriginID: route.OriginID,
+        DestinationID: route.DestinationID,
+      }))
+      .sort((a, b) => a.routeName.localeCompare(b.routeName));
+  };
+
+  // Get data from APIs
   const categoryData = extractCategoriesFromAPI(geofenceCatList);
   const geofenceData = extractGeofenceFromAPI(userGeofences);
+  const routeData = extractRouteFromAPI(routes);
 
-  // ✅ MEMOIZED FILTERED DATA FOR PERFORMANCE
+  // MEMOIZED FILTERED DATA FOR PERFORMANCE
   const filteredData = useMemo(() => {
-    const currentData = activeTab === "geofence" ? geofenceData : categoryData;
+    let currentData;
+    if (activeTab === "geofence") {
+      currentData = geofenceData;
+    } else if (activeTab === "category") {
+      currentData = categoryData;
+    } else {
+      currentData = routeData;
+    }
 
     if (!searchTerm.trim()) {
       return currentData;
     }
 
     const searchLower = searchTerm.toLowerCase();
-    return currentData.filter(
-      (item) =>
+    return currentData.filter((item) => {
+      if (activeTab === "route") {
+        return item.routeName.toLowerCase().includes(searchLower);
+      }
+      return (
         item.name.toLowerCase().includes(searchLower) ||
         (item.category && item.category.toLowerCase().includes(searchLower))
-    );
-  }, [activeTab, geofenceData, categoryData, searchTerm]);
+      );
+    });
+  }, [activeTab, geofenceData, categoryData, routeData, searchTerm]);
 
-  // ✅ VIRTUAL SCROLLING - Only render visible items
+  // VIRTUAL SCROLLING - Only render visible items
   const displayedData = useMemo(() => {
     return filteredData.slice(0, visibleItems);
   }, [filteredData, visibleItems]);
 
-  // Initialize geofence selections - USING REDUX FLAG
+  // Initialize geofence selections
   useEffect(() => {
     if (isOpen && geofenceData.length > 0) {
       if (filtersApplied) {
@@ -124,7 +184,7 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen, geofenceData.length, reduxSelectedIds, filtersApplied]);
 
-  // Initialize category selections - USING REDUX FLAG
+  // Initialize category selections
   useEffect(() => {
     if (isOpen && categoryData.length > 0) {
       if (filtersApplied) {
@@ -135,7 +195,18 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen, categoryData.length, reduxSelectedCategories, filtersApplied]);
 
-  // ✅ LOAD MORE ITEMS ON SCROLL
+  // ✅ Initialize route selections
+  useEffect(() => {
+    if (isOpen && routeData.length > 0) {
+      if (routeFiltersApplied) {
+        setLocalSelectedRouteNames(new Set(reduxSelectedRouteNames));
+      } else {
+        setLocalSelectedRouteNames(new Set(routeData.map((r) => r.routeName)));
+      }
+    }
+  }, [isOpen, routeData.length, reduxSelectedRouteNames, routeFiltersApplied]);
+
+  // LOAD MORE ITEMS ON SCROLL
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
     if (scrollHeight - scrollTop <= clientHeight + 100) {
@@ -152,10 +223,15 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
       setLocalSelectedGeofenceIds(
         new Set([...localSelectedGeofenceIds, ...allIds])
       );
-    } else {
+    } else if (activeTab === "category") {
       const allCategoryNames = filteredData.map((c) => c.name);
       setLocalSelectedCategories(
         new Set([...localSelectedCategories, ...allCategoryNames])
+      );
+    } else {
+      const allRouteNames = filteredData.map((r) => r.routeName);
+      setLocalSelectedRouteNames(
+        new Set([...localSelectedRouteNames, ...allRouteNames])
       );
     }
   };
@@ -169,12 +245,21 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
           [...localSelectedGeofenceIds].filter((id) => !filteredIds.has(id))
         )
       );
-    } else {
+    } else if (activeTab === "category") {
       const filteredNames = new Set(filteredData.map((c) => c.name));
       setLocalSelectedCategories(
         new Set(
           [...localSelectedCategories].filter(
             (name) => !filteredNames.has(name)
+          )
+        )
+      );
+    } else {
+      const filteredRouteNames = new Set(filteredData.map((r) => r.routeName));
+      setLocalSelectedRouteNames(
+        new Set(
+          [...localSelectedRouteNames].filter(
+            (name) => !filteredRouteNames.has(name)
           )
         )
       );
@@ -194,7 +279,7 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
       }
 
       setLocalSelectedGeofenceIds(newSelected);
-    } else {
+    } else if (activeTab === "category") {
       const newSelected = new Set(localSelectedCategories);
       const categoryName = typeof item === "object" ? item.name : item;
 
@@ -205,48 +290,84 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
       }
 
       setLocalSelectedCategories(newSelected);
+    } else {
+      // ✅ Route toggle
+      const newSelected = new Set(localSelectedRouteNames);
+      const routeName = typeof item === "object" ? item.routeName : item;
+
+      if (newSelected.has(routeName)) {
+        newSelected.delete(routeName);
+      } else {
+        newSelected.add(routeName);
+      }
+
+      setLocalSelectedRouteNames(newSelected);
     }
   };
 
-  // SAVE SETTINGS FUNCTION
+  // ✅ SAVE SETTINGS FUNCTION - Updated logic
   const handleSaveSettings = () => {
     const selectedIdArray = Array.from(localSelectedGeofenceIds);
     const selectedCategoryArray = Array.from(localSelectedCategories);
+    const selectedRouteArray = Array.from(localSelectedRouteNames);
 
+    // Dispatch all selections
+    dispatch(setSelectedGeofenceIds(selectedIdArray));
+    dispatch(setSelectedCategories(selectedCategoryArray));
+    dispatch(setSelectedRouteNames(selectedRouteArray)); // ✅ This will update routemap automatically
+
+    // Apply filters logic
     const nothingSelected =
-      selectedIdArray.length === 0 || selectedCategoryArray.length === 0;
+      selectedIdArray.length === 0 ||
+      selectedCategoryArray.length === 0 ||
+      selectedRouteArray.length === 0;
 
     const allGeofencesSelected = selectedIdArray.length === geofenceData.length;
     const allCategoriesSelected =
       selectedCategoryArray.length === categoryData.length;
-
-    dispatch(setSelectedGeofenceIds(selectedIdArray));
-    dispatch(setSelectedCategories(selectedCategoryArray));
+    const allRoutesSelected = selectedRouteArray.length === routeData.length;
 
     if (nothingSelected) {
       dispatch(applyGeofenceFilters());
-    } else if (allGeofencesSelected && allCategoriesSelected) {
+      dispatch(applyRouteFilters());
+    } else if (
+      allGeofencesSelected &&
+      allCategoriesSelected &&
+      allRoutesSelected
+    ) {
       dispatch(resetGeofenceFilters());
+      dispatch(resetRouteFilters());
     } else {
       dispatch(applyGeofenceFilters());
+      dispatch(applyRouteFilters());
     }
+
     onClose();
   };
 
   // CURRENT DATA AND SELECTED LOGIC
-  const currentSelected =
-    activeTab === "geofence"
-      ? localSelectedGeofenceIds
-      : localSelectedCategories;
+  const getCurrentSelected = () => {
+    if (activeTab === "geofence") {
+      return localSelectedGeofenceIds;
+    } else if (activeTab === "category") {
+      return localSelectedCategories;
+    } else {
+      return localSelectedRouteNames;
+    }
+  };
+
+  const currentSelected = getCurrentSelected();
   const safeCurrentSelected =
     currentSelected instanceof Set ? currentSelected : new Set();
 
-  // ✅ CALCULATE SELECTED COUNT FROM FILTERED DATA
+  // CALCULATE SELECTED COUNT FROM FILTERED DATA
   const selectedCount = filteredData.filter((item) => {
     if (activeTab === "geofence") {
       return safeCurrentSelected.has(item.id);
-    } else {
+    } else if (activeTab === "category") {
       return safeCurrentSelected.has(item.name);
+    } else {
+      return safeCurrentSelected.has(item.routeName);
     }
   }).length;
 
@@ -261,7 +382,7 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
       >
-        {/* Modal header - COMPRESSED */}
+        {/* Modal header */}
         <div className="px-4 py-3 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold text-gray-800">
@@ -276,7 +397,7 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Tabs - COMPRESSED */}
+        {/* Tabs */}
         <div className="px-4 py-2 border-b border-gray-200">
           <div className="flex space-x-1 bg-gray-100 rounded-lg p-1">
             <button
@@ -307,19 +428,35 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
             >
               Category ({categoryData.length})
             </button>
+            {/* ✅ ROUTE TAB - with API call on click */}
+            <button
+              onClick={handleRouteTabClick}
+              className={`flex-1 cursor-pointer py-1.5 px-3 text-sm font-medium rounded-md transition-colors ${
+                activeTab === "route"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+              disabled={routesLoading}
+            >
+              {routesLoading ? "Loading..." : `Routes (${routeData.length})`}
+            </button>
           </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-          {/* Filter heading and controls - COMPRESSED */}
+          {/* Filter heading and controls */}
           <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
             {/* Search Box */}
             <div className="mb-2">
               <input
                 type="text"
                 placeholder={`Search ${
-                  activeTab === "geofence" ? "geofences" : "categories"
+                  activeTab === "geofence"
+                    ? "geofences"
+                    : activeTab === "category"
+                    ? "categories"
+                    : "routes"
                 }...`}
                 value={searchTerm}
                 onChange={(e) => {
@@ -354,19 +491,32 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* Scrollable list - OPTIMIZED */}
+          {/* Scrollable list */}
           <div
             className="flex-1 overflow-y-auto px-4 py-2"
             onScroll={handleScroll}
           >
-            {filteredData.length === 0 ? (
+            {/* ✅ Show loading for routes */}
+            {activeTab === "route" && routesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="w-8 h-8 mx-auto mb-4 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <p className="text-gray-500 font-medium">Loading routes...</p>
+                </div>
+              </div>
+            ) : filteredData.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-center">
                   <div className="w-12 h-12 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                     <X size={24} className="text-gray-400" />
                   </div>
                   <p className="text-gray-500 font-medium">
-                    No {activeTab === "geofence" ? "geofences" : "categories"}{" "}
+                    No{" "}
+                    {activeTab === "geofence"
+                      ? "geofences"
+                      : activeTab === "category"
+                      ? "categories"
+                      : "routes"}{" "}
                     found
                   </p>
                 </div>
@@ -375,42 +525,65 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
               <div className="space-y-1">
                 {displayedData.map((item, index) => (
                   <div
-                    key={activeTab === "geofence" ? item.id : item.id || index}
+                    key={
+                      activeTab === "geofence"
+                        ? item.id
+                        : activeTab === "category"
+                        ? item.id || index
+                        : item.routeName
+                    }
                     className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors"
                   >
                     <input
                       type="checkbox"
                       id={`item-${
-                        activeTab === "geofence" ? item.id : item.id || index
+                        activeTab === "geofence"
+                          ? item.id
+                          : activeTab === "category"
+                          ? item.id || index
+                          : item.routeName
                       }`}
                       checked={
                         activeTab === "geofence"
                           ? safeCurrentSelected.has(item.id)
-                          : safeCurrentSelected.has(item.name)
+                          : activeTab === "category"
+                          ? safeCurrentSelected.has(item.name)
+                          : safeCurrentSelected.has(item.routeName)
                       }
                       onChange={() => handleItemToggle(item)}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
                     <label
                       htmlFor={`item-${
-                        activeTab === "geofence" ? item.id : item.id || index
+                        activeTab === "geofence"
+                          ? item.id
+                          : activeTab === "category"
+                          ? item.id || index
+                          : item.routeName
                       }`}
                       className="ml-3 flex-1 cursor-pointer"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
-                            {item.name}
+                            {activeTab === "route" ? item.routeName : item.name}
                           </p>
                           {activeTab === "geofence" && item.category && (
                             <p className="text-xs text-gray-500 truncate">
                               {item.category}
                             </p>
                           )}
+                          {/* ✅ Show route details */}
+                          {activeTab === "route" && (
+                            <p className="text-xs text-gray-500 truncate">
+                              Origin: {item.originLatLng} → Destination:{" "}
+                              {item.destinationLatLng}
+                            </p>
+                          )}
                         </div>
 
-                        {/* Color indicator */}
-                        {item.color && (
+                        {/* Color indicator - only for geofence and category */}
+                        {activeTab !== "route" && item.color && (
                           <div
                             className="w-3 h-3 rounded-full ml-2 flex-shrink-0"
                             style={{ backgroundColor: item.color }}
@@ -438,24 +611,26 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Show Shapes Toggle - COMPRESSED */}
-        <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <label className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showShapes}
-                onChange={handleShowShapesToggle}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <span className="ml-2 text-sm font-medium text-gray-700">
-                Show Geofence Shapes
-              </span>
-            </label>
+        {/* Show Shapes Toggle - ✅ Hide when route tab is active */}
+        {activeTab !== "route" && (
+          <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
+            <div className="flex items-center justify-between">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showShapes}
+                  onChange={handleShowShapesToggle}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <span className="ml-2 text-sm font-medium text-gray-700">
+                  Show Geofence Shapes
+                </span>
+              </label>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Modal footer - COMPRESSED */}
+        {/* Modal footer */}
         <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
           <div className="flex justify-end space-x-3">
             <button

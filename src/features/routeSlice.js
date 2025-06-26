@@ -40,13 +40,19 @@ const routeSlice = createSlice({
     loading: false,
     error: null,
     totalRoutes: 0,
-    showRoutes: false, // ✅ NEW STATE: Routes show/hide toggle
+    showRoutes: false, // ✅ Manual control - default false
+    // Route filtering
+    selectedRouteNames: [], // Array of selected route names
+    routemap: [], // Filtered routes array
+    routeFiltersApplied: false, // Flag to track if filters are applied
   },
   reducers: {
     clearRoutes: (state) => {
       state.routes = [];
       state.error = null;
       state.totalRoutes = 0;
+      state.routemap = [];
+      state.selectedRouteNames = [];
     },
     clearError: (state) => {
       state.error = null;
@@ -54,13 +60,39 @@ const routeSlice = createSlice({
     setTotalRoutes: (state, action) => {
       state.totalRoutes = action.payload;
     },
-    // ✅ NEW REDUCER: Toggle routes visibility
+    // ✅ Manual control for showing routes
     setShowRoutes: (state, action) => {
       state.showRoutes = action.payload;
     },
-    // ✅ NEW REDUCER: Toggle routes (convenience function)
     toggleShowRoutes: (state) => {
       state.showRoutes = !state.showRoutes;
+    },
+    // Route filtering reducers
+    setSelectedRouteNames: (state, action) => {
+      state.selectedRouteNames = action.payload;
+      // ✅ Update routemap based on selected route names
+      state.routemap = state.routes.filter(route => 
+        action.payload.includes(route.routeName)
+      );
+    },
+    applyRouteFilters: (state) => {
+      // Filter routes based on selected route names
+      state.routemap = state.routes.filter(route => 
+        state.selectedRouteNames.includes(route.routeName)
+      );
+      state.routeFiltersApplied = true;
+    },
+    resetRouteFilters: (state) => {
+      // Reset to show all routes
+      state.routemap = [...state.routes];
+      state.selectedRouteNames = state.routes.map(route => route.routeName);
+      state.routeFiltersApplied = false;
+    },
+    // ✅ NEW: Initialize routemap with full data
+    initializeRoutemap: (state) => {
+      state.routemap = [...state.routes];
+      state.selectedRouteNames = state.routes.map(route => route.routeName);
+      state.routeFiltersApplied = false;
     },
   },
   extraReducers: (builder) => {
@@ -74,14 +106,19 @@ const routeSlice = createSlice({
         state.loading = false;
         state.routes = action.payload;
         state.totalRoutes = action.payload?.length || 0;
-        // ✅ AUTO SET: Routes successfully load hone pe showRoutes true kar do
-        state.showRoutes = true;
+        
+        // ✅ DON'T auto-set showRoutes to true
+        // ✅ Initialize routemap and selectedRouteNames with all routes
+        state.routemap = [...action.payload];
+        state.selectedRouteNames = action.payload.map(route => route.routeName);
+        state.routeFiltersApplied = false;
       })
       .addCase(fetchRouteListForUser.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
-        // ✅ ERROR HANDLING: Error pe showRoutes false kar do
-        state.showRoutes = false;
+        // ✅ Don't change showRoutes on error
+        state.routemap = [];
+        state.selectedRouteNames = [];
       });
   },
 });
@@ -90,14 +127,21 @@ export const {
   clearRoutes,
   clearError,
   setTotalRoutes,
-  setShowRoutes, // ✅ NEW EXPORT
-  toggleShowRoutes, // ✅ NEW EXPORT
+  setShowRoutes,
+  toggleShowRoutes,
+  setSelectedRouteNames,
+  applyRouteFilters,
+  resetRouteFilters,
+  initializeRoutemap, // ✅ NEW EXPORT
 } = routeSlice.actions;
 
-// ✅ NEW SELECTOR: Routes visibility selector
+// Selectors
 export const selectShowRoutes = (state) => state.route.showRoutes;
 export const selectRoutes = (state) => state.route.routes;
 export const selectRoutesLoading = (state) => state.route.loading;
 export const selectRoutesError = (state) => state.route.error;
+export const selectRoutemap = (state) => state.route.routemap;
+export const selectSelectedRouteNames = (state) => state.route.selectedRouteNames;
+export const selectRouteFiltersApplied = (state) => state.route.routeFiltersApplied;
 
 export default routeSlice.reducer;

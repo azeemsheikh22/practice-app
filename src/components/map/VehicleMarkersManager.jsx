@@ -20,11 +20,13 @@ import {
   selectShowAllLabels,
   selectShowGeofences,
 } from "../../features/mapInteractionSlice";
+import { selectSelectedVehicles } from "../../features/gpsTrackingSlice";
 import "../../styles/mapTooltips.css";
 import movingIcon from "../../assets/moving-vehicle.png";
 import stoppedIcon from "../../assets/stopped-vehicle.png";
 import idleIcon from "../../assets/idle-vehicle.png";
 import GeofenceManager from "./GeofenceManager";
+import RouteManager from "./RouteManager";
 
 // ✅ PERFORMANCE: Preload vehicle icons for better performance
 const preloadIcons = () => {
@@ -152,11 +154,52 @@ const VehicleMarkersManager = ({
   const selectedVehicleId = useSelector(selectSelectedVehicleId);
   const zoomToVehicle = useSelector(selectZoomToVehicle);
   const showGeofences = useSelector(selectShowGeofences);
+  const selectedVehicles = useSelector(selectSelectedVehicles); // ✅ Add this selector
 
   const { filteredMapGeofences } = useSelector((state) => state.geofence);
 
   const dispatch = useDispatch();
   const carData = useSelector(selectCarData) || [];
+
+  // ✅ NEW: Add dedicated clear markers function
+  const clearAllMarkers = useCallback(() => {
+    if (!mapInstanceRef.current) return;
+    
+    // Clear individual markers
+    Object.values(markersRef.current).forEach((marker) => {
+      try {
+        if (mapInstanceRef.current.hasLayer(marker)) {
+          mapInstanceRef.current.removeLayer(marker);
+        }
+      } catch (error) {
+        console.error("Error removing marker:", error);
+      }
+    });
+    
+    // Clear marker cluster
+    if (markerClusterRef.current) {
+      try {
+        if (mapInstanceRef.current.hasLayer(markerClusterRef.current)) {
+          mapInstanceRef.current.removeLayer(markerClusterRef.current);
+        }
+        markerClusterRef.current.clearLayers();
+      } catch (error) {
+        console.error("Error clearing cluster:", error);
+      }
+    }
+    
+    // Reset references
+    markersRef.current = {};
+    prevPositionsRef.current = {};
+  }, [mapInstanceRef]);
+
+  // ✅ NEW: Watch selectedVehicles directly for immediate clearing
+  useEffect(() => {
+    // If no vehicles selected, immediately clear markers
+    if (selectedVehicles.length === 0) {
+      clearAllMarkers();
+    }
+  }, [selectedVehicles, clearAllMarkers]);
 
   // useEffect mein event listener add karein
   useEffect(() => {
@@ -277,6 +320,7 @@ const VehicleMarkersManager = ({
     }
   }, [searchQuery, processedData, mapBounds, mapZoom]);
 
+
   // ✅ PERFORMANCE: Memoized coordinate validation
   const isValidCoordinate = useCallback(
     (lat, lng) =>
@@ -341,7 +385,6 @@ const VehicleMarkersManager = ({
 
     return newIcon;
   }, []);
-
   // ✅ PERFORMANCE: Debounced update function
   const debouncedUpdateVehicleMarkers = useMemo(
     () =>
@@ -390,7 +433,31 @@ const VehicleMarkersManager = ({
     debouncedUpdateVehicleMarkers();
   }, [debouncedUpdateVehicleMarkers]);
 
-  // Rest of your existing useEffects remain the same...
+  // ✅ MAIN FIX: Handle filteredCarData changes with immediate clearing
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    // ✅ CRITICAL: If no data, immediately clear all markers
+    if (filteredCarData.length === 0) {
+      clearAllMarkers();
+      return;
+    }
+
+    // Normal update if data exists
+    try {
+      handleUpdateVehicleMarkers();
+    } catch (error) {
+      console.error("Error updating vehicle markers:", error);
+    }
+
+    return () => {
+      if (updateTimerRef.current) {
+        clearTimeout(updateTimerRef.current);
+        updateTimerRef.current = null;
+      }
+    };
+  }, [filteredCarData, handleUpdateVehicleMarkers, clearAllMarkers, mapInstanceRef]);
+
+  // ✅ Zoom to vehicle effect
   useEffect(() => {
     if (zoomToVehicle && selectedVehicleId && mapInstanceRef.current) {
       mapInstanceRef.current.closePopup();
@@ -403,6 +470,7 @@ const VehicleMarkersManager = ({
     }
   }, [selectedVehicleId, zoomToVehicle, dispatch, mapInstanceRef]);
 
+  // ✅ Icon clustering effect
   useEffect(() => {
     if (mapInstanceRef.current && markerClusterRef.current) {
       const map = mapInstanceRef.current;
@@ -431,10 +499,14 @@ const VehicleMarkersManager = ({
         }
       }
 
-      handleUpdateVehicleMarkers();
+      // Only update if we have data
+      if (filteredCarData.length > 0) {
+        handleUpdateVehicleMarkers();
+      }
     }
-  }, [iconClustering, handleUpdateVehicleMarkers, mapInstanceRef]);
+  }, [iconClustering, handleUpdateVehicleMarkers, filteredCarData, mapInstanceRef]);
 
+  // ✅ Cluster reset interval
   useEffect(() => {
     const intervalId = setInterval(() => {
       if (
@@ -453,23 +525,6 @@ const VehicleMarkersManager = ({
 
     return () => clearInterval(intervalId);
   }, [iconClustering, mapInstanceRef]);
-
-  useEffect(() => {
-    try {
-      if (mapInstanceRef.current) {
-        handleUpdateVehicleMarkers();
-      }
-    } catch (error) {
-      console.error("Error updating vehicle markers:", error);
-    }
-
-    return () => {
-      if (updateTimerRef.current) {
-        clearTimeout(updateTimerRef.current);
-        updateTimerRef.current = null;
-      }
-    };
-  }, [filteredCarData, handleUpdateVehicleMarkers, mapInstanceRef]);
 
   // NEW: Auto zoom function
   const performAutoZoom = useCallback(() => {
@@ -561,10 +616,14 @@ const VehicleMarkersManager = ({
     }
   }, [filteredCarData, performAutoZoom]);
 
+  // ✅ Cleanup effects
   useEffect(() => {
     return () => {
       if (autoZoomTimeoutRef.current) {
         clearTimeout(autoZoomTimeoutRef.current);
+      }
+      if (updateTimerRef.current) {
+        clearTimeout(updateTimerRef.current);
       }
     };
   }, []);
@@ -577,6 +636,12 @@ const VehicleMarkersManager = ({
         showGeofences={showGeofences}
         geofenceMarkersRef={geofenceMarkersRef}
         onGeofenceContextMenu={onGeofenceContextMenu}
+      />
+
+      {/* ADD RouteManager - context menu handler optional hai */}
+      <RouteManager
+        mapInstanceRef={mapInstanceRef}
+        onRouteContextMenu={null} // Ya ye prop hi remove kar dein
       />
     </>
   );

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo, useCallback } from "react";
 import {
   X,
   Layers,
@@ -27,7 +27,6 @@ import IconLegendModal from "./IconLegendModal";
 import AdvancedOptionsModal from "./AdvancedOptionsModal";
 import {
   fetchRouteListForUser,
-  selectRoutesLoading,
   selectShowRoutes,
   setShowRoutes,
 } from "../../features/routeSlice";
@@ -38,174 +37,212 @@ const MapSidebarOptions = ({ isOpen, onClose }) => {
   const optionsRef = useRef(null);
   const dispatch = useDispatch();
 
-  const { userGeofences } = useSelector((state) => state.geofence);
-  const { routes: userRoutes } = useSelector((state) => state.route);
-  const iconClustering = useSelector(selectIconClustering);
-  const movingStatusFilter = useSelector(selectMovingStatusFilter);
-  const showAllLabels = useSelector(selectShowAllLabels);
-  const showGeofences = useSelector(selectShowGeofences);
-  const routesLoading = useSelector(selectRoutesLoading);
+  // ✅ PERFORMANCE: Memoize selectors to prevent unnecessary re-renders
+  const selectorData = useSelector((state) => ({
+    userGeofences: state.geofence.userGeofences,
+    userRoutes: state.route.routes,
+    iconClustering: state.mapInteraction.iconClustering,
+    movingStatusFilter: state.gpsTracking.movingStatusFilter,
+    showAllLabels: state.mapInteraction.showAllLabels,
+    showGeofences: state.mapInteraction.showGeofences,
+    showRoutes: state.route.showRoutes,
+  }));
 
-  // ✅ UPDATED: Redux se showRoutes state use karein
-  const showRoutes = useSelector(selectShowRoutes);
+  const {
+    userGeofences,
+    userRoutes,
+    iconClustering,
+    movingStatusFilter,
+    showAllLabels,
+    showGeofences,
+    showRoutes,
+  } = selectorData;
 
-  console.warn("hello", userRoutes);
-
-  const toggleShowAllLabels = () => {
+  // ✅ PERFORMANCE: Memoize callback functions
+  const toggleShowAllLabels = useCallback(() => {
     dispatch(setShowAllLabels(!showAllLabels));
-  };
+  }, [dispatch, showAllLabels]);
 
-  const handleVehicleFilterChange = (filter) => {
-    dispatch(setMovingStatusFilter(filter));
-  };
+  const handleVehicleFilterChange = useCallback(
+    (filter) => {
+      dispatch(setMovingStatusFilter(filter));
+    },
+    [dispatch]
+  );
 
-  const toggleIconClustering = () => {
+  const toggleIconClustering = useCallback(() => {
     dispatch(setIconClustering(!iconClustering));
-  };
+  }, [dispatch, iconClustering]);
 
-  const toggleGeofences = () => {
+  const toggleGeofences = useCallback(() => {
     const newValue = !showGeofences;
     dispatch(setShowGeofences(newValue));
-    if (newValue) {
-      if (!userGeofences || userGeofences.length === 0) {
-        dispatch(fetchGeofenceForUser());
-      }
-    } else {
+    if (newValue && (!userGeofences || userGeofences.length === 0)) {
+      dispatch(fetchGeofenceForUser());
     }
-  };
+  }, [dispatch, showGeofences, userGeofences]);
 
-  // ✅ UPDATED: toggleRoutes function with Redux state
-  const toggleRoutes = () => {
+  const toggleRoutes = useCallback(() => {
     const newValue = !showRoutes;
-
-    // Redux state update
     dispatch(setShowRoutes(newValue));
-
-    // Conditional API dispatch
-    if (newValue) {
-      // Routes ON kiya gaya hai, API call karein
-      if (!userRoutes || userRoutes.length === 0) {
-        console.log("Fetching routes for user...");
-        dispatch(fetchRouteListForUser());
-      } else {
-        console.log("Routes already loaded:", userRoutes.length);
-      }
-    } else {
-      // Routes OFF kiya gaya hai
-      console.log("Routes turned off");
+    if (newValue && (!userRoutes || userRoutes.length === 0)) {
+      dispatch(fetchRouteListForUser());
     }
-  };
+  }, [dispatch, showRoutes, userRoutes]);
 
-  const openIconLegend = () => {
+  const openIconLegend = useCallback(() => {
     setIsIconLegendOpen(true);
-  };
+  }, []);
 
-  const closeIconLegend = () => {
+  const closeIconLegend = useCallback(() => {
     setIsIconLegendOpen(false);
-  };
+  }, []);
 
-  const openAdvancedOptions = () => {
+  const openAdvancedOptions = useCallback(() => {
     setIsAdvancedOptionsOpen(true);
-  };
+  }, []);
 
-  const closeAdvancedOptions = () => {
+  const closeAdvancedOptions = useCallback(() => {
     setIsAdvancedOptionsOpen(false);
-  };
+  }, []);
 
-  // ✅ BALANCED Toggle Switch Component
-  const ToggleSwitch = ({ id, checked, onChange, label, icon }) => (
-    <div className="flex items-center justify-between py-2.5 px-3 hover:bg-gray-50 rounded-md transition duration-200">
-      <label
-        htmlFor={id}
-        className="text-sm font-medium text-gray-700 flex items-center cursor-pointer"
-      >
-        {icon && (
-          <span className="mr-2.5 w-4 h-4 flex items-center justify-center">
-            {icon}
-          </span>
-        )}
-        {label}
-      </label>
-      <button
-        onClick={onChange}
-        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 ${
-          checked ? "bg-primary" : "bg-gray-200"
-        }`}
-        aria-checked={checked}
-        role="switch"
-      >
-        <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition duration-300 ${
-            checked ? "translate-x-4" : "translate-x-0.5"
-          }`}
-        />
-      </button>
-    </div>
-  );
-
-  // ✅ BALANCED Menu Item Component
-  const MenuItem = ({ label, icon, onClick }) => (
-    <div
-      className="flex items-center justify-between py-2.5 px-3 cursor-pointer hover:bg-gray-50 rounded-md transition duration-200"
-      onClick={onClick}
-    >
-      <div className="flex items-center">
-        {icon && (
-          <span className="mr-2.5 w-4 h-4 flex items-center justify-center text-gray-500">
-            {icon}
-          </span>
-        )}
-        <span className="text-sm font-medium text-gray-700">{label}</span>
-      </div>
-      <ChevronRight size={16} className="text-gray-400" />
-    </div>
-  );
-
-  // ✅ BALANCED Radio Button Component
-  const RadioButton = ({ label, icon, isSelected, onClick, colorClass }) => (
-    <div
-      className={`flex items-center p-2.5 rounded-md cursor-pointer transition duration-200 ${
-        isSelected
-          ? `${colorClass} border border-${colorClass.replace(
-              "bg-",
-              ""
-            )}/50 shadow-sm`
-          : "hover:bg-gray-50"
-      }`}
-      onClick={onClick}
-    >
-      <div className="flex items-center w-full">
-        <div
-          className={`w-4 h-4 rounded-full mr-2.5 flex items-center justify-center ${
-            isSelected ? "border-2 border-primary" : "border-2 border-gray-300"
-          }`}
-        >
-          {isSelected && <div className="w-2 h-2 rounded-full bg-primary" />}
+  // ✅ PERFORMANCE: Memoize heavy components
+  const ToggleSwitch = useMemo(
+    () =>
+      React.memo(({ id, checked, onChange, label, icon }) => (
+        <div className="flex items-center justify-between py-2.5 px-3 hover:bg-gray-50 rounded-md transition duration-200">
+          <label
+            htmlFor={id}
+            className="text-sm font-medium text-gray-700 flex items-center cursor-pointer"
+          >
+            {icon && (
+              <span className="mr-2.5 w-4 h-4 flex items-center justify-center">
+                {icon}
+              </span>
+            )}
+            {label}
+          </label>
+          <button
+            onClick={onChange}
+            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${
+              checked ? "bg-primary" : "bg-gray-200"
+            }`}
+            aria-checked={checked}
+            role="switch"
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition duration-200 ${
+                checked ? "translate-x-4" : "translate-x-0.5"
+              }`}
+            />
+          </button>
         </div>
-        {icon && (
-          <span className="mr-2.5 w-4 h-4 flex items-center justify-center">
-            {icon}
-          </span>
-        )}
-        <span className="text-sm font-medium text-gray-700">{label}</span>
-      </div>
-    </div>
+      )),
+    []
+  );
+
+  const MenuItem = useMemo(
+    () =>
+      React.memo(({ label, icon, onClick }) => (
+        <div
+          className="flex items-center justify-between py-2.5 px-3 cursor-pointer hover:bg-gray-50 rounded-md transition duration-200"
+          onClick={onClick}
+        >
+          <div className="flex items-center">
+            {icon && (
+              <span className="mr-2.5 w-4 h-4 flex items-center justify-center text-gray-500">
+                {icon}
+              </span>
+            )}
+            <span className="text-sm font-medium text-gray-700">{label}</span>
+          </div>
+          <ChevronRight size={16} className="text-gray-400" />
+        </div>
+      )),
+    []
+  );
+
+  const RadioButton = useMemo(
+    () =>
+      React.memo(({ label, icon, isSelected, onClick, colorClass }) => (
+        <div
+          className={`flex items-center p-2.5 rounded-md cursor-pointer transition duration-200 ${
+            isSelected
+              ? `${colorClass} border border-${colorClass.replace(
+                  "bg-",
+                  ""
+                )}/50 shadow-sm`
+              : "hover:bg-gray-50"
+          }`}
+          onClick={onClick}
+        >
+          <div className="flex items-center w-full">
+            <div
+              className={`w-4 h-4 rounded-full mr-2.5 flex items-center justify-center ${
+                isSelected
+                  ? "border-2 border-primary"
+                  : "border-2 border-gray-300"
+              }`}
+            >
+              {isSelected && (
+                <div className="w-2 h-2 rounded-full bg-primary" />
+              )}
+            </div>
+            {icon && (
+              <span className="mr-2.5 w-4 h-4 flex items-center justify-center">
+                {icon}
+              </span>
+            )}
+            <span className="text-sm font-medium text-gray-700">{label}</span>
+          </div>
+        </div>
+      )),
+    []
+  );
+
+  // ✅ PERFORMANCE: Optimized animation variants
+  const sidebarVariants = useMemo(
+    () => ({
+      hidden: {
+        width: 0,
+        opacity: 0,
+        transition: {
+          type: "tween",
+          duration: 0.2,
+          ease: "easeInOut",
+        },
+      },
+      visible: {
+        width: 320,
+        opacity: 1,
+        transition: {
+          type: "tween",
+          duration: 0.2,
+          ease: "easeInOut",
+        },
+      },
+    }),
+    []
   );
 
   return (
     <>
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {isOpen && (
           <motion.div
             ref={optionsRef}
-            className="fixed top-0 right-0 h-full bg-white shadow-xl z-50 overflow-hidden flex flex-col"
-            initial={{ width: 0, opacity: 0 }}
-            animate={{ width: 320, opacity: 1 }} // ✅ BALANCED WIDTH: 320px
-            exit={{ width: 0, opacity: 0 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="fixed top-0 right-0 h-full bg-white shadow-xl z-50 overflow-hidden flex flex-col will-change-transform"
+            variants={sidebarVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            style={{
+              backfaceVisibility: "hidden",
+              transform: "translateZ(0)", // Force hardware acceleration
+            }}
           >
-            {/* ✅ BALANCED Header */}
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white">
+            {/* Header - Optimized */}
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-white flex-shrink-0">
               <h3 className="text-base font-semibold text-gray-800">
                 Map Settings
               </h3>
@@ -217,9 +254,15 @@ const MapSidebarOptions = ({ isOpen, onClose }) => {
               </button>
             </div>
 
-            {/* ✅ BALANCED Content */}
-            <div className="flex-1 overflow-y-auto p-4">
-              {/* ✅ BALANCED Vehicle Filter Section */}
+            {/* Content - Optimized with transform3d */}
+            <div
+              className="flex-1 overflow-y-auto p-4"
+              style={{
+                transform: "translate3d(0,0,0)",
+                willChange: "scroll-position",
+              }}
+            >
+              {/* Vehicle Filter Section */}
               <div className="space-y-3">
                 <h4 className="text-sm font-semibold text-gray-700 mb-2 pl-1">
                   Show Vehicles
@@ -259,7 +302,7 @@ const MapSidebarOptions = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* ✅ BALANCED Map Options Section */}
+              {/* Map Options Section */}
               <div className="space-y-3 mt-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-2 pl-1">
                   Map Options
@@ -296,7 +339,7 @@ const MapSidebarOptions = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              {/* ✅ BALANCED Add to Map Section */}
+              {/* Add to Map Section */}
               <div className="space-y-3 mt-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-2 pl-1">
                   Add to Map
@@ -309,15 +352,15 @@ const MapSidebarOptions = ({ isOpen, onClose }) => {
                     label="Geofences"
                     icon={<Layers size={16} className="text-green-500" />}
                   />
-                  {/* ✅ UPDATED: Routes Toggle with Redux state */}
                   <ToggleSwitch
                     id="userRoutes"
                     checked={showRoutes}
                     onChange={toggleRoutes}
-                    label={`Routes`}
+                    label="Routes"
                     icon={<Route size={16} className="text-blue-500" />}
                   />
-                  {/* Suggested Geofences - Disabled */}
+
+                  {/* Disabled Options */}
                   <div className="flex items-center justify-between py-2.5 px-3 opacity-50 cursor-not-allowed">
                     <label className="text-sm font-medium text-gray-400 flex items-center">
                       <span className="mr-2.5 w-4 h-4 flex items-center justify-center">
@@ -332,7 +375,7 @@ const MapSidebarOptions = ({ isOpen, onClose }) => {
                       <span className="inline-block h-4 w-4 transform rounded-full bg-white shadow-md translate-x-0.5" />
                     </button>
                   </div>
-                  {/* Garmin Stops - Disabled */}
+
                   <div className="flex items-center justify-between py-2.5 px-3 opacity-50 cursor-not-allowed">
                     <label className="text-sm font-medium text-gray-400 flex items-center">
                       <span className="mr-2.5 w-4 h-4 flex items-center justify-center">
@@ -348,11 +391,17 @@ const MapSidebarOptions = ({ isOpen, onClose }) => {
                     </button>
                   </div>
                 </div>
-                {/* ✅ BALANCED Advanced Options */}
-                <div className="mt-3 bg-white rounded-lg shadow-sm border border-gray-100">
+              </div>
+
+              {/* Advanced Options Section */}
+              <div className="space-y-3 mt-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2 pl-1">
+                  Advanced Options
+                </h4>
+                <div className="bg-white rounded-lg shadow-sm border border-gray-100">
                   <MenuItem
-                    label="Advanced Options"
-                    icon={<Settings size={16} className="text-gray-500" />}
+                    label="Advanced Filters"
+                    icon={<Settings size={16} className="text-purple-500" />}
                     onClick={openAdvancedOptions}
                   />
                 </div>
@@ -362,16 +411,18 @@ const MapSidebarOptions = ({ isOpen, onClose }) => {
         )}
       </AnimatePresence>
 
-      {/* Icon Legend Modal */}
-      <IconLegendModal isOpen={isIconLegendOpen} onClose={closeIconLegend} />
-
-      {/* Advanced Options Modal */}
-      <AdvancedOptionsModal
-        isOpen={isAdvancedOptionsOpen}
-        onClose={closeAdvancedOptions}
-      />
+      {/* Modals - Lazy loaded */}
+      {isIconLegendOpen && (
+        <IconLegendModal isOpen={isIconLegendOpen} onClose={closeIconLegend} />
+      )}
+      {isAdvancedOptionsOpen && (
+        <AdvancedOptionsModal
+          isOpen={isAdvancedOptionsOpen}
+          onClose={closeAdvancedOptions}
+        />
+      )}
     </>
   );
 };
 
-export default MapSidebarOptions;
+export default React.memo(MapSidebarOptions);

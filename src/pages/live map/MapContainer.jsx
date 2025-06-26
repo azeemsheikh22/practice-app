@@ -34,7 +34,8 @@ import VehicleMarkersManager from "../../components/map/VehicleMarkersManager";
 import "../../styles/mapTooltips.css";
 import DistanceMeasurementTool from "../../components/map/DistanceMeasurementTool";
 import "../../styles/distanceTool.css";
-
+// Add import at the top
+import "../../styles/routeStyles.css";
 import movingIcon from "../../assets/moving-vehicle.png";
 import stoppedIcon from "../../assets/stopped-vehicle.png";
 import idleIcon from "../../assets/idle-vehicle.png";
@@ -297,7 +298,7 @@ const MapContainer = memo(
       // Create temporary success message
       const successDiv = document.createElement("div");
       successDiv.innerHTML = `
-    <div style="
+      <div style="
       position: fixed;
       top: 20px;
       right: 20px;
@@ -1073,7 +1074,7 @@ const MapContainer = memo(
         });
 
         const tileLayer = L.tileLayer(
-          "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+          "https://{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}",
           {
             minZoom: 3,
             maxZoom: 20,

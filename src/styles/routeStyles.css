@@ -1,0 +1,166 @@
+/* Route Popup Styles */
+.route-popup .leaflet-popup-content-wrapper {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e5e7eb;
+  padding: 0;
+}
+
+.route-popup .leaflet-popup-content {
+  margin: 0;
+  line-height: 1.4;
+  padding: 16px;
+}
+
+.route-popup .leaflet-popup-tip {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-top: none;
+  border-right: none;
+}
+
+/* Route Marker Tooltip Styles */
+.route-marker-tooltip {
+  background: rgba(0, 0, 0, 0.8) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  padding: 4px 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* ✅ NEW: Enhanced Route Marker Tooltips */
+.route-origin-tooltip {
+  background: linear-gradient(135deg, #10b981, #059669) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 6px 10px !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  border-left: 3px solid #34d399 !important;
+}
+
+.route-destination-tooltip {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 6px 10px !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+  border-left: 3px solid #f87171 !important;
+}
+
+/* ✅ Route Marker Hover Effects */
+.route-origin-marker {
+  transition: all 0.2s ease-in-out;
+}
+
+.route-origin-marker:hover {
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.6));
+}
+
+.route-destination-marker {
+  transition: all 0.2s ease-in-out;
+}
+
+.route-destination-marker:hover {
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.6));
+}
+
+/* ✅ Route Line Styles */
+.route-polyline {
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+}
+
+.route-polyline:hover {
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.3));
+}
+
+/* ✅ Route Tooltip Arrow Styles */
+.route-origin-tooltip .leaflet-tooltip-top:before {
+  border-top-color: #10b981 !important;
+}
+
+.route-destination-tooltip .leaflet-tooltip-top:before {
+  border-top-color: #ef4444 !important;
+}
+
+
+
+/* ✅ Floating Route Name (Option 3) */
+.route-hover-name {
+  background: linear-gradient(135deg, #667eea, #764ba2) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  padding: 8px 16px !important;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
+  border-left: 4px solid #a8edea !important;
+  animation: routeNameFadeIn 0.3s ease-out;
+}
+
+/* ✅ Responsive Route Tooltips */
+@media (max-width: 768px) {
+  .route-origin-tooltip,
+  .route-destination-tooltip {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+  }
+}
+
+/* ✅ Route Marker Animation */
+@keyframes routeMarkerPulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.route-marker-pulse {
+  animation: routeMarkerPulse 2s infinite;
+}
+
+/* ✅ Route Loading State */
+.route-loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.route-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
