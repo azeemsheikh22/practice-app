@@ -1,7 +1,7 @@
 import React, { useState, memo, useMemo, useCallback, useEffect } from "react";
 import VehicleCard from "./VehicleCard";
 import { Car, ChevronDown } from "lucide-react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { setSelectedVehicle } from "../../features/mapInteractionSlice";
 import { FixedSizeList as List } from "react-window";
 import "../../styles/performance.css";
@@ -25,10 +25,10 @@ const useResponsiveHeight = () => {
         newHeight = 500;
       } else if (screenWidth > 1280) {
         // xl
-        newHeight = 400;
+        newHeight = 450;
       } else {
         // 2xl
-        newHeight = 420;
+        newHeight = 450;
       }
 
       setHeight(newHeight);
@@ -45,9 +45,9 @@ const useResponsiveHeight = () => {
 
 const VehicleList = memo(({ carData }) => {
   const [sortOption, setSortOption] = useState("nameAZ"); // Changed default to "nameAZ"
-  const selectedVehicleId = useSelector(
-    (state) => state.mapInteraction.selectedVehicleId
-  );
+  // const selectedVehicleId = useSelector(
+  //   (state) => state.mapInteraction.selectedVehicleId
+  // );
   const dispatch = useDispatch();
 
   // Use responsive height hook

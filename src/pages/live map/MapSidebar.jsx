@@ -61,6 +61,7 @@ const MapSidebar = memo(() => {
   );
   const selectedVehiclesFromSlice = useSelector(selectSelectedVehicles);
 
+
   // ✅ OPTIMIZATION 4: Memoized car data
   const carData = useMemo(() => {
     return rawCarData || [];
@@ -224,6 +225,125 @@ const MapSidebar = memo(() => {
     getGroupsToExpand,
   ]);
 
+  // Replace the group restoration useEffect with this improved version
+  useEffect(() => {
+    if (
+      selectedFilter === "group" &&
+      rawVehicles?.length > 0 &&
+      selectedVehiclesFromSlice.length > 0
+    ) {
+      const groupsToSelect = [];
+      const vehiclesToSelect = [];
+
+      // Helper function to get all vehicle valueIds in a group (recursively)
+      const getAllVehicleValueIds = (group) => {
+        const vehicleIds = [];
+
+        if (group.children) {
+          group.children.forEach((child) => {
+            if (child.Type === "Vehicle" && child.valueId) {
+              vehicleIds.push(Number(child.valueId));
+            } else if (child.Type === "Group") {
+              vehicleIds.push(...getAllVehicleValueIds(child));
+            }
+          });
+        }
+
+        return vehicleIds;
+      };
+
+      // Helper function to check if a group should be selected
+      const shouldGroupBeSelected = (group) => {
+        const groupVehicleIds = getAllVehicleValueIds(group);
+
+        // If group has no vehicles, check if it was previously selected
+        // We can determine this by checking if any of its child groups are selected
+        if (groupVehicleIds.length === 0) {
+          // For empty groups, check if all child groups are selected
+          if (group.children && group.children.length > 0) {
+            const childGroups = group.children.filter(
+              (child) => child.Type === "Group"
+            );
+            if (childGroups.length > 0) {
+              return childGroups.every((childGroup) =>
+                shouldGroupBeSelected(childGroup)
+              );
+            }
+          }
+          return false; // Empty group with no children
+        }
+
+        // For groups with vehicles, check if ALL vehicles are selected
+        return groupVehicleIds.every((vehicleId) =>
+          selectedVehiclesFromSlice.includes(vehicleId)
+        );
+      };
+
+      // Recursive function to process tree items
+      const processTreeItems = (items) => {
+        items.forEach((item) => {
+          if (item.Type === "Group") {
+            if (shouldGroupBeSelected(item)) {
+              groupsToSelect.push(item.id);
+            }
+
+            // Process child groups recursively
+            if (item.children) {
+              processTreeItems(item.children);
+            }
+          } else if (item.Type === "Vehicle") {
+            if (
+              item.valueId &&
+              selectedVehiclesFromSlice.includes(Number(item.valueId))
+            ) {
+              vehiclesToSelect.push(item.id);
+            }
+          }
+        });
+      };
+
+      processTreeItems(treeStructure);
+
+      const allSelectionsToRestore = [...groupsToSelect, ...vehiclesToSelect];
+      if (allSelectionsToRestore.length > 0) {
+        dispatch(setVisuallySelectedItems(allSelectionsToRestore));
+      }
+    }
+  }, [
+    selectedFilter,
+    rawVehicles,
+    selectedVehiclesFromSlice,
+    treeStructure,
+    dispatch,
+  ]);
+
+  // Update the existing vehicle restoration useEffect
+  useEffect(() => {
+    if (
+      selectedFilter === "vehicle" &&
+      rawVehicles?.length > 0 &&
+      selectedVehiclesFromSlice.length > 0
+    ) {
+      const vehicleItems = rawVehicles.filter(
+        (item) => item.Type === "Vehicle"
+      );
+      const vehicleIdsToSelect = [];
+
+      vehicleItems.forEach((vehicle) => {
+        if (
+          vehicle.valueId &&
+          selectedVehiclesFromSlice.includes(Number(vehicle.valueId))
+        ) {
+          vehicleIdsToSelect.push(vehicle.id);
+        }
+      });
+
+      if (vehicleIdsToSelect.length > 0) {
+        dispatch(setVisuallySelectedItems(vehicleIdsToSelect));
+      }
+    }
+  }, [selectedFilter, rawVehicles, selectedVehiclesFromSlice, dispatch]);
+
   // ✅ OPTIMIZATION 11: Memoized search functions
   const itemMatchesSearch = useCallback((item, query) => {
     const matchesText = item.text?.toLowerCase().includes(query.toLowerCase());
@@ -325,6 +445,12 @@ const MapSidebar = memo(() => {
 
   const handleItemSelect = useCallback(
     (item, isChecked) => {
+      // ✅ Handle special case for clearing only groups
+      if (item.Type === "ClearGroups") {
+        dispatch(setVisuallySelectedItems(item.vehicleSelections || []));
+        return;
+      }
+
       let newVisuallySelectedItems = [...visuallySelectedItems];
       let newSelectedVehicleIds = [...selectedVehicleIds];
 
@@ -396,7 +522,7 @@ const MapSidebar = memo(() => {
   const deselectAll = useCallback(() => {
     setSelectedVehicleIds([]);
     dispatch(setVisuallySelectedItems([]));
-    dispatch(updateVehicleFilter([]));
+    dispatch(updateVehicleFilter([])); // This should only be called when user explicitly deselects all
   }, [dispatch]);
 
   const handleFilterChange = useCallback(
@@ -406,9 +532,9 @@ const MapSidebar = memo(() => {
       setSearchQuery("");
       dispatch(setGlobalSearchQuery(""));
 
-      setSelectedVehicleIds([]);
-      dispatch(setVisuallySelectedItems([]));
-      dispatch(updateVehicleFilter([]));
+      // ✅ Don't clear visual selections immediately - let useEffect handle restoration
+      // dispatch(setVisuallySelectedItems([])); // Remove this line
+
       dispatch(clearRawVehicleList());
 
       let scope = 3;
@@ -496,9 +622,9 @@ const MapSidebar = memo(() => {
                   onSearchChange={handleSearchChange}
                   onFilterChange={handleFilterChange}
                   filteredTree={filteredTree}
-                  selectedVehicleIds={selectedVehiclesFromSlice}
+                  selectedVehicleIds={selectedVehiclesFromSlice} // ✅ This should be the slice data
                   treeData={rawVehicles}
-                  selectedItems={visuallySelectedItems}
+                  selectedItems={visuallySelectedItems} // ✅ This should be the visual selections
                   expandedGroups={expandedGroups}
                   onToggleGroup={toggleGroup}
                   onItemSelect={handleItemSelect}

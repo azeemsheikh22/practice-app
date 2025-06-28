@@ -5,7 +5,6 @@ import {
 } from "@reduxjs/toolkit";
 import * as signalR from "@microsoft/signalr";
 
-
 // Variables for throttling and connection state
 let lastCarDataUpdateTime = 0;
 let pendingCarDataUpdates = [];
@@ -29,6 +28,20 @@ const initialState = {
   error: null,
   loading: false,
   dataThrottleTime: 1000, // Default throttle time in ms
+  
+  // ✅ NEW: Cache system for tree data
+  treeDataCache: {
+    scope1: null, // Vehicle data
+    scope2: null, // Driver data  
+    scope3: null, // Group data
+  },
+  currentScope: 3, // Track current scope
+  cacheTimestamps: {
+    scope1: null,
+    scope2: null,
+    scope3: null,
+  },
+  cacheExpiry: 5 * 60 * 1000, // 5 minutes cache expiry
 };
 
 // Function to process pending car data updates
@@ -149,13 +162,22 @@ export const initializeConnection = createAsyncThunk(
         }
       });
 
-      // Rest of your existing event handlers...
+      // ✅ UPDATED: ReceiveVehicleList with caching
       newConnection.on("ReceiveVehicleList", (vehicles) => {
         if (Array.isArray(vehicles) && vehicles.length > 0) {
+          const currentScope = getState().gpsTracking.currentScope;
+          
+          // Cache the data based on current scope
+          dispatch(cacheTreeData({ 
+            scope: currentScope, 
+            data: vehicles 
+          }));
+          
           dispatch(setRawVehicleList(vehicles));
           dispatch(updateAvailableVehicles(vehicles));
         }
       });
+
       // Optimized ReceiveCarData handler with throttling
       newConnection.on("ReceiveCarData", (data) => {
         console.log("vehicle on map", data.length);
@@ -226,10 +248,31 @@ export const initializeConnection = createAsyncThunk(
   }
 );
 
+// ✅ UPDATED: requestVehicleListWithScope with caching logic
 export const requestVehicleListWithScope = createAsyncThunk(
   "gpsTracking/requestVehicleListWithScope",
-  async (scope, { getState }) => {
-    const { connection } = getState().gpsTracking;
+  async (scope, { getState, dispatch }) => {
+    const state = getState().gpsTracking;
+    const { connection, treeDataCache, cacheTimestamps, cacheExpiry } = state;
+    
+    // ✅ Check if we have cached data for this scope
+    const cacheKey = `scope${scope}`;
+    const cachedData = treeDataCache[cacheKey];
+    const cacheTime = cacheTimestamps[cacheKey];
+    const now = Date.now();
+    
+    // ✅ If cache exists and is not expired, use cached data
+    if (cachedData && cacheTime && (now - cacheTime) < cacheExpiry) {
+      console.log(`🎯 Using cached data for scope ${scope}`);
+      dispatch(setCurrentScope(scope));
+      dispatch(setRawVehicleList(cachedData));
+      dispatch(updateAvailableVehicles(cachedData));
+      return scope;
+    }
+
+    // ✅ If no cache or expired, fetch fresh data
+    console.log(`🔄 Fetching fresh data for scope ${scope}`);
+    
     const userTypeID = parseInt(localStorage.getItem("userTypeId"), 10) || 1;
     const onlyRoot = userTypeID === 1 ? 1 : 0;
 
@@ -237,6 +280,9 @@ export const requestVehicleListWithScope = createAsyncThunk(
       connection &&
       connection.state === signalR.HubConnectionState.Connected
     ) {
+      // Set current scope before making request
+      dispatch(setCurrentScope(scope));
+      
       await connection.invoke("RequestVehicleList", scope, onlyRoot);
       return scope;
     } else {
@@ -266,12 +312,64 @@ export const updateVehicleFilter = createAsyncThunk(
   }
 );
 
-
 // Slice
 const gpsTrackingSlice = createSlice({
   name: "gpsTracking",
   initialState,
   reducers: {
+    // ✅ NEW: Cache tree data reducer
+    cacheTreeData: (state, action) => {
+      const { scope, data } = action.payload;
+      const cacheKey = `scope${scope}`;
+      
+      state.treeDataCache[cacheKey] = data;
+      state.cacheTimestamps[cacheKey] = Date.now();
+      
+      console.log(`💾 Cached tree data for scope ${scope}:`, data.length, "items");
+    },
+
+    // ✅ NEW: Set current scope
+    setCurrentScope: (state, action) => {
+      state.currentScope = action.payload;
+    },
+
+    // ✅ NEW: Clear specific cache
+    clearScopeCache: (state, action) => {
+      const scope = action.payload;
+      const cacheKey = `scope${scope}`;
+      
+      state.treeDataCache[cacheKey] = null;
+      state.cacheTimestamps[cacheKey] = null;
+      
+      console.log(`🗑️ Cleared cache for scope ${scope}`);
+    },
+
+    // ✅ NEW: Clear all cache
+    clearAllCache: (state) => {
+      state.treeDataCache = {
+        scope1: null,
+        scope2: null,
+        scope3: null,
+      };
+      state.cacheTimestamps = {
+        scope1: null,
+        scope2: null,
+        scope3: null,
+      };
+      console.log("🗑️ Cleared all tree data cache");
+    },
+
+    // ✅ NEW: Force refresh cache
+    forceRefreshCache: (state, action) => {
+      const scope = action.payload;
+      const cacheKey = `scope${scope}`;
+      
+      // Mark cache as expired by setting old timestamp
+      state.cacheTimestamps[cacheKey] = 0;
+      
+      console.log(`🔄 Forced refresh for scope ${scope}`);
+    },
+
     // Optimized updateCarData reducer
     updateCarData: (state, action) => {
       // Skip processing if no vehicles are selected
@@ -479,6 +577,21 @@ const gpsTrackingSlice = createSlice({
             state.carData = filteredData;
           }
         }
+      })
+      // ✅ NEW: Handle requestVehicleListWithScope cases
+      .addCase(requestVehicleListWithScope.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(requestVehicleListWithScope.fulfilled, (state, action) => {
+        state.loading = false;
+        state.currentScope = action.payload;
+        console.log(`✅ Successfully loaded scope ${action.payload}`);
+      })
+      .addCase(requestVehicleListWithScope.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message;
+        console.error(`❌ Failed to load scope data:`, action.error.message);
       });
   },
 });
@@ -495,6 +608,12 @@ export const {
   clearConnection,
   setMovingStatusFilter,
   setConnectionStatus,
+  // ✅ NEW: Export cache-related actions
+  cacheTreeData,
+  setCurrentScope,
+  clearScopeCache,
+  clearAllCache,
+  forceRefreshCache,
 } = gpsTrackingSlice.actions;
 
 // Export selectors
@@ -508,6 +627,30 @@ export const selectConnectionStatus = (state) =>
   state.gpsTracking.connectionStatus;
 export const selectMovingStatusFilter = (state) =>
   state.gpsTracking.movingStatusFilter;
+
+// ✅ NEW: Cache-related selectors
+export const selectTreeDataCache = (state) => state.gpsTracking.treeDataCache;
+export const selectCurrentScope = (state) => state.gpsTracking.currentScope;
+export const selectCacheTimestamps = (state) => state.gpsTracking.cacheTimestamps;
+
+// ✅ NEW: Selector to get cached data for specific scope
+export const selectCachedDataForScope = (scope) => (state) => {
+  const cacheKey = `scope${scope}`;
+  return state.gpsTracking.treeDataCache[cacheKey];
+};
+
+// ✅ NEW: Selector to check if cache is valid for scope
+export const selectIsCacheValidForScope = (scope) => (state) => {
+  const cacheKey = `scope${scope}`;
+  const cachedData = state.gpsTracking.treeDataCache[cacheKey];
+  const cacheTime = state.gpsTracking.cacheTimestamps[cacheKey];
+  const cacheExpiry = state.gpsTracking.cacheExpiry;
+  
+  if (!cachedData || !cacheTime) return false;
+  
+  const now = Date.now();
+  return (now - cacheTime) < cacheExpiry;
+};
 
 // Add a memoized selector for filtered car data
 export const selectFilteredCarData = createSelector(
@@ -538,3 +681,4 @@ export const selectFilteredCarData = createSelector(
 );
 
 export default gpsTrackingSlice.reducer;
+

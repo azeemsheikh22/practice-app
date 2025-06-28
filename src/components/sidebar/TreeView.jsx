@@ -17,13 +17,12 @@ const TreeView = ({
   selectedVehicleIds,
   isLoading = false,
 }) => {
-  // Handle filter change with auto deselect
+  // Replace the handleFilterChange function
   const handleFilterChange = (e) => {
     const newFilter = e.target.value;
 
-    if (selectedItems.length > 0) {
-      onDeselectAll();
-    }
+    // ✅ Don't clear any selections when switching filters
+    // Let the parent component handle selection restoration
 
     onFilterChange(e);
   };
