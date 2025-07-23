@@ -84,7 +84,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
 
   return (
     <motion.div
-      className="fixed inset-0 flex items-center justify-center z-[300]"
+      className="fixed inset-0 flex items-center justify-center z-[840]"
       initial={{ opacity: 0, y: -50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{duration: 0.4}}

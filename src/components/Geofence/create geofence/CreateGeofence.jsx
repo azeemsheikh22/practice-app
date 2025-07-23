@@ -4,12 +4,12 @@ import { MapPin, Save, X, Menu, ChevronLeft } from "lucide-react";
 import GeofenceMap from "./GeofenceMap";
 import DetailTab from "./DetailTab";
 import AdvanceTab from "./AdvanceTab";
-import { useSearchParams } from "react-router-dom"; // ADD THIS IMPORT
+import { useSearchParams } from "react-router-dom";
 import { setSelectedLocation } from "../../../features/locationSearchSlice";
 import { useDispatch } from "react-redux";
 
 const CreateGeofence = () => {
-  const [searchParams] = useSearchParams(); // ADD THIS HOOK
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("detail");
   const [mapType, setMapType] = useState("street");
   const [activeTool, setActiveTool] = useState(null);
@@ -31,7 +31,7 @@ const CreateGeofence = () => {
     contactName: "",
     contactPhone: "",
     placeId: "",
-    markerColor: "#D52B1E",
+    markerColor: "#25689f", // ✅ Changed default color to blue theme
     showOn: [],
   });
 
@@ -95,7 +95,7 @@ const CreateGeofence = () => {
         contactName: "",
         contactPhone: "",
         placeId: "",
-        markerColor: "#D52B1E",
+        markerColor: "#25689f", // ✅ Reset to blue theme
         showOn: [],
       });
     }
@@ -109,47 +109,47 @@ const CreateGeofence = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
-      {/* Header - remains same */}
+      {/* Header - Reduced height and padding to match CreateRoute */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-4 h-[10vh] overflow-hidden relative z-40"
+        className="bg-white shadow-sm border-b border-gray-200 px-3 py-4 overflow-hidden relative z-40"
       >
-        {/* Header content remains same */}
+        {/* Header content */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={toggleSidebar}
-              className="lg:hidden flex items-center justify-center w-10 h-10 bg-[#D52B1E]/10 rounded-lg text-[#D52B1E] hover:bg-[#D52B1E]/20 transition-colors"
+              className="lg:hidden flex items-center justify-center w-8 h-8 bg-[#25689f]/10 rounded-md text-[#25689f] hover:bg-[#25689f]/20 transition-colors"
             >
-              <Menu size={20} />
+              <Menu size={16} />
             </motion.button>
 
-            <div className="p-2 bg-[#D52B1E]/10 rounded-lg">
-              <MapPin size={24} className="text-[#D52B1E]" />
+            <div className="p-1.5 bg-[#25689f]/10 rounded-md">
+              <MapPin size={18} className="text-[#25689f]" />
             </div>
             <div>
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
+              <h1 className="text-base sm:text-lg font-semibold text-gray-900">
                 {isEditMode ? "Edit Geofence" : "Create Geofence"}
               </h1>
               {isEditMode && geofenceId && (
-                <p className="text-sm text-gray-600">
-                  Editing Geofence ID: {geofenceId}
+                <p className="text-xs text-gray-500">
+                  ID: {geofenceId}
                 </p>
               )}
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleClose}
-              className="flex items-center px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200"
+              className="flex items-center px-3 py-2 cursor-pointer bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200"
             >
-              <X size={16} />
+              <X size={14} />
             </motion.button>
           </div>
         </div>
@@ -162,9 +162,9 @@ const CreateGeofence = () => {
         transition={{ duration: 0.4, delay: 0.1 }}
         className="relative"
       >
-        <div className="grid grid-cols-1 lg:grid-cols-12 h-[90vh]">
-          {/* Desktop Sidebar */}
-          <div className="hidden lg:block lg:col-span-4 xl:col-span-3 bg-white overflow-auto shadow-sm border-r border-gray-200 p-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 h-[91vh]">
+          {/* Desktop Sidebar - Reduced padding */}
+          <div className="hidden lg:block lg:col-span-4 xl:col-span-3 bg-white overflow-auto shadow-sm border-r border-gray-200">
             <SidebarContent
               activeTab={activeTab}
               setActiveTab={setActiveTab}
@@ -178,7 +178,7 @@ const CreateGeofence = () => {
             />
           </div>
 
-          {/* Mobile Sidebar - remains same but add urlCoordinates prop */}
+          {/* Mobile Sidebar */}
           <AnimatePresence>
             {isSidebarOpen && (
               <>
@@ -195,42 +195,40 @@ const CreateGeofence = () => {
                   animate={{ x: 0 }}
                   exit={{ x: -320 }}
                   transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                  className="lg:hidden fixed left-0 top-0 h-full w-[400px] bg-white shadow-2xl z-[10000] overflow-auto"
+                  className="lg:hidden fixed left-0 top-0 h-full w-[350px] bg-white shadow-2xl z-[10000] overflow-auto"
                 >
-                  <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-                    <h2 className="text-lg font-semibold text-gray-900">
+                  <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50">
+                    <h2 className="text-base font-medium text-gray-900">
                       Geofence Settings
                     </h2>
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={toggleSidebar}
-                      className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="p-1.5 rounded-md hover:bg-gray-200 transition-colors"
                     >
-                      <ChevronLeft size={20} className="text-gray-600" />
+                      <ChevronLeft size={18} className="text-gray-600" />
                     </motion.button>
                   </div>
 
-                  <div className="p-4">
-                    <SidebarContent
-                      activeTab={activeTab}
-                      setActiveTab={setActiveTab}
-                      detailForm={detailForm}
-                      setDetailForm={setDetailForm}
-                      advanceForm={advanceForm}
-                      setAdvanceForm={setAdvanceForm}
-                      geofenceData={geofenceData}
-                      handleSave={handleSave}
-                      handleCancel={handleCancel}
-                      isMobile={true}
-                    />
-                  </div>
+                  <SidebarContent
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    detailForm={detailForm}
+                    setDetailForm={setDetailForm}
+                    advanceForm={advanceForm}
+                    setAdvanceForm={setAdvanceForm}
+                    geofenceData={geofenceData}
+                    handleSave={handleSave}
+                    handleCancel={handleCancel}
+                    isMobile={true}
+                  />
                 </motion.div>
               </>
             )}
           </AnimatePresence>
 
-          {/* Map Section - pass urlCoordinates */}
+          {/* Map Section */}
           <div className="col-span-1 lg:col-span-8 xl:col-span-9 h-full overflow-hidden">
             <GeofenceMap
               mapType={mapType}
@@ -243,34 +241,17 @@ const CreateGeofence = () => {
         </div>
       </motion.div>
 
-      {/* Mobile Floating Action Button */}
-      <AnimatePresence>
-        {!isSidebarOpen && (
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={toggleSidebar}
-            className="lg:hidden fixed bottom-6 left-6 w-14 h-14 bg-[#D52B1E] text-white rounded-full shadow-lg flex items-center justify-center z-30 hover:bg-[#B8241A] transition-colors"
-          >
-            <Menu size={24} />
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile Status Bar */}
+      {/* Mobile Status Bar - Compact */}
       {geofenceData && (
         <motion.div
           initial={{ y: 100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="lg:hidden fixed bottom-20 left-4 right-4 bg-green-500 text-white p-3 rounded-lg shadow-lg z-30"
+          className="lg:hidden fixed bottom-16 left-3 right-3 bg-[#25689f] text-white p-2.5 rounded-md shadow-lg z-30"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-white rounded-full"></div>
-              <span className="text-sm font-medium">
+              <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+              <span className="text-xs font-medium">
                 ✅ {geofenceData.type} Geofence Ready
               </span>
             </div>
@@ -278,7 +259,7 @@ const CreateGeofence = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={toggleSidebar}
-              className="text-xs bg-white/20 px-3 py-1 rounded-full hover:bg-white/30 transition-colors"
+              className="text-xs bg-white/20 px-2 py-0.5 rounded-full hover:bg-white/30 transition-colors"
             >
               Settings
             </motion.button>
@@ -302,90 +283,105 @@ const SidebarContent = ({
   isMobile = false,
 }) => {
   return (
-    <>
-      {/* Tabs remain same */}
-      <div className="flex mb-6 space-x-1 bg-gray-100 rounded-lg p-1">
+    <div className="h-full flex flex-col">
+      {/* Tabs - Updated with blue theme and compact design */}
+      <div className="flex border-b border-gray-200 bg-gray-50 p-1 m-4 rounded-lg">
         <button
           onClick={() => setActiveTab("detail")}
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "detail"
-              ? "bg-white text-[#D52B1E] shadow-sm"
-              : "text-gray-600 hover:text-gray-800"
-          }`}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 ${activeTab === "detail"
+            ? "bg-white text-[#25689f] shadow-sm"
+            : "text-gray-600 hover:text-gray-800"
+            }`}
         >
           Detail
         </button>
         <button
           onClick={() => setActiveTab("advance")}
-          className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-            activeTab === "advance"
-              ? "bg-white text-[#D52B1E] shadow-sm"
-              : "text-gray-600 hover:text-gray-800"
-          }`}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all cursor-pointer duration-200 ${activeTab === "advance"
+            ? "bg-white text-[#25689f] shadow-sm"
+            : "text-gray-600 hover:text-gray-800"
+            }`}
         >
           Advance Options
         </button>
       </div>
 
-      {/* Tab Content - pass urlCoordinates to DetailTab */}
-      {activeTab === "detail" && (
-        <DetailTab detailForm={detailForm} setDetailForm={setDetailForm} />
-      )}
+      {/* Tab Content */}
+      <div className="flex-1 px-4 pb-4">
+        <AnimatePresence mode="wait">
+          {activeTab === "detail" && (
+            <motion.div
+              key="detail"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <DetailTab detailForm={detailForm} setDetailForm={setDetailForm} />
+            </motion.div>
+          )}
 
-      {activeTab === "advance" && (
-        <AdvanceTab advanceForm={advanceForm} setAdvanceForm={setAdvanceForm} />
-      )}
+          {activeTab === "advance" && (
+            <motion.div
+              key="advance"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <AdvanceTab advanceForm={advanceForm} setAdvanceForm={setAdvanceForm} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-      {/* Rest remains same */}
+      {/* Geofence Status - Updated with blue theme and compact design */}
       {geofenceData && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-2 p-4 bg-green-50 border border-green-200 rounded-lg"
+          className="mx-4 mb-4 p-3 bg-[#25689f]/10 border border-[#25689f]/20 rounded-lg"
         >
-          <h4 className="text-sm font-medium text-green-800 mb-2">
+          <h4 className="text-sm font-medium text-[#25689f] mb-1">
             ✅ Geofence Drawn
           </h4>
-          <p className="text-xs text-green-600">
+          <p className="text-xs text-[#1F557F]">
             Type: <span className="font-medium">{geofenceData.type}</span>
           </p>
           {geofenceData.area && (
-            <p className="text-xs text-green-600">
+            <p className="text-xs text-[#1F557F]">
               Area: <span className="font-medium">{geofenceData.area} km²</span>
             </p>
           )}
         </motion.div>
       )}
 
-      <div
-        className={`flex ${
-          isMobile ? "flex-col space-y-3" : "justify-end space-x-3"
-        } mt-2 pt-2 border-t border-gray-200`}
-      >
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleCancel}
-          className={`${
-            isMobile ? "w-full" : ""
-          } px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200`}
-        >
-          Cancel
-        </motion.button>
+      {/* Action Buttons - Enhanced and compact */}
+      <div className={`flex ${isMobile ? "flex-col space-y-3" : "flex-col space-y-3"} p-4 pt-0`}>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleSave}
-          className={`${
-            isMobile ? "w-full" : ""
-          } flex items-center justify-center px-6 py-2 bg-[#D52B1E] text-white rounded-lg hover:bg-[#B8241A] transition-colors duration-200`}
+          className={`${isMobile ? "w-full" : ""
+            } flex items-center justify-center cursor-pointer px-4 py-3 text-sm font-semibold bg-gradient-to-r from-[#25689f] to-[#1F557F] text-white rounded-xl hover:from-[#1F557F] hover:to-[#184567] transition-all duration-200 shadow-md hover:shadow-lg`}
         >
           <Save size={16} className="mr-2" />
           Save Geofence
         </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={handleCancel}
+          className={`${isMobile ? "w-full" : ""
+            } px-4 py-3 text-sm font-semibold cursor-pointer border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 bg-white shadow-sm hover:shadow-md`}
+        >
+          Cancel
+        </motion.button>
       </div>
-    </>
+    </div>
   );
 };
 
 export default CreateGeofence;
+

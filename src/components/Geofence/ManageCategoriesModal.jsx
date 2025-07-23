@@ -7,7 +7,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     categoryName: "",
     type: "authorization",
-    color: "#3B82F6",
+    color: "#25689f", // ✅ Changed default color to blue theme
     icon: "1",
   });
 
@@ -45,9 +45,9 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
     { id: "28", src: "/icons/28.png" },
   ];
 
-  // Sample existing categories
+  // Sample existing categories - ✅ Updated with blue theme colors
   const [existingCategories, setExistingCategories] = useState([
-    { id: 1, name: "CITY", type: "authorization", color: "#3B82F6", icon: "1" },
+    { id: 1, name: "CITY", type: "authorization", color: "#25689f", icon: "1" }, // ✅ Changed to blue
     {
       id: 2,
       name: "Black Spot",
@@ -60,7 +60,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
       id: 4,
       name: "TPPL Sites Sindh",
       type: "authorization",
-      color: "#8B5CF6",
+      color: "#1F557F", // ✅ Changed to dark blue
       icon: "4",
     },
   ]);
@@ -125,7 +125,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
     setFormData({
       categoryName: "",
       type: "authorization",
-      color: "#3B82F6",
+      color: "#25689f", // ✅ Reset to blue theme
       icon: "1",
     });
     setShowIconPicker(false);
@@ -137,7 +137,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
     setFormData({
       categoryName: category.name,
       type: category.type,
-      color: category.color || "#3B82F6",
+      color: category.color || "#25689f", // ✅ Default to blue theme
       icon: category.icon || "1",
     });
     setActiveTab("create");
@@ -166,7 +166,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-[300]">
+    <div className="fixed inset-0 flex items-center justify-center z-[802]">
       <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
 
       <motion.div
@@ -190,13 +190,13 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
             </button>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs - ✅ Updated with blue theme */}
           <div className="flex mt-4 space-x-1 bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => setActiveTab("create")}
               className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                 activeTab === "create"
-                  ? "bg-white text-[#D52B1E] shadow-sm"
+                  ? "bg-white text-[#25689f] shadow-sm" // ✅ Changed to blue theme
                   : "text-gray-600 hover:text-gray-800"
               }`}
             >
@@ -210,14 +210,14 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                 setFormData({
                   categoryName: "",
                   type: "authorization",
-                  color: "#3B82F6",
+                  color: "#25689f", // ✅ Reset to blue theme
                   icon: "1",
                 });
                 setShowIconPicker(false);
               }}
               className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                 activeTab === "manage"
-                  ? "bg-white text-[#D52B1E] shadow-sm"
+                  ? "bg-white text-[#25689f] shadow-sm" // ✅ Changed to blue theme
                   : "text-gray-600 hover:text-gray-800"
               }`}
             >
@@ -243,7 +243,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                     value={formData.categoryName}
                     onChange={handleInputChange}
                     placeholder="Enter category name"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] transition-colors" // ✅ Added blue focus
                   />
                 </div>
 
@@ -256,7 +256,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                     name="type"
                     value={formData.type}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] transition-colors" // ✅ Added blue focus
                   >
                     <option value="authorization">Authorization</option>
                     <option value="unauthorization">Unauthorization</option>
@@ -272,7 +272,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                   <button
                     type="button"
                     onClick={() => setShowIconPicker(!showIconPicker)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center justify-between"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] transition-colors" // ✅ Added blue focus
                   >
                     <div className="flex items-center space-x-2">
                       <img
@@ -299,7 +299,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                             onClick={() => handleIconSelect(icon.id)}
                             className={`p-2 rounded border-2 hover:bg-gray-50 transition-colors ${
                               formData.icon === icon.id
-                                ? "border-[#D52B1E] bg-red-50"
+                                ? "border-[#25689f] bg-[#25689f]/10" // ✅ Changed to blue theme
                                 : "border-gray-300"
                             }`}
                             title={`Icon ${icon.id}`}
@@ -330,20 +330,21 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                       name="color"
                       value={formData.color}
                       onChange={handleInputChange}
-                      className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+                      className="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] transition-colors" // ✅ Added blue focus
                     />
                     <input
                       type="text"
                       name="color"
                       value={formData.color}
                       onChange={handleInputChange}
-                      placeholder="#3B82F6"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      placeholder="#25689f" // ✅ Changed placeholder to blue
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] transition-colors" // ✅ Added blue focus
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
                     Click color box to open picker or enter hex code
                   </p>
+               
                 </div>
               </div>
 
@@ -382,14 +383,14 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                   </div>
                 </div>
               )}
-              {/* Action Buttons */}
+              {/* Action Buttons - ✅ Updated with blue theme */}
               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                 <button
                   onClick={() => {
                     setFormData({
                       categoryName: "",
                       type: "authorization",
-                      color: "#3B82F6",
+                      color: "#25689f", // ✅ Reset to blue theme
                       icon: "1",
                     });
                     setEditingCategory(null);
@@ -401,7 +402,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                 </button>
                 <button
                   onClick={handleSave}
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#D52B1E] border border-transparent rounded-lg hover:bg-[#B8241A] transition-colors flex items-center"
+                  className="px-4 py-2 text-sm font-medium text-white bg-[#25689f] border border-transparent rounded-lg hover:bg-[#1F557F] transition-colors flex items-center" // ✅ Changed to blue theme
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {editingCategory ? "Update Category" : "Save Category"}
@@ -465,7 +466,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleEdit(category)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="p-2 text-[#25689f] hover:bg-[#25689f]/10 rounded-lg transition-colors" // ✅ Changed to blue theme
                           title="Edit Category"
                         >
                           <Edit3 className="w-4 h-4" />

@@ -145,28 +145,7 @@
   color: #4b5563;
 }
 
-/* Fix for popup content white space */
-.custom-popup {
-  padding: 0 !important;
-  margin: 0 !important;
-  overflow: hidden !important;
-}
 
-.custom-popup .leaflet-popup-content-wrapper {
-  padding: 0 !important;
-  overflow: hidden !important;
-  border-radius: 8px !important;
-}
-
-.custom-popup .leaflet-popup-content {
-  margin: 0 !important;
-  padding: 0 !important;
-  width: 100% !important;
-}
-
-.custom-popup .leaflet-popup-tip-container {
-  margin-top: -1px !important;
-}
 
 .vehicle-popup {
   width: 100%;

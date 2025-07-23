@@ -50,11 +50,11 @@
   perspective: 1000px;
 }
 
-/* Reduce paint operations */
+/* Reduce paint operations
 .vehicle-card-container {
   transform: translateZ(0);
   backface-visibility: hidden;
-}
+} */
 
 /* GPU acceleration for animations */
 .transition-all {

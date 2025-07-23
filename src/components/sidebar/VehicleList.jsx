@@ -1,57 +1,10 @@
-import React, { useState, memo, useMemo, useCallback, useEffect } from "react";
+import React, { useState, memo, useCallback } from "react";
 import VehicleCard from "./VehicleCard";
 import { Car, ChevronDown } from "lucide-react";
-import { useDispatch } from "react-redux";
-import { setSelectedVehicle } from "../../features/mapInteractionSlice";
-import { FixedSizeList as List } from "react-window";
 import "../../styles/performance.css";
 
-// Hook for responsive height
-const useResponsiveHeight = () => {
-  const [height, setHeight] = useState(350);
-
-  useEffect(() => {
-    const updateHeight = () => {
-      const screenWidth = window.innerWidth;
-      let newHeight;
-      if (screenWidth < 640) {
-        // sm
-        newHeight = 400;
-      } else if (screenWidth < 768) {
-        // md
-        newHeight = 820;
-      } else if (screenWidth < 1024) {
-        // lg
-        newHeight = 500;
-      } else if (screenWidth > 1280) {
-        // xl
-        newHeight = 450;
-      } else {
-        // 2xl
-        newHeight = 450;
-      }
-
-      setHeight(newHeight);
-    };
-
-    updateHeight();
-    window.addEventListener("resize", updateHeight);
-
-    return () => window.removeEventListener("resize", updateHeight);
-  }, []);
-
-  return height;
-};
-
-const VehicleList = memo(({ carData }) => {
-  const [sortOption, setSortOption] = useState("nameAZ"); // Changed default to "nameAZ"
-  // const selectedVehicleId = useSelector(
-  //   (state) => state.mapInteraction.selectedVehicleId
-  // );
-  const dispatch = useDispatch();
-
-  // Use responsive height hook
-  const responsiveHeight = useResponsiveHeight();
+const VehicleList = memo(({ carData, sidebarHeight }) => {
+  const [sortOption, setSortOption] = useState("nameAZ");
 
   // Sort options
   const sortOptions = [
@@ -62,8 +15,8 @@ const VehicleList = memo(({ carData }) => {
     { value: "lastUpdate", label: "Sort by Last Update" },
   ];
 
-  // useMemo for sorting vehicles
-  const sortedVehicles = useMemo(() => {
+  // Sort vehicles based on selected option
+  const sortedVehicles = React.useMemo(() => {
     if (!carData || carData.length === 0) return [];
 
     let sorted = [...carData];
@@ -128,28 +81,12 @@ const VehicleList = memo(({ carData }) => {
     return sorted;
   }, [carData, sortOption]);
 
-  // useCallback for functions
-  const handleDeselectVehicle = useCallback(() => {
-    dispatch(setSelectedVehicle(null));
-  }, [dispatch]);
-
   const handleSortChange = useCallback((e) => {
     setSortOption(e.target.value);
   }, []);
 
-  const Row = ({ index, style }) => (
-    <div
-      style={{
-        ...style,
-        zIndex: 1000 - index, // Upper cards have higher z-index
-      }}
-    >
-      <VehicleCard car={sortedVehicles[index]} />
-    </div>
-  );
-
   return (
-    <div className="p-3 transition-opacity duration-300 opacity-100">
+    <div className="px-2 py-3 transition-opacity duration-300 opacity-100 h-full flex flex-col">
       <div className="font-bold mb-3 text-dark flex items-center justify-between">
         <span className="transition-all duration-300 transform translate-x-0 opacity-100">
           Vehicles
@@ -173,36 +110,21 @@ const VehicleList = memo(({ carData }) => {
               </option>
             ))}
           </select>
-          <ChevronDown 
-            size={16} 
-            className="absolute right-2.5 top-2.5 text-gray-400 pointer-events-none" 
+          <ChevronDown
+            size={16}
+            className="absolute right-2.5 top-2.5 text-gray-400 pointer-events-none"
           />
         </div>
       </div>
 
-      {/* Deselect button - Only show when a vehicle is selected */}
-      {/* <div className="mb-3 transition-all duration-200 transform translate-y-0 opacity-100">
-        <button
-          onClick={handleDeselectVehicle}
-          className={`text-primary font-bold text-sm hover:underline flex items-center p-1 transition-transform duration-200 hover:scale-105 active:scale-95 ${
-            selectedVehicleId ? "opacity-100" : "opacity-60"
-          }`}
-          disabled={!selectedVehicleId}
-        >
-          DESELECT VEHICLE
-        </button>
-      </div> */}
-
-      <div className="space-y-3">
+      {/* Vehicle List - Simplified without react-window */}
+      <div className="flex-1 overflow-y-auto">
         {sortedVehicles.length > 0 ? (
-          <List
-            height={responsiveHeight} // Use responsive height
-            itemCount={sortedVehicles.length}
-            itemSize={140}
-            itemData={sortedVehicles}
-          >
-            {Row}
-          </List>
+          <div className="space-y-2.5">
+            {sortedVehicles.map((car, index) => (
+              <VehicleCard key={car.car_id || index} car={car} />
+            ))}
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-8 text-center transition-opacity duration-500 opacity-100">
             <div className="transition-transform duration-500 transform scale-100">

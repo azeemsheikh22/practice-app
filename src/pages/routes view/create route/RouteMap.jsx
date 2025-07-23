@@ -1,44 +1,178 @@
 import React, { useRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Minus, Globe, Satellite, Maximize } from "lucide-react";
+import { useDispatch } from "react-redux";
+import {
+  Plus,
+  Minus,
+  Globe,
+  Satellite,
+  Maximize,
+  Copy,
+  MapPin,
+  Navigation,
+} from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
+import { setRouteCalculationData } from "../../../features/routeSlice";
+import { showAddLocationSuccessMessage } from "./mapMessages";
+import {
+  handleShowCoordinates,
+  handleCopyCoordinates,
+  geocodeLocation,
+  calculateMultiWaypointRoute,
+  initializeMapTileLayer,
+  createDraggableWaypointMarker,
+} from "./RouteMapUtils";
+// Internal styles for route interactions
+const routeStyles = `
+  /* Hide Leaflet Routing Machine default panels but NOT leaflet-bar */
+  .leaflet-routing-container {
+    display: none !important;
+  }
+  
+  .leaflet-routing-alternatives-container {
+    display: none !important;
+  }
+  
+  /* Route drag tooltip */
+  .route-drag-tooltip {
+    position: absolute;
+    background: rgba(37, 104, 159, 0.9);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    pointer-events: none;
+    z-index: 10000;
+    transform: translate(-50%, -100%);
+    margin-top: -10px;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(8px);
+  }
+  
+  .route-drag-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(37, 104, 159, 0.9);
+  }
+  
+  /* Route line interactions */
+  .leaflet-routing-container path {
+    cursor: grab !important;
+    stroke-width: 6;
+    transition: all 0.2s ease;
+  }
+  
+  .leaflet-routing-container path:hover {
+    stroke-width: 8 !important;
+    cursor: grab !important;
+    filter: drop-shadow(0 2px 6px rgba(37, 104, 159, 0.4));
+  }
+  
+  .leaflet-routing-line {
+    cursor: grab !important;
+    transition: all 0.2s ease;
+  }
+  
+  .leaflet-routing-line:hover {
+    cursor: grab !important;
+    filter: brightness(1.1) drop-shadow(0 0 5px rgba(37, 104, 159, 0.5)) !important;
+  }
+  
+  /* Waypoint marker interactions */
+  .leaflet-routing-container .leaflet-marker-icon {
+    transition: transform 0.2s ease;
+    cursor: grab;
+  }
+  
+  .leaflet-routing-container .leaflet-marker-icon:hover {
+    transform: scale(1.1);
+    cursor: grab;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+`;
 
 const RouteMap = ({
-  startLocation,
-  endLocation,
-  waypoints,
+  waypoints = [],
   onRouteCalculated,
+  onAddLocationToRoute,
+  onWaypointLocationChange,
 }) => {
+  const dispatch = useDispatch();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const [mapType, setMapType] = useState("street");
-  const [startMarker, setStartMarker] = useState(null);
-  const [endMarker, setEndMarker] = useState(null);
   const [waypointMarkers, setWaypointMarkers] = useState([]);
+  const [routeFitted, setRouteFitted] = useState(false);
   const [routeLayer, setRouteLayer] = useState(null);
+
+  // Context Menu State
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    lat: null,
+    lng: null,
+  });
 
   // Initialize map
   useEffect(() => {
     if (!mapInstanceRef.current && mapRef.current) {
+      // Inject route styles
+      if (!document.getElementById('route-styles')) {
+        const styleElement = document.createElement('style');
+        styleElement.id = 'route-styles';
+        styleElement.textContent = routeStyles;
+        document.head.appendChild(styleElement);
+      }
+
       const map = L.map(mapRef.current, {
         zoomControl: false,
         attributionControl: false,
-      }).setView([30.3753, 69.3451], 6); // Pakistan center
+      }).setView([30.3753, 69.3451], 6);
 
       mapInstanceRef.current = map;
+      map.tileLayer = initializeMapTileLayer(map, "street");
 
-      const tileLayer = L.tileLayer(
-        "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
-        {
-          minZoom: 3,
-          maxZoom: 20,
-          subdomains: ["mt0", "mt1", "mt2", "mt3"],
-          attribution: "© Google",
-        }
-      ).addTo(map);
+      map.getContainer().addEventListener("contextmenu", function (e) {
+        e.preventDefault();
+        return false;
+      });
 
-      map.tileLayer = tileLayer;
+      map.on("contextmenu", function (e) {
+        const { lat, lng } = e.latlng;
+        const { x, y } = e.containerPoint;
+        const mapContainer = map.getContainer();
+        const rect = mapContainer.getBoundingClientRect();
+
+        setContextMenu({
+          visible: true,
+          x: rect.left + x,
+          y: rect.top + y,
+          lat: lat,
+          lng: lng,
+        });
+      });
+
+      map.on("click", function () {
+        setContextMenu((prev) => ({ ...prev, visible: false }));
+      });
+
+      map.on("zoomstart movestart", function () {
+        setContextMenu((prev) => ({ ...prev, visible: false }));
+      });
     }
 
     return () => {
@@ -49,25 +183,107 @@ const RouteMap = ({
     };
   }, []);
 
+  // Mouse event handlers for drag feedback
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    const map = mapInstanceRef.current;
+    let dragTooltip = null;
+
+    // Add drag start feedback
+    const handleMouseDown = (e) => {
+      const target = e.originalEvent.target;
+      if (target && target.tagName === 'path' && target.classList.contains('leaflet-interactive')) {
+        // Create drag tooltip
+        dragTooltip = document.createElement('div');
+        dragTooltip.className = 'route-drag-tooltip';
+        dragTooltip.textContent = '🖱️ Drag to modify route';
+        dragTooltip.style.left = e.originalEvent.pageX + 'px';
+        dragTooltip.style.top = e.originalEvent.pageY + 'px';
+        document.body.appendChild(dragTooltip);
+      }
+    };
+
+    // Update tooltip position during drag
+    const handleMouseMove = (e) => {
+      if (dragTooltip) {
+        dragTooltip.style.left = e.originalEvent.pageX + 'px';
+        dragTooltip.style.top = e.originalEvent.pageY + 'px';
+      }
+    };
+
+    // Remove tooltip on drag end
+    const handleMouseUp = () => {
+      if (dragTooltip) {
+        document.body.removeChild(dragTooltip);
+        dragTooltip = null;
+      }
+    };
+
+    map.on('mousedown', handleMouseDown);
+    map.on('mousemove', handleMouseMove);
+    map.on('mouseup', handleMouseUp);
+
+    return () => {
+      if (dragTooltip && document.body.contains(dragTooltip)) {
+        document.body.removeChild(dragTooltip);
+      }
+      map.off('mousedown', handleMouseDown);
+      map.off('mousemove', handleMouseMove);
+      map.off('mouseup', handleMouseUp);
+    };
+  }, [routeLayer]);
+
+  // Context Menu Functions
+  const handleShowCoordinatesClick = () => {
+    setContextMenu(handleShowCoordinates(contextMenu, mapInstanceRef));
+  };
+
+  const handleCopyCoordinatesClick = async () => {
+    setContextMenu(await handleCopyCoordinates(contextMenu));
+  };
+
+  // Add Location to Route function
+  const handleAddLocationToRoute = () => {
+    if (contextMenu.lat && contextMenu.lng) {
+      const lat = parseFloat(contextMenu.lat.toFixed(6));
+      const lng = parseFloat(contextMenu.lng.toFixed(6));
+      const coordinatesText = `${lat}, ${lng}`;
+
+      if (onAddLocationToRoute) {
+        onAddLocationToRoute(coordinatesText);
+      }
+
+      showAddLocationSuccessMessage(coordinatesText);
+    }
+    setContextMenu((prev) => ({ ...prev, visible: false }));
+  };
+
+  // Handle marker drag end
+  const handleMarkerDragEnd = (waypointId, newLocation) => {
+    if (onWaypointLocationChange) {
+      onWaypointLocationChange(waypointId, newLocation);
+    }
+  };
+
+  // Hide context menu when clicking outside
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      if (!e.target.closest(".route-context-menu")) {
+        setContextMenu((prev) => ({ ...prev, visible: false }));
+      }
+    };
+
+    document.addEventListener("click", handleGlobalClick);
+    return () => document.removeEventListener("click", handleGlobalClick);
+  }, []);
+
   // Handle map type change
   const handleMapTypeChange = (type) => {
     setMapType(type);
     if (mapInstanceRef.current && mapInstanceRef.current.tileLayer) {
       mapInstanceRef.current.removeLayer(mapInstanceRef.current.tileLayer);
-
-      const tileUrl =
-        type === "satellite"
-          ? "https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
-          : "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
-
-      const newTileLayer = L.tileLayer(tileUrl, {
-        minZoom: 3,
-        maxZoom: 20,
-        subdomains: ["mt0", "mt1", "mt2", "mt3"],
-        attribution: "© Google",
-      }).addTo(mapInstanceRef.current);
-
-      mapInstanceRef.current.tileLayer = newTileLayer;
+      mapInstanceRef.current.tileLayer = initializeMapTileLayer(mapInstanceRef.current, type);
     }
   };
 
@@ -84,208 +300,202 @@ const RouteMap = ({
     }
   };
 
-  // Fit to bounds function
+  // Handle fit to bounds
   const handleFitToBounds = () => {
-    if (mapInstanceRef.current) {
-      const bounds = [];
-      
-      if (startMarker) bounds.push(startMarker.getLatLng());
-      if (endMarker) bounds.push(endMarker.getLatLng());
-      waypointMarkers.forEach(marker => bounds.push(marker.getLatLng()));
-
-      if (bounds.length > 0) {
-        const group = new L.featureGroup(bounds.map(latlng => L.marker(latlng)));
-        mapInstanceRef.current.fitBounds(group.getBounds(), {
-          padding: [20, 20],
-        });
-      } else {
-        mapInstanceRef.current.setView([30.3753, 69.3451], 6);
-      }
+    if (mapInstanceRef.current && waypointMarkers.length > 0) {
+      const group = new L.featureGroup(waypointMarkers);
+      mapInstanceRef.current.fitBounds(group.getBounds(), {
+        padding: [20, 20],
+      });
+    } else if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView([30.3753, 69.3451], 6);
     }
   };
 
-  // Create custom icons
-  const createCustomIcon = (color, text) => {
-    return L.divIcon({
-      className: 'custom-marker',
-      html: `
-        <div style="
-          background-color: ${color};
-          width: 30px;
-          height: 30px;
-          border-radius: 50% 50% 50% 0;
-          transform: rotate(-45deg);
-          border: 2px solid white;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        ">
-          <span style="
-            transform: rotate(45deg);
-            color: white;
-            font-weight: bold;
-            font-size: 12px;
-          ">${text}</span>
-        </div>
-      `,
-      iconSize: [30, 30],
-      iconAnchor: [15, 30],
-    });
-  };
-
-  // Geocode location (simplified - you might want to use a proper geocoding service)
-  const geocodeLocation = async (locationString) => {
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          locationString
-        )}&limit=1&countrycodes=pk`
-      );
-      const data = await response.json();
-      if (data && data.length > 0) {
-        return {
-          lat: parseFloat(data[0].lat),
-          lng: parseFloat(data[0].lon),
-        };
-      }
-    } catch (error) {
-      console.error("Geocoding error:", error);
-    }
-    return null;
-  };
-
-  // Update markers when locations change
+  // Update markers and route when waypoints change
   useEffect(() => {
-    const updateMarkers = async () => {
+    const updateMarkersAndRoute = async () => {
       if (!mapInstanceRef.current) return;
 
       // Clear existing markers
-      if (startMarker) {
-        mapInstanceRef.current.removeLayer(startMarker);
-        setStartMarker(null);
-      }
-      if (endMarker) {
-        mapInstanceRef.current.removeLayer(endMarker);
-        setEndMarker(null);
-      }
-      waypointMarkers.forEach(marker => {
+      waypointMarkers.forEach((marker) => {
         mapInstanceRef.current.removeLayer(marker);
       });
       setWaypointMarkers([]);
 
-      // Add start marker
-      if (startLocation) {
-        const coords = await geocodeLocation(startLocation);
+      // Clear existing route
+      if (routeLayer) {
+        mapInstanceRef.current.removeControl(routeLayer);
+        setRouteLayer(null);
+      }
+
+      // Check if waypoints array is empty or all locations are empty
+      const hasValidWaypoints =
+        waypoints &&
+        waypoints.length > 0 &&
+        waypoints.some((wp) => wp.location && wp.location.trim() !== "");
+
+      if (!hasValidWaypoints) {
+        dispatch(setRouteCalculationData(null));
+        if (onRouteCalculated) {
+          onRouteCalculated(null);
+        }
+        return;
+      }
+
+      // Filter waypoints with valid locations
+      const validWaypoints = waypoints.filter((wp) => {
+        if (!wp.location || !wp.location.trim()) return false;
+
+        // Check if it's coordinates
+        const coords = wp.location
+          .split(",")
+          .map((coord) => parseFloat(coord.trim()));
+        if (coords.length === 2 && !isNaN(coords[0]) && !isNaN(coords[1])) {
+          return true;
+        }
+
+        // For text locations, only process if they seem complete
+        return wp.location.length > 10;
+      });
+
+      // If no valid waypoints after filtering, clear everything
+      if (validWaypoints.length === 0) {
+        dispatch(setRouteCalculationData(null));
+        if (onRouteCalculated) {
+          onRouteCalculated(null);
+        }
+        return;
+      }
+
+      // If only 1 waypoint, show marker but no route
+      if (validWaypoints.length === 1) {
+        const waypoint = validWaypoints[0];
+        const coords = await geocodeLocation(waypoint.location);
+
         if (coords) {
-          const marker = L.marker([coords.lat, coords.lng], {
-            icon: createCustomIcon('#22c55e', 'S')
-          }).addTo(mapInstanceRef.current);
-          
-          marker.bindPopup(`<b>Start:</b> ${startLocation}`);
-          setStartMarker(marker);
-        }
-      }
-
-      // Add end marker
-      if (endLocation) {
-        const coords = await geocodeLocation(endLocation);
-        if (coords) {
-          const marker = L.marker([coords.lat, coords.lng], {
-            icon: createCustomIcon('#ef4444', 'E')
-          }).addTo(mapInstanceRef.current);
-          
-          marker.bindPopup(`<b>End:</b> ${endLocation}`);
-          setEndMarker(marker);
-        }
-      }
-
-      // Add waypoint markers
-      if (waypoints && waypoints.length > 0) {
-        const newWaypointMarkers = [];
-        for (let i = 0; i < waypoints.length; i++) {
-          if (waypoints[i]) {
-            const coords = await geocodeLocation(waypoints[i]);
-            if (coords) {
-              const marker = L.marker([coords.lat, coords.lng], {
-                icon: createCustomIcon('#3b82f6', (i + 1).toString())
-              }).addTo(mapInstanceRef.current);
-              
-              marker.bindPopup(`<b>Waypoint ${i + 1}:</b> ${waypoints[i]}`);
-              newWaypointMarkers.push(marker);
-            }
-          }
-        }
-        setWaypointMarkers(newWaypointMarkers);
-      }
-    };
-
-    updateMarkers();
-  }, [startLocation, endLocation, waypoints]);
-
-  // Calculate route when start and end locations are available
-  useEffect(() => {
-    const calculateRoute = async () => {
-      if (!startLocation || !endLocation || !mapInstanceRef.current) return;
-
-      try {
-        const startCoords = await geocodeLocation(startLocation);
-        const endCoords = await geocodeLocation(endLocation);
-
-        if (startCoords && endCoords) {
-          // Simple route calculation using OSRM (you can replace with your preferred routing service)
-          const response = await fetch(
-            `https://router.project-osrm.org/route/v1/driving/${startCoords.lng},${startCoords.lat};${endCoords.lng},${endCoords.lat}?overview=full&geometries=geojson`
+          const marker = createDraggableWaypointMarker(
+            waypoint,
+            coords,
+            true,
+            true,
+            mapInstanceRef.current,
+            handleMarkerDragEnd
           );
           
-          const data = await response.json();
-          
-          if (data.routes && data.routes.length > 0) {
-            const route = data.routes[0];
-            
-            // Remove existing route
-            if (routeLayer) {
-              mapInstanceRef.current.removeLayer(routeLayer);
-            }
-
-            // Add new route
-            const routeLine = L.geoJSON(route.geometry, {
-              style: {
-                color: '#3b82f6',
-                weight: 4,
-                opacity: 0.8,
-              }
-            }).addTo(mapInstanceRef.current);
-
-            setRouteLayer(routeLine);
-
-            // Fit map to route
-            mapInstanceRef.current.fitBounds(routeLine.getBounds(), {
-              padding: [20, 20],
-            });
-
-            // Call callback with route data
-            if (onRouteCalculated) {
-              onRouteCalculated({
-                distance: `${(route.distance / 1000).toFixed(1)} km`,
-                duration: `${Math.round(route.duration / 60)} min`,
-                geometry: route.geometry,
-              });
-            }
-          }
+          setWaypointMarkers([marker]);
         }
-      } catch (error) {
-        console.error("Route calculation error:", error);
+
+        dispatch(setRouteCalculationData(null));
+        if (onRouteCalculated) {
+          onRouteCalculated(null);
+        }
+        return;
+      }
+
+      const newMarkers = [];
+      const waypointCoords = [];
+
+      // Process each waypoint (only if 2 or more)
+      for (let i = 0; i < validWaypoints.length; i++) {
+        const waypoint = validWaypoints[i];
+        const coords = await geocodeLocation(waypoint.location);
+
+        if (coords) {
+          waypointCoords.push(coords);
+
+          const isStart = i === 0;
+          const isEnd = i === validWaypoints.length - 1;
+
+          const marker = createDraggableWaypointMarker(
+            waypoint,
+            coords,
+            isStart,
+            isEnd,
+            mapInstanceRef.current,
+            handleMarkerDragEnd
+          );
+          
+          newMarkers.push(marker);
+        }
+      }
+
+      setWaypointMarkers(newMarkers);
+
+      // Calculate route with Leaflet Routing Machine
+      if (waypointCoords.length >= 2) {
+        await calculateMultiWaypointRoute(
+          waypointCoords, 
+          routeLayer, 
+          mapInstanceRef, 
+          setRouteLayer, 
+          dispatch, 
+          setRouteCalculationData, 
+          onRouteCalculated
+        );
+      } else {
+        dispatch(setRouteCalculationData(null));
+        if (onRouteCalculated) {
+          onRouteCalculated(null);
+        }
+      }
+
+      // Auto-fit bounds only once when route is first calculated
+      if (!routeFitted && newMarkers.length > 0) {
+        const group = new L.featureGroup(newMarkers);
+        mapInstanceRef.current.fitBounds(group.getBounds(), {
+          padding: [20, 20],
+        });
+        setRouteFitted(true);
       }
     };
 
-    calculateRoute();
-  }, [startLocation, endLocation, onRouteCalculated]);
+    updateMarkersAndRoute();
+  }, [waypoints]);
+
+  // Reset routeFitted when waypoints change
+  useEffect(() => {
+    setRouteFitted(false);
+  }, [waypoints]);
 
   return (
     <div className="relative h-full">
       <div ref={mapRef} className="w-full h-full" />
-      
+
+      {/* Context Menu */}
+      {contextMenu.visible && (
+        <div
+          className="route-context-menu fixed bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-[10000]"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+            minWidth: "200px",
+          }}
+        >
+          <button
+            onClick={handleShowCoordinatesClick}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-[#25689f]/10 hover:text-[#25689f] flex items-center"
+          >
+            <MapPin size={16} className="mr-3 text-gray-500" />
+            Show Coordinates
+          </button>
+          <button
+            onClick={handleCopyCoordinatesClick}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-[#25689f]/10 hover:text-[#25689f] flex items-center"
+          >
+            <Copy size={16} className="mr-3 text-gray-500" />
+            Copy Coordinates
+          </button>
+          <button
+            onClick={handleAddLocationToRoute}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-[#25689f]/10 hover:text-[#25689f] flex items-center"
+          >
+            <Navigation size={16} className="mr-3 text-[#25689f]" />
+            Add to Route
+          </button>
+        </div>
+      )}
+
       {/* Map Type Toggle */}
       <div className="absolute top-3 left-3 z-[1000]">
         <div className="flex items-center space-x-1 bg-white/95 backdrop-blur-sm rounded-lg p-1 shadow-lg border border-gray-200">
@@ -295,7 +505,7 @@ const RouteMap = ({
             onClick={() => handleMapTypeChange("street")}
             className={`flex items-center cursor-pointer px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
               mapType === "street"
-                ? "bg-blue-500 text-white shadow-sm"
+                ? "bg-[#25689f] text-white shadow-sm"
                 : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
             }`}
           >
@@ -308,7 +518,7 @@ const RouteMap = ({
             onClick={() => handleMapTypeChange("satellite")}
             className={`flex items-center cursor-pointer px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
               mapType === "satellite"
-                ? "bg-blue-500 text-white shadow-sm"
+                ? "bg-[#25689f] text-white shadow-sm"
                 : "text-gray-600 hover:text-gray-800 hover:bg-gray-100"
             }`}
           >
@@ -321,7 +531,6 @@ const RouteMap = ({
       {/* Zoom Controls */}
       <div className="absolute top-3 right-3 z-[1000]">
         <div className="flex flex-col space-y-2">
-          {/* Zoom Buttons */}
           <div className="flex flex-col space-y-1 bg-white/95 backdrop-blur-sm rounded-lg p-1 shadow-lg border border-gray-200">
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -360,3 +569,4 @@ const RouteMap = ({
 };
 
 export default RouteMap;
+

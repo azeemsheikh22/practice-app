@@ -45,6 +45,8 @@ const routeSlice = createSlice({
     selectedRouteNames: [], // Array of selected route names
     routemap: [], // Filtered routes array
     routeFiltersApplied: false, // Flag to track if filters are applied
+    currentRoute: null, // Add this for current route being created
+    routeCalculationData: null, // Add this for route calculation results
   },
   reducers: {
     clearRoutes: (state) => {
@@ -94,6 +96,29 @@ const routeSlice = createSlice({
       state.selectedRouteNames = state.routes.map(route => route.routeName);
       state.routeFiltersApplied = false;
     },
+    // New reducers for route creation
+    setCurrentRoute: (state, action) => {
+      state.currentRoute = action.payload;
+    },
+    setRouteCalculationData: (state, action) => {
+      state.routeCalculationData = action.payload;
+    },
+    clearCurrentRoute: (state) => {
+      state.currentRoute = null;
+      state.routeCalculationData = null;
+    },
+    setRouteWaypoints: (state, action) => {
+      if (state.currentRoute) {
+        state.currentRoute.waypoints = action.payload;
+      }
+    },
+    
+    updateRouteCalculationData: (state, action) => {
+      state.routeCalculationData = {
+        ...state.routeCalculationData,
+        ...action.payload
+      };
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -132,7 +157,12 @@ export const {
   setSelectedRouteNames,
   applyRouteFilters,
   resetRouteFilters,
-  initializeRoutemap, // ✅ NEW EXPORT
+  initializeRoutemap,
+  setCurrentRoute,
+  setRouteCalculationData,
+  clearCurrentRoute,
+  setRouteWaypoints,
+  updateRouteCalculationData,
 } = routeSlice.actions;
 
 // Selectors
@@ -143,5 +173,11 @@ export const selectRoutesError = (state) => state.route.error;
 export const selectRoutemap = (state) => state.route.routemap;
 export const selectSelectedRouteNames = (state) => state.route.selectedRouteNames;
 export const selectRouteFiltersApplied = (state) => state.route.routeFiltersApplied;
+export const selectCurrentRoute = (state) => state.route.currentRoute;
+export const selectRouteCalculationData = (state) => state.route.routeCalculationData;
+export const selectRouteWaypoints = (state) => state.route.currentRoute?.waypoints || [];
+export const selectRouteDistance = (state) => state.route.routeCalculationData?.distance;
+export const selectRouteDuration = (state) => state.route.routeCalculationData?.duration;
 
 export default routeSlice.reducer;
+

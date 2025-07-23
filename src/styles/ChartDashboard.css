@@ -1,0 +1,70 @@
+/* React Grid Layout Styles */
+.react-grid-item {
+    transition: all 200ms ease;
+    transition-property: left, top;
+  }
+  
+  .react-grid-item.cssTransforms {
+    transition-property: transform;
+  }
+  
+  .react-grid-item > .react-resizable-handle {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    bottom: 0;
+    right: 0;
+    background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNiIgaGVpZ2h0PSI2IiB2aWV3Qm94PSIwIDAgNiA2IiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8ZG90cyBmaWxsPSIjOTk5IiBkPSJtMTUgMTJjMCAuNTUyLS40NDggMS0xIDFzLTEtLjQ0OC0xLTEgLjQ0OC0xIDEtMSAxIC40NDggMSAxem0wIDRjMCAuNTUyLS40NDggMS0xIDFzLTEtLjQ0OC0xLTEgLjQ0OC0xIDEtMSAxIC40NDggMSAxeiIvPgo8L3N2Zz4K');
+    background-position: bottom right;
+    padding: 0 3px 3px 0;
+    background-repeat: no-repeat;
+    background-origin: content-box;
+    box-sizing: border-box;
+    cursor: se-resize;
+  }
+  
+  .react-grid-item.react-grid-placeholder {
+    background: rgb(59 130 246 / 0.15);
+    border: 2px dashed rgb(59 130 246 / 0.4);
+    opacity: 0.2;
+    transition-duration: 100ms;
+    z-index: 2;
+    user-select: none;
+  }
+  
+  .react-grid-item.react-draggable-dragging {
+    transition: none;
+    z-index: 3;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  }
+  
+  .react-grid-item.react-resizable-resizing {
+    z-index: 1;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  /* Prevent overflow during drag */
+.layout {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Constrain dragging within container */
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 3;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  /* Prevent going outside container */
+  max-width: 100% !important;
+}
+
+/* Container bounds */
+.react-grid-layout {
+  position: relative;
+  overflow: hidden;
+}
+
+
+
+
+  

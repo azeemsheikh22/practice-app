@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 const ZoomControls = ({ onZoomIn, onZoomOut }) => {
   return (
-    <div className="absolute right-4 top-45 -translate-y-1/2 flex flex-col bg-white rounded shadow z-10">
+    <div className="absolute lg:right-4 right-3 top-47 lg:top-45 -translate-y-1/2 flex flex-col bg-white rounded shadow z-[700]">
       <motion.button
         className="p-2 border-b hover:bg-gray-100"
         onClick={onZoomIn}

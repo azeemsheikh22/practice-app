@@ -1,10 +1,3 @@
-.custom-tooltip {
-  color: black;
-  border-radius: 20px;
-  padding-left: 15px;
-  padding-right: 15px;
-}
-
 /* GEOFENCE STYLES - Using existing color scheme */
 
 /* Geofence Marker Icon */
@@ -253,11 +246,6 @@
   width: auto !important;
 }
 
-.geofence-popup .leaflet-popup-tip {
-  background: white !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-}
-
 .geofence-category-section {
   margin-bottom: 12px;
 }
@@ -312,5 +300,229 @@
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   padding: 4px;
   min-width: 180px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* tooltip popup Css */
+
+/* ✅ EXISTING TOOLTIP STYLES - Keep as is */
+.custom-tooltip {
+  color: black;
+  border-radius: 5px;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+/* Fix for popup content white space */
+.custom-popup {
+  margin-bottom: 14px;
+  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+/* ✅ HIDE DEFAULT LEAFLET POPUP STYLING */
+.custom-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.custom-popup .leaflet-popup-content {
+  margin: 0;
+  padding: 0;
+  width: 330px !important;
+}
+
+/* ✅ ENHANCED: Big & Visible Close Button */
+.custom-popup .leaflet-popup-close-button {
+  position: absolute !important;
+  top: 5px !important;
+  right: 5px !important;
+  width: 32px !important;
+  height: 32px !important;
+  font-size: 20px !important;
+  font-weight: bold !important;
+  color: black !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 1000 !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  border: none;
+  box-shadow: none;
+}
+
+/* ✅ YOUR CUSTOM POPUP STYLES */
+.popup-container {
+  font-family: Poppins, Arial, sans-serif;
+  width: 330px;
+  background: #fff;
+  border-radius: 5px;
+  overflow: hidden;
+  font-size: 12px;
+  position: relative;
+}
+
+.popup-top {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  padding-right: 45px; /* ✅ Extra space for close button */
+  border-bottom: 1px solid #3d3d3d;
+}
+
+.popup-icon img {
+  margin-right: 10px;
+  border-radius: 4px;
+}
+
+.popup-title-block {
+  flex-grow: 1;
+}
+
+.popup-title {
+  font-weight: 600;
+  font-size: 13px;
+  font-family: poppins;
+  color: #333;
+  margin-bottom: 1px;
+}
+
+.popup-subtitle {
+  font-size: 12px;
+  color: #444;
+}
+
+.popup-meta {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 9px;
+  font-size: 12px;
+  /* background-color: #f8f9fa; */
+}
+
+.popup-meta-left {
+  font-weight: 500;
+  color: #666;
+}
+
+.popup-meta-right {
+  font-weight: 500;
+  color: #007bff;
+}
+
+.popup-info {
+  padding: 2px 7px;
+  font-size: 11px;
+  color: #333;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.popup-info strong {
+  color: #000;
+}
+
+.popup-battery {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.battery-box {
+  width: 30px;
+  height: 12px;
+  background: #000;
+  position: relative;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.battery-fill {
+  height: 100%;
+  background: #00cc00;
+  transition: width 0.3s ease;
+}
+
+.battery-text {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.popup-buttons {
+  display: flex;
+  justify-content: space-around;
+  padding: 8px;
+  border-top: 1px solid #ccc;
+}
+
+.popup-btn {
+  color: #007bff;
+  border: none;
+  background: none;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.popup-btn:hover {
+  color: blue;
+  background-color: #e3f2fd;
+}
+
+.popup-btn:active {
+  transform: scale(0.95);
+}
+
+/* ✅ Responsive adjustments */
+@media (max-width: 480px) {
+  .popup-container {
+    width: 280px;
+  }
+
+  .custom-popup .leaflet-popup-content {
+    width: 280px !important;
+  }
+
+  .popup-top {
+    padding-right: 40px; /* ✅ Adjust for mobile */
+  }
+
+  .custom-popup .leaflet-popup-close-button {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 18px !important;
+  }
+
+  .popup-title {
+    font-size: 12px;
+  }
+
+  .popup-subtitle {
+    font-size: 11px;
+  }
+
+  .popup-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .popup-btn {
+    text-align: center;
+  }
+}
+
+@keyframes closeButtonPulse {
+  0%,
+  100% {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+  50% {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 4px rgba(255, 71, 87, 0.3);
+  }
 }

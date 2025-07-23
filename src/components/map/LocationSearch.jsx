@@ -3,9 +3,9 @@ import React, {
   useRef,
   useEffect,
   useCallback,
-  useMemo,
   forwardRef,
 } from "react";
+import { createPortal } from "react-dom";
 import { Search, MapPin, X, Loader } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { setGlobalSearchQuery } from "../../features/locationSearchSlice";
@@ -16,7 +16,7 @@ const LocationSearch = forwardRef(
       onLocationSelect,
       searchQuery,
       setSearchQuery,
-      onClose,
+      onClear,
       isMobile = false,
     },
     ref
@@ -24,15 +24,43 @@ const LocationSearch = forwardRef(
     const [suggestions, setSuggestions] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [showDropdown, setShowDropdown] = useState(false);
+    const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, width: 0 });
     const searchTimeoutRef = useRef(null);
     const dropdownRef = useRef(null);
     const inputRef = useRef(null);
+    const containerRef = useRef(null);
     const dispatch = useDispatch();
 
     // Expose input ref to parent
     React.useImperativeHandle(ref, () => ({
       focus: () => inputRef.current?.focus(),
     }));
+
+    // Calculate dropdown position
+    const updateDropdownPosition = useCallback(() => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + window.scrollY + 4,
+          left: rect.left + window.scrollX,
+          width: rect.width
+        });
+      }
+    }, []);
+
+    // Update position when dropdown shows
+    useEffect(() => {
+      if (showDropdown) {
+        updateDropdownPosition();
+        window.addEventListener('resize', updateDropdownPosition);
+        window.addEventListener('scroll', updateDropdownPosition);
+
+        return () => {
+          window.removeEventListener('resize', updateDropdownPosition);
+          window.removeEventListener('scroll', updateDropdownPosition);
+        };
+      }
+    }, [showDropdown, updateDropdownPosition]);
 
     // Memoized coordinate validation functions
     const isLatLongFormat = useCallback((query) => {
@@ -159,7 +187,7 @@ const LocationSearch = forwardRef(
           // Primary: Nominatim (OSM)
           try {
             const nominatimResults = await searchNominatim(query);
-            allResults.push(...nominatimResults);
+            allResults.push(...nominatimResults);g
           } catch (error) {
             console.error("Nominatim failed:", error);
           }
@@ -217,8 +245,9 @@ const LocationSearch = forwardRef(
     useEffect(() => {
       const handleClickOutside = (event) => {
         if (
-          dropdownRef.current &&
-          !dropdownRef.current.contains(event.target)
+          containerRef.current &&
+          !containerRef.current.contains(event.target) &&
+          (!dropdownRef.current || !dropdownRef.current.contains(event.target))
         ) {
           setShowDropdown(false);
         }
@@ -251,17 +280,12 @@ const LocationSearch = forwardRef(
       setShowDropdown(false);
       // Clear global search query as well
       dispatch(setGlobalSearchQuery(""));
-    }, [setSearchQuery, dispatch]);
-
-    // Optimized close handler
-    const handleClose = useCallback(() => {
-      clearSearch();
-      if (onClose) {
-        onClose();
+      if (onClear) {
+        onClear();
       }
-    }, [clearSearch, onClose]);
+    }, [setSearchQuery, dispatch, onClear]);
 
-    // NEW: Optimized input change handler with global search dispatch
+    // Optimized input change handler with global search dispatch
     const handleInputChange = useCallback(
       (e) => {
         const value = e.target.value;
@@ -279,20 +303,88 @@ const LocationSearch = forwardRef(
       }
     }, [suggestions.length]);
 
+    // Dropdown component
+    const DropdownContent = () => (
+      <div
+        ref={dropdownRef}
+        className="bg-white border border-gray-200 rounded-lg shadow-2xl max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200"
+        style={{
+          position: 'fixed',
+          top: dropdownPosition.top,
+          left: dropdownPosition.left,
+          width: Math.max(dropdownPosition.width, 295),
+          zIndex: 999999,
+          minWidth: '295px'
+        }}
+      >
+        {suggestions.length > 0 ? (
+          suggestions.map((location, index) => (
+            <div
+              key={location.id}
+              className="px-4 py-3 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-all duration-200 group"
+              onClick={() => handleLocationClick(location)}
+              style={{ animationDelay: `${index * 30}ms` }}
+            >
+              <div className="flex items-start">
+                <MapPin
+                  size={16}
+                  className={`mt-1 mr-3 flex-shrink-0 transition-all duration-200 group-hover:scale-110 ${location.isCoordinates
+                    ? "text-blue-500 group-hover:text-blue-600"
+                    : "text-gray-400 group-hover:text-gray-600"
+                    }`}
+                />
+                <div className="flex-grow min-w-0">
+                  <div
+                    className={`text-sm font-semibold truncate transition-colors duration-200 ${location.isCoordinates
+                      ? "text-blue-900 group-hover:text-blue-800"
+                      : "text-gray-900 group-hover:text-gray-800"
+                      }`}
+                  >
+                    {location.isCoordinates
+                      ? location.name
+                      : location.name.split(",")[0]}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1 line-clamp-2 group-hover:text-gray-600 transition-colors duration-200">
+                    {location.isCoordinates
+                      ? "Geographic Coordinates"
+                      : location.address}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          !isLoading && searchQuery.length >= 3 && (
+            <div className="px-4 py-4 text-sm text-gray-500 text-center">
+              <div className="flex flex-col items-center space-y-2">
+                <Search size={20} className="text-gray-300" />
+                <div>
+                  {isLatLongFormat(searchQuery)
+                    ? "Invalid coordinates format. Use: latitude, longitude"
+                    : `No locations found for "${searchQuery}"`}
+                </div>
+              </div>
+            </div>
+          )
+        )}
+      </div>
+    );
+
     return (
-      <div className="relative" ref={dropdownRef}>
-        {/* Optimized Search Input */}
-        <div className="flex items-center bg-white rounded-sm shadow-md overflow-hidden h-[42px] border border-gray-200 transition-all duration-200 hover:shadow-lg focus-within:shadow-lg focus-within:border-blue-300">
+      <div className="relative" ref={containerRef}>
+        {/* Desktop Optimized Search Input */}
+        <div className="flex items-center bg-white/95 backdrop-blur-sm rounded-sm overflow-hidden border border-white/30 transition-all duration-200 hover:bg-white hover:shadow-xl focus-within:bg-white focus-within:shadow-xl focus-within:border-blue-200 h-[28px] min-w-[380px]">
           <div className="flex items-center px-3 text-gray-500">
-            <Search size={18} />
+            <Search size={16} className="text-gray-600" />
           </div>
+
           <input
             ref={inputRef}
             type="text"
             value={searchQuery}
             onChange={handleInputChange}
             placeholder="Search for almost everything..."
-            className="h-full w-64 focus:outline-none text-sm text-gray-700 bg-transparent"
+            className="h-full flex-1 focus:outline-none text-[12px] text-gray-700 placeholder:text-gray-600 bg-transparent"
             onFocus={handleInputFocus}
             autoComplete="off"
             spellCheck="false"
@@ -300,75 +392,25 @@ const LocationSearch = forwardRef(
 
           <div className="flex items-center px-2">
             {isLoading && (
-              <Loader size={16} className="animate-spin text-gray-500 mr-1" />
+              <Loader size={14} className="animate-spin text-blue-500 mr-2" />
             )}
 
-            {/* Close search button */}
-            <button
-              type="button"
-              onClick={handleClose}
-              className="h-8 w-8 hover:bg-gray-100 rounded-full flex items-center justify-center transition-all duration-150 hover:scale-105 active:scale-95"
-              title="Close search"
-            >
-              <X size={16} className="text-gray-600" />
-            </button>
+            {/* Clear search button - only show if there's content */}
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="h-6 w-6 hover:bg-gray-100 cursor-pointer rounded-full flex items-center justify-center transition-all duration-150 hover:scale-110 active:scale-95 group"
+                title="Clear search"
+              >
+                <X size={12} className="text-gray-500 group-hover:text-gray-700" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Optimized Dropdown with better animations */}
-        {showDropdown && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-md shadow-xl z-50 max-h-80 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
-            {suggestions.map((location, index) => (
-              <div
-                key={location.id}
-                className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors duration-150"
-                onClick={() => handleLocationClick(location)}
-                style={{ animationDelay: `${index * 20}ms` }}
-              >
-                <div className="flex items-start">
-                  <MapPin
-                    size={16}
-                    className={`mt-1 mr-3 flex-shrink-0 transition-colors duration-150 ${
-                      location.isCoordinates ? "text-blue-500" : "text-gray-400"
-                    }`}
-                  />
-                  <div className="flex-grow min-w-0">
-                    <div
-                      className={`text-sm font-medium truncate transition-colors duration-150 ${
-                        location.isCoordinates
-                          ? "text-blue-900"
-                          : "text-gray-900"
-                      }`}
-                    >
-                      {location.isCoordinates
-                        ? location.name
-                        : location.name.split(",")[0]}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1 line-clamp-2">
-                      {location.isCoordinates
-                        ? "Geographic Coordinates"
-                        : location.address}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Optimized No Results Message */}
-        {showDropdown &&
-          !isLoading &&
-          searchQuery.length >= 3 &&
-          suggestions.length === 0 && (
-            <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-b-md shadow-lg z-50 animate-in fade-in duration-200">
-              <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                {isLatLongFormat(searchQuery)
-                  ? "Invalid coordinates format. Use: latitude, longitude"
-                  : `No locations found for "${searchQuery}"`}
-              </div>
-            </div>
-          )}
+        {/* Render dropdown using Portal */}
+        {showDropdown && createPortal(<DropdownContent />, document.body)}
       </div>
     );
   }
@@ -377,3 +419,4 @@ const LocationSearch = forwardRef(
 LocationSearch.displayName = "LocationSearch";
 
 export default LocationSearch;
+

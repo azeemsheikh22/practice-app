@@ -12,7 +12,7 @@ const IconLegendModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-[300]">
+    <div className="fixed inset-0 flex items-center justify-center z-[906]">
       {/* Black overlay with slight transparency */}
       <div
         className="absolute inset-0 bg-black/50"

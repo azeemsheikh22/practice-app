@@ -145,9 +145,10 @@ const ContextMenus = ({
               Find Nearest
             </button>
 
+            {/* ✅ DISABLED: Send to Garmin button */}
             <button
-              onClick={handleSendToGarmin}
-              className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              disabled
+              className="w-full flex items-center cursor-not-allowed gap-3 px-4 py-2 text-sm text-gray-400 bg-gray-100 opacity-50"
             >
               <svg
                 className="w-4 h-4 flex-shrink-0"
@@ -340,7 +341,7 @@ const ContextMenus = ({
               }
               className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
-              <svg
+                  <svg
                 className="w-4 h-4 flex-shrink-0"
                 fill="none"
                 stroke="currentColor"
@@ -640,14 +641,10 @@ const ContextMenus = ({
               Edit Place
             </button>
 
+            {/* ✅ DISABLED: Send Location to Garmin button */}
             <button
-              onClick={() =>
-                handleGeofenceMenuAction(
-                  "sendToGarmin",
-                  geofenceContextMenu.geofenceData
-                )
-              }
-              className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              disabled
+              className="w-full flex items-center cursor-not-allowed gap-3 px-4 py-2 text-sm text-gray-400 bg-gray-100 opacity-50"
             >
               <svg
                 className="w-4 h-4 flex-shrink-0"
@@ -669,3 +666,4 @@ const ContextMenus = ({
 };
 
 export default ContextMenus;
+

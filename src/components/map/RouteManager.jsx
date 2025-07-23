@@ -169,9 +169,6 @@ const RouteManager = ({ mapInstanceRef, onRouteContextMenu }) => {
 
   const clearRoutes = useCallback(() => {
     if (!mapInstanceRef.current) return;
-
-    console.log("🧹 Clearing routemap:", Object.keys(routeLayersRef.current));
-
     Object.entries(routeLayersRef.current).forEach(([key, routeGroup]) => {
       if (
         routeGroup?.polyline &&
@@ -194,11 +191,7 @@ const RouteManager = ({ mapInstanceRef, onRouteContextMenu }) => {
 
   const addRoutesToMap = useCallback(() => {
     if (!mapInstanceRef.current || !routemap?.length) return;
-
     clearRoutes();
-
-    console.log("🗺️ Adding routes to map:", routemap.length);
-
     routemap.forEach((route, index) => {
       const polyline = createRoutePolyline(route, index);
       const markers = createRouteMarkers(route);
@@ -220,11 +213,6 @@ const RouteManager = ({ mapInstanceRef, onRouteContextMenu }) => {
         route,
       };
     });
-
-    console.log(
-      "✅ Routes added successfully:",
-      Object.keys(routeLayersRef.current)
-    );
   }, [
     routemap,
     mapInstanceRef,
@@ -236,12 +224,6 @@ const RouteManager = ({ mapInstanceRef, onRouteContextMenu }) => {
   // ✅ Effect to watch toggle and routemap changes
   useEffect(() => {
     if (!mapInstanceRef.current) return;
-
-    console.log("🔄 RouteManager effect triggered:", {
-      showRoutes,
-      routemapLength: routemap?.length || 0,
-    });
-
     if (showRoutes && routemap?.length > 0) {
       addRoutesToMap();
     } else {
@@ -252,7 +234,6 @@ const RouteManager = ({ mapInstanceRef, onRouteContextMenu }) => {
   // ✅ Cleanup on unmount
   useEffect(() => {
     return () => {
-      console.log("🧹 RouteManager cleanup");
       clearRoutes();
     };
   }, [clearRoutes]);

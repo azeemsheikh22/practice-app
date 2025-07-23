@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Minus, Car, Truck, Package } from "lucide-react";
+import { Plus, Minus, Car, Truck } from "lucide-react";
 
 const ReplayTreeItem = ({
   item,
@@ -11,94 +11,86 @@ const ReplayTreeItem = ({
 }) => {
   const isGroup = item.Type === "Group";
 
-  // Get vehicle icon with conditional coloring
-  const getItemIcon = () => {
-    const iconClass = isSelected ? "text-white" : "";
-
+  const getItemIcon = (isSelected) => {
     if (isGroup) {
-      return null;
+      return null; // No icon for groups
     } else if (item.icon && item.icon.includes("truck.png")) {
-      return <Truck size={16} className={`text-blue-600 ${iconClass}`} />;
-    } else if (item.text && item.text.toLowerCase().includes("delivery")) {
-      return <Package size={16} className={`text-green-600 ${iconClass}`} />;
+      return <Truck size={14} className={` ${isSelected ? "text-white" : "text-green-600"}`} />;
     } else {
-      return <Car size={16} className={`text-teal-600 ${iconClass}`} />;
+      return <Car size={14} className={` ${isSelected ? "text-white" : "text-[#25689f]"}`} />; // Changed from text-teal-600 to text-[#25689f]
     }
   };
 
-  
-
   const handleItemClick = () => {
     if (!isGroup) {
-      // Agar same vehicle click kiya to deselect kar do
       if (isSelected) {
-        onSelect(null); // Deselect current vehicle
+        onSelect(null);
       } else {
-        onSelect(item); // Select new vehicle
+        onSelect(item);
       }
     }
   };
 
+  const handleToggleClick = (e) => {
+    e.stopPropagation();
+    onToggleExpand(item.id);
+  };
+
   return (
-    <div className={`ml-${level > 0 ? "4" : "1"} transition-all duration-200`}>
-      <div
-        className={`flex items-center p-2 rounded-md transition-all duration-200 cursor-pointer ${
-          isSelected
-            ? "bg-[#D52B1E] border-l-2 border-[#D52B1E]" // Full red background
-            : "hover:bg-gray-50 border-l-2 border-transparent"
-        }`}
-        onClick={handleItemClick}
-      >
-        {/* Expand/Collapse arrow for groups */}
-        {isGroup && item.children && item.children.length > 0 && (
+    <div
+      className={`flex items-center py-1.5 px-2 mx-1 rounded cursor-pointer transition-colors ${
+        isSelected
+          ? "bg-[#25689f] text-white" // Changed from bg-blue-500 to bg-[#25689f]
+          : isGroup
+          ? "hover:bg-gray-50"
+          : "hover:bg-[#25689f]/10" // Changed from hover:bg-blue-50 to hover:bg-[#25689f]/10
+      }`}
+      onClick={handleItemClick}
+      style={{ marginLeft: `${level * 12}px` }}
+    >
+      {/* Expand/Collapse button */}
+      {isGroup && item.children && item.children.length > 0 && (
+        <button
+          onClick={handleToggleClick}
+          className="mr-2 p-0.5 hover:bg-gray-200 rounded cursor-pointer"
+        >
+          {isExpanded ? (
+            <Minus size={12} className={isSelected ? "text-white" : "text-gray-600"} />
+          ) : (
+            <Plus size={12} className={isSelected ? "text-white" : "text-gray-600"} />
+          )}
+        </button>
+      )}
+
+      {/* Radio button for vehicles only */}
+      {!isGroup && (
+        <div className="mr-2 flex-shrink-0">
           <div
-            className="mr-2 cursor-pointer flex items-center justify-center w-5 h-5"
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleExpand(item.id);
-            }}
+            className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
+              isSelected
+                ? "border-white bg-white"
+                : "border-gray-400 bg-white"
+            }`}
           >
-            {isExpanded ? (
-              <Minus size={14} className="text-gray-500" />
-            ) : (
-              <Plus size={14} className="text-gray-500" />
-            )}
+            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-[#25689f]"></div>} {/* Changed from bg-blue-500 to bg-[#25689f] */}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Indent for child items */}
-        {level > 0 && !isGroup && <div className="w-5"></div>}
-
-        {/* Radio button for vehicles (single selection) */}
-        {!isGroup && (
-          <div className="mr-2 flex-shrink-0 w-5 h-5 flex items-center justify-center">
-            <div
-              className={`w-4 h-4 rounded-full border-2 transition-all duration-200 ${
-                isSelected
-                  ? "border-white bg-white" // White border when selected
-                  : "border-gray-400 bg-white"
-              }`}
-            >
-              {isSelected && (
-                <div className="w-full h-full rounded-full bg-[#D52B1E] scale-50"></div>
-              )}
-            </div>
+      {/* Icon for vehicles only */}
+      {!isGroup && (
+        <div className="flex-shrink-0 mr-2">
+          <div className={isSelected ? "text-white" : ""}>
+            {getItemIcon(isSelected)}
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Icon for vehicles only */}
-        {!isGroup && (
-          <div className="flex-shrink-0 mr-2 w-5 h-5 flex items-center justify-center">
-            <div className={isSelected ? "text-white" : ""}>
-              {getItemIcon()}
-            </div>
-          </div>
-        )}
-
-        {/* Label */}
+      {/* Text */}
+      <div className="flex-1 min-w-0">
         <div
-          className={`text-sm font-medium truncate max-w-[200px] ${
-            isSelected ? "text-white font-semibold" : "text-gray-900"
+          className={`text-[14px] font-normal truncate ${
+            isSelected ? "text-white" : "text-gray-900"
           }`}
           title={item.text}
         >

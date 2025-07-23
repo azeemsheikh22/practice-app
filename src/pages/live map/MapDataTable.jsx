@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   ChevronUp,
@@ -22,7 +22,12 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRowId, setSelectedRowId] = useState(null);
 
-  // ✅ NEW: Column visibility state
+  // ✅ VIRTUAL SCROLLING STATE
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(400);
+  const scrollContainerRef = useRef(null);
+
+  // ✅ Column visibility state
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState({
     name: true,
@@ -44,7 +49,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
   const dispatch = useDispatch();
   const carData = useSelector(selectCarData) || [];
 
-  // ✅ NEW: Column definitions for easy management
+  // ✅ Column definitions
   const columnDefinitions = [
     { key: "name", label: "Vehicle", width: "140px", isSticky: true },
     { key: "status", label: "Status", width: "100px" },
@@ -62,34 +67,35 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
     { key: "voltage", label: "Voltage", width: "80px" },
   ];
 
-  // ✅ NEW: Toggle column visibility
-  const toggleColumnVisibility = (columnKey) => {
+  // ✅ VIRTUAL SCROLLING CONSTANTS
+  const ROW_HEIGHT = 48;
+  const BUFFER_SIZE = 5; // Extra rows to render for smooth scrolling
+
+  // ✅ Toggle functions
+  const toggleColumnVisibility = useCallback((columnKey) => {
     setVisibleColumns((prev) => ({
       ...prev,
       [columnKey]: !prev[columnKey],
     }));
-  };
+  }, []);
 
-  // ✅ NEW: Select/Deselect all columns
-  const toggleAllColumns = () => {
-    const allVisible = Object.values(visibleColumns).every(
-      (visible) => visible
-    );
+  const toggleAllColumns = useCallback(() => {
+    const allVisible = Object.values(visibleColumns).every(visible => visible);
     const newState = {};
     Object.keys(visibleColumns).forEach((key) => {
       newState[key] = !allVisible;
     });
     setVisibleColumns(newState);
-  };
+  }, [visibleColumns]);
 
-  // ✅ UPDATED: Compact Location component - Single line with tooltip
-  const LocationDisplay = ({ location }) => {
+  // ✅ Location Display Component
+  const LocationDisplay = ({ location,status }) => {
     const [showFull, setShowFull] = useState(false);
     const maxLength = 25;
 
     if (!location || location.length <= maxLength) {
       return (
-        <span className="text-xs text-gray-700" title={location}>
+        <span className={`text-xs ${status === "Moving"?"text-[#00C951]":status === "Stop"?"text-[#FB2C36]":status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} title={location}>
           {location || "N/A"}
         </span>
       );
@@ -98,7 +104,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
     return (
       <div className="flex items-center space-x-1">
         <span
-          className="text-xs text-gray-700 cursor-pointer"
+          className={`text-xs ${status === "Moving"?"text-[#00C951]":status === "Stop"?"text-[#FB2C36]":status === "Idle"?"text-[#F0B100]":"text-gray-500"} cursor-pointer`}
           title={location}
           onClick={() => setShowFull(!showFull)}
         >
@@ -106,7 +112,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
         </span>
         <button
           onClick={() => setShowFull(!showFull)}
-          className="text-xs text-[#D52B1E] hover:text-[#B8241A] font-medium flex-shrink-0"
+          className={`text-xs ${status === "Moving"?"text-[#00C951]":status === "Stop"?"text-[#FB2C36]":status === "Idle"?"text-[#F0B100]":"text-gray-500"} font-medium flex-shrink-0`}
         >
           {showFull ? "Less" : "More"}
         </button>
@@ -114,34 +120,95 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
     );
   };
 
-  const transformedData = carData.map((car, index) => ({
-    id: car?.car_id ?? index + 1,
-    name: car?.carname ?? `Vehicle ${car?.car_id ?? index + 1}`,
-    status: car?.movingstatus ?? "Unknown",
-    location: car?.location ?? "Unknown",
-    lastUpdate: car?.gps_time ? new Date(car.gps_time).toLocaleString() : "N/A",
-    speed: typeof car?.speed === "number" ? `${car.speed} km/h` : "0 km/h",
-    mileage: typeof car?.mileage === "number" ? `${car.mileage} km` : "N/A",
-    signalStrength: car?.signalstrength ?? "N/A",
-    latitude: car?.latitude ?? "N/A",
-    longitude: car?.longitude ?? "N/A",
-    acc: typeof car?.acc === "number" ? (car.acc === 1 ? "On" : "Off") : "N/A",
-    engine: car?.engine === "1" ? "On" : car?.engine === "0" ? "Off" : "N/A",
-    head: car?.head ?? "N/A",
-    terminalKey: car?.terminalkey ?? "N/A",
-    voltage: car?.voltage ?? "N/A",
-    originalData: car,
-  }));
+  // ✅ Data transformation
+  const transformedData = useMemo(() => {
+    return carData.map((car, index) => ({
+      id: car?.car_id ?? index + 1,
+      name: car?.carname ?? `Vehicle ${car?.car_id ?? index + 1}`,
+      status: car?.movingstatus ?? "Unknown",
+      location: car?.location ?? "Unknown",
+      lastUpdate: car?.gps_time ? new Date(car.gps_time).toLocaleString() : "N/A",
+      speed: typeof car?.speed === "number" ? `${car.speed} km/h` : "0 km/h",
+      mileage: typeof car?.mileage === "number" ? `${car.mileage} km` : "N/A",
+      signalStrength: car?.signalstrength ?? "N/A",
+      latitude: car?.latitude ?? "N/A",
+      longitude: car?.longitude ?? "N/A",
+      acc: typeof car?.acc === "number" ? (car.acc === 1 ? "On" : "Off") : "N/A",
+      engine: car?.engine === "1" ? "On" : car?.engine === "0" ? "Off" : "N/A",
+      head: car?.head ?? "N/A",
+      terminalKey: car?.terminalkey ?? "N/A",
+      voltage: car?.voltage ?? "N/A",
+      originalData: car,
+    }));
+  }, [carData]);
 
-  const tableData = transformedData;
+  // ✅ Filtering and sorting
+  const sortedData = useMemo(() => {
+    let filtered = transformedData.filter((row) => {
+      if (!searchTerm.trim()) return true;
+      const term = searchTerm.toLowerCase();
+      return Object.values(row).some(
+        (value) =>
+          value !== undefined &&
+          value !== null &&
+          value.toString().toLowerCase().includes(term)
+      );
+    });
 
-  // ✅ UPDATED: Handle row click with toggle functionality
-  const handleRowClick = (row, event) => {
+    if (sortField) {
+      filtered = [...filtered].sort((a, b) => {
+        const aValue = a[sortField];
+        const bValue = b[sortField];
+        return sortDirection === "asc"
+          ? aValue > bValue ? 1 : -1
+          : aValue < bValue ? 1 : -1;
+      });
+    }
+
+    return filtered;
+  }, [transformedData, searchTerm, sortField, sortDirection]);
+
+  // ✅ VIRTUAL SCROLLING CALCULATIONS
+  const visibleRows = useMemo(() => {
+    const startIndex = Math.floor(scrollTop / ROW_HEIGHT);
+    const endIndex = Math.min(
+      startIndex + Math.ceil(containerHeight / ROW_HEIGHT) + BUFFER_SIZE,
+      sortedData.length
+    );
+    
+    const actualStartIndex = Math.max(0, startIndex - BUFFER_SIZE);
+    
+    return {
+      startIndex: actualStartIndex,
+      endIndex,
+      visibleData: sortedData.slice(actualStartIndex, endIndex),
+      offsetY: actualStartIndex * ROW_HEIGHT,
+    };
+  }, [scrollTop, containerHeight, sortedData]);
+
+  // ✅ Scroll handler
+  const handleScroll = useCallback((e) => {
+    setScrollTop(e.target.scrollTop);
+  }, []);
+
+  // ✅ Container height effect
+  useEffect(() => {
+    const updateHeight = () => {
+      if (scrollContainerRef.current) {
+        setContainerHeight(scrollContainerRef.current.clientHeight);
+      }
+    };
+
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, [isFullyOpen]);
+
+  // ✅ Event handlers
+  const handleRowClick = useCallback((row, event) => {
     if (event.target.tagName === "BUTTON" || event.target.closest("button")) {
       return;
     }
-
-    console.log("Row clicked:", row.originalData);
 
     if (selectedRowId === row.id) {
       setSelectedRowId(null);
@@ -150,42 +217,18 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
       setSelectedRowId(row.id);
       dispatch(setSelectedVehicle(row.id));
     }
-  };
+  }, [selectedRowId, dispatch]);
 
-  const handleSort = (field) => {
+  const handleSort = useCallback((field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
       setSortDirection("asc");
     }
-  };
+  }, [sortField, sortDirection]);
 
-  const filteredData = tableData.filter((row) => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
-    return Object.values(row).some(
-      (value) =>
-        value !== undefined &&
-        value !== null &&
-        value.toString().toLowerCase().includes(term)
-    );
-  });
-
-  const sortedData = [...filteredData].sort((a, b) => {
-    if (!sortField) return 0;
-    const aValue = a[sortField];
-    const bValue = b[sortField];
-    return sortDirection === "asc"
-      ? aValue > bValue
-        ? 1
-        : -1
-      : aValue < bValue
-      ? 1
-      : -1;
-  });
-
-  const getStatusColor = (status) => {
+  const getStatusColor = useCallback((status) => {
     switch (status.toLowerCase()) {
       case "moving":
       case "run":
@@ -199,9 +242,9 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
       default:
         return "bg-blue-500";
     }
-  };
+  }, []);
 
-  const getRowBackgroundColor = (status, rowId) => {
+  const getRowBackgroundColor = useCallback((status, rowId) => {
     if (selectedRowId === rowId) {
       return "bg-blue-100 border-l-4 border-blue-500";
     }
@@ -209,17 +252,17 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
     switch (status.toLowerCase()) {
       case "moving":
       case "run":
-        return "bg-green-50";
+        return "bg-white";
       case "idle":
-        return "bg-yellow-50";
+        return "bg-white";
       case "stop":
-        return "bg-red-50";
+        return "bg-white";
       case "offline":
-        return "bg-gray-50";
+        return "bg-white";
       default:
         return "";
     }
-  };
+  }, [selectedRowId]);
 
   const toggleFullOpen = () => setIsFullyOpen(!isFullyOpen);
 
@@ -229,39 +272,8 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
     onToggle();
   };
 
-  // ✅ UPDATED: Sortable header that respects visibility
-  const SortableHeader = ({
-    field,
-    label,
-    isSticky = false,
-    width = "auto",
-  }) => {
-    if (!visibleColumns[field]) return null;
-
-    return (
-      <th
-        scope="col"
-        className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap bg-gray-50 ${
-          isSticky ? "sticky left-0 z-20 shadow-md" : ""
-        }`}
-        style={{ width: width, minWidth: width }}
-        onClick={() => handleSort(field)}
-      >
-        <div className="flex items-center">
-          {label}
-          {sortField === field &&
-            (sortDirection === "asc" ? (
-              <ChevronUp size={14} className="ml-1" />
-            ) : (
-              <ChevronDown size={14} className="ml-1" />
-            ))}
-        </div>
-      </th>
-    );
-  };
-
-  // ✅ NEW: Render table cell based on column visibility
-  const renderTableCell = (row, columnKey, style = {}) => {
+  // ✅ Render table cell
+  const renderTableCell = useCallback((row, columnKey, style = {}) => {
     if (!visibleColumns[columnKey]) return null;
 
     const cellContent = {
@@ -287,106 +299,74 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
       location: (
         <td className="px-3 py-2 text-xs text-gray-500" style={style}>
           <div className="w-full overflow-hidden">
-            <LocationDisplay location={row.location} />
+            <LocationDisplay location={row.location} status={row?.status} />
           </div>
         </td>
       ),
       lastUpdate: (
-        <td className="px-3 py-2 text-xs text-gray-500 truncate" style={style}>
+        <td className={`px-3 py-2 text-xs ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"} truncate`} style={style}>
           {row.lastUpdate}
         </td>
       ),
       speed: (
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-500"
-          style={style}
-        >
+        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
           {row.speed}
         </td>
       ),
       mileage: (
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-500"
-          style={style}
-        >
+        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
           {row.mileage}
         </td>
       ),
       signalStrength: (
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-500"
-          style={style}
-        >
+        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
           {row.signalStrength}
         </td>
       ),
       latitude: (
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 truncate"
-          style={style}
-        >
+        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"} truncate`} style={style}>
           {row.latitude}
         </td>
       ),
       longitude: (
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 truncate"
-          style={style}
-        >
+        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"} truncate`} style={style}>
           {row.longitude}
         </td>
       ),
       acc: (
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-500"
-          style={style}
-        >
+        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
           {row.acc}
         </td>
       ),
       engine: (
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-500"
-          style={style}
-        >
+        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
           {row.engine}
         </td>
       ),
       head: (
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-500"
-          style={style}
-        >
+        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
           {row.head}
         </td>
       ),
       terminalKey: (
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-500 truncate"
-          style={style}
-        >
+        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"} truncate`} style={style}>
           {row.terminalKey}
         </td>
       ),
       voltage: (
-        <td
-          className="px-3 py-2 whitespace-nowrap text-xs text-gray-500"
-          style={style}
-        >
+        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
           {row.voltage}
         </td>
       ),
     };
 
     return cellContent[columnKey];
-  };
+  }, [visibleColumns, getStatusColor]);
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 transition-all duration-300 ease-in-out z-20 
-        ${
-          isOpen ? (isFullyOpen ? "h-[75vh]" : "h-[45vh]") : "h-0"
-        } bg-transparent`}
+      className={`fixed bottom-0 left-0 right-0 transition-all duration-300 ease-in-out z-[720] 
+        ${isOpen ? (isFullyOpen ? "h-[75vh]" : "h-[45vh]") : "h-0"} bg-transparent`}
     >
       <div className="h-full flex bg-transparent">
         <div
@@ -395,21 +375,26 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
         ></div>
 
         <div
-          className={`flex-grow bg-white w-[58%] overflow-hidden border-t border-gray-200 shadow-lg transition-all duration-300 ease-in-out ${
+          className={`flex-grow bg-white w-[58%] overflow-hidden border-t border-none transition-all duration-300 ease-in-out ${
             isOpen ? "opacity-100" : "opacity-0"
           }`}
         >
           {isOpen && (
             <div className="flex flex-col bg-white border-b border-gray-200">
-              {/* ✅ UPDATED: Header with column settings */}
+              {/* ✅ Header */}
               <div className="flex items-center justify-between px-3 py-1.5">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-dark text-sm">
                     Vehicle Data
                   </span>
                   <span className="bg-primary text-white text-xs px-2 py-0.5 rounded-full">
-                    {tableData.length}
+                    {sortedData.length}
                   </span>
+                  {sortedData.length !== transformedData.length && (
+                    <span className="text-xs text-gray-500">
+                      of {transformedData.length}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex-grow mx-4 hidden md:block">
@@ -419,7 +404,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
                     </div>
                     <input
                       type="text"
-                      className="block w-full pl-8 pr-3 py-1 border border-gray-200 rounded-md text-xs placeholder-gray-400 focus:outline-none "
+                      className="block w-full pl-8 pr-3 py-1 border border-gray-200 rounded-md text-xs placeholder-gray-400 focus:outline-none"
                       placeholder="Search vehicles..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -429,14 +414,14 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
                         className="absolute inset-y-0 right-0 pr-2 flex items-center cursor-pointer text-gray-400 hover:text-gray-600"
                         onClick={() => setSearchTerm("")}
                       >
-                        <X size={14} />
+                        <X size={17} />
                       </button>
                     )}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-1">
-                  {/* ✅ NEW: Column Settings Dropdown */}
+                  {/* ✅ Column Settings Dropdown */}
                   <div className="relative">
                     <button
                       className="p-1 hover:bg-gray-100 rounded-full cursor-pointer transition-colors duration-200 flex items-center gap-1"
@@ -446,7 +431,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
                       <Settings size={14} className="text-gray-600" />
                     </button>
 
-                    {/* ✅ NEW: Column Visibility Dropdown */}
+                    {/* ✅ Column Visibility Dropdown */}
                     {showColumnDropdown && (
                       <div className="absolute right-0 top-8 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
                         <div className="p-3 border-b border-gray-100">
@@ -466,7 +451,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
                         </div>
 
                         <div className="p-2 space-y-1">
-                          {columnDefinitions.map((column,index) => (
+                          {columnDefinitions.map((column, index) => (
                             <label
                               key={index}
                               className="flex items-center p-2 hover:bg-gray-50 rounded-md cursor-pointer"
@@ -477,7 +462,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
                                 onChange={() =>
                                   toggleColumnVisibility(column.key)
                                 }
-                                className="w-4 h-4 text-primary border-gray-300 rounded "
+                                className="w-4 h-4 text-primary border-gray-300 rounded"
                               />
                               <span className="ml-2 text-sm text-gray-700 flex items-center">
                                 {visibleColumns[column.key] ? (
@@ -558,54 +543,95 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
             </div>
           )}
 
-          {/* ✅ UPDATED: Table content with dynamic columns */}
+          {/* ✅ OPTIMIZED: Virtual Scrolling Table */}
           <div
-            className={`overflow-x-scroll overflow-y-scroll relative ${
-              isFullyOpen ? "h-[calc(78vh-60px)]" : "h-[calc(48vh-60px)]"
+            ref={scrollContainerRef}
+            className={`overflow-auto relative ${
+              isFullyOpen ? "h-[calc(86vh-120px)]" : "h-[calc(57vh-120px)]"
             }`}
             style={{
               willChange: "transform",
-              overflowAnchor: "none",
               scrollbarWidth: "thin",
-              msOverflowStyle: "scrollbar",
             }}
-            onClick={() => setShowColumnDropdown(false)} // Close dropdown when clicking table area
+            onScroll={handleScroll}
+            onClick={() => setShowColumnDropdown(false)}
           >
             {sortedData.length > 0 ? (
-              <table className="w-full min-w-full table-fixed divide-y divide-gray-200 transition-opacity duration-300 ease-in-out">
-                <thead className="bg-white sticky top-0 z-20">
-                  <tr>
-                    {columnDefinitions.map((column, index) => (
-                      <SortableHeader
-                        key={index}
-                        field={column.key}
-                        label={column.label}
-                        isSticky={column.isSticky}
-                        width={column.width}
-                      />
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedData.map((row,index) => (
-                    <tr
-                      key={index}
-                      className={`cursor-pointer transition-colors duration-200 ${getRowBackgroundColor(
-                        row.status,
-                        row.id
-                      )}`}
-                      onClick={(e) => handleRowClick(row, e)}
-                      title="Click to select and zoom to vehicle"
-                    >
-                      {columnDefinitions.map((column) =>
-                        renderTableCell(row, column.key, {
-                          width: column.width,
-                        })
-                      )}
+              <div style={{ position: 'relative' }}>
+                {/* ✅ STICKY HEADER */}
+                <table className="w-full min-w-full table-fixed divide-y divide-gray-200">
+                  <thead className="bg-gray-50 sticky top-0 z-20">
+                    <tr>
+                      {columnDefinitions.map((column, index) => {
+                        if (!visibleColumns[column.key]) return null;
+
+                        return (
+                          <th
+                            key={index}
+                            scope="col"
+                            className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap bg-gray-50 ${
+                              column.isSticky ? "sticky left-0 z-30 shadow-md" : ""
+                            }`}
+                            style={{ width: column.width, minWidth: column.width }}
+                            onClick={() => handleSort(column.key)}
+                          >
+                            <div className="flex items-center">
+                              {column.label}
+                              {sortField === column.key &&
+                                (sortDirection === "asc" ? (
+                                  <ChevronUp size={14} className="ml-1" />
+                                ) : (
+                                  <ChevronDown size={14} className="ml-1" />
+                                ))}
+                            </div>
+                          </th>
+                        );
+                      })}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                </table>
+
+                {/* ✅ VIRTUAL SCROLLING BODY */}
+                <div
+                  style={{
+                    height: sortedData.length * ROW_HEIGHT,
+                    position: 'relative',
+                  }}
+                >
+                  <div
+                    style={{
+                      transform: `translateY(${visibleRows.offsetY}px)`,
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                    }}
+                  >
+                    <table className="w-full min-w-full table-fixed">
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {visibleRows.visibleData.map((row, index) => (
+                          <tr
+                            key={`${visibleRows.startIndex + index}-${row.id}`}
+                            className={`cursor-pointer transition-colors duration-200 ${getRowBackgroundColor(
+                              row.status,
+                              row.id
+                            )} hover:bg-gray-50`}
+                            style={{ height: ROW_HEIGHT }}
+                            onClick={(e) => handleRowClick(row, e)}
+                            title="Click to select and zoom to vehicle"
+                          >
+                            {columnDefinitions.map((column, colIndex) =>
+                              renderTableCell(row, column.key, {
+                                width: column.width,
+                              })
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full py-8">
                 <SearchX size={40} className="text-gray-300 mb-3" />
@@ -637,3 +663,4 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
 };
 
 export default MapDataTable;
+

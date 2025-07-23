@@ -252,11 +252,13 @@ const geofenceSlice = createSlice({
     filteredMapGeofences: [],
     // ✅ NEW STATE: Show shapes for geofences
     showShapes: false, // By default uncheck
-    // ✅ NEW STATE: Current date range being used
+    selectedGeofenceShapes: [],
     currentDateRange: {
       datefrom: "",
       dateto: "",
     },
+    // ✅ NEW STATE: Selected category for drawing
+    selectedCategoryForDrawing: null,
   },
   reducers: {
     clearGeofences: (state) => {
@@ -318,6 +320,33 @@ const geofenceSlice = createSlice({
     setShowShapes: (state, action) => {
       state.showShapes = action.payload;
     },
+
+    // ✅ NEW REDUCER: Set selected category for drawing
+    setSelectedCategoryForDrawing: (state, action) => {
+      state.selectedCategoryForDrawing = action.payload;
+    },
+
+    // Add new reducer for toggling individual geofence shapes
+    toggleGeofenceShape: (state, action) => {
+      const geofenceId = action.payload;
+
+      if (!geofenceId) return;
+
+      // Check if this geofence is already in the array
+      const index = state.selectedGeofenceShapes.indexOf(geofenceId);
+
+      if (index === -1) {
+        // Add to array if not present
+        state.selectedGeofenceShapes.push(geofenceId);
+      }
+      // We don't remove - shapes stay visible once added
+    },
+
+    // Add reducer to clear all selected shapes
+    clearSelectedGeofenceShapes: (state) => {
+      state.selectedGeofenceShapes = [];
+    },
+
     // ✅ NEW REDUCER: Set current date range
     setCurrentDateRange: (state, action) => {
       state.currentDateRange = action.payload;
@@ -460,6 +489,16 @@ const geofenceSlice = createSlice({
       .addCase(fetchGeofenceCatList.fulfilled, (state, action) => {
         state.geofenceCatListLoading = false;
         state.geofenceCatList = action.payload;
+        
+        // ✅ Set default category to UnCategorized when categories are loaded
+        if (action.payload && action.payload.length > 0 && !state.selectedCategoryForDrawing) {
+          const unCategorized = action.payload.find(
+            (cat) => cat.Categoryname === "UnCategorized"
+          );
+          if (unCategorized) {
+            state.selectedCategoryForDrawing = unCategorized;
+          }
+        }
       })
       .addCase(fetchGeofenceCatList.rejected, (state, action) => {
         state.geofenceCatListLoading = false;
@@ -484,8 +523,12 @@ export const {
   applyGeofenceFilters,
   resetGeofenceFilters,
   clearGeofenceCatList,
-  setShowShapes, // ✅ NEW EXPORT
-  setCurrentDateRange, // ✅ NEW EXPORT
+  setShowShapes,
+  toggleGeofenceShape,
+  clearSelectedGeofenceShapes, 
+  setCurrentDateRange,
+  setSelectedCategoryForDrawing, // ✅ NEW ACTION
 } = geofenceSlice.actions;
 
 export default geofenceSlice.reducer;
+

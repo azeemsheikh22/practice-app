@@ -8,11 +8,12 @@ import logo3 from "../../assets/LogoColor.png";
 import menuIcon1 from "../../assets/menuICON1.png";
 import menuIcon2 from "../../assets/menuICON2.png";
 import menuIcon3 from "../../assets/menuICON3.png";
-import menuIcon4 from "../../assets/menuICON4.png";
+// import menuIcon4 from "../../assets/menuICON4.png";
 import menuIcon5 from "../../assets/menuICON5.png";
 import menuIcon6 from "../../assets/menuICON6.png";
 import menuIcon7 from "../../assets/menuICON7.png";
 import menuIcon8 from "../../assets/menuICON8.png";
+import menuIcon9 from "../../assets/menuICON9.png";
 
 const StartingPage = () => {
   const [firstName, setFirstName] = useState("");
@@ -52,13 +53,19 @@ const StartingPage = () => {
     navigate("/login");
   };
 
-  // Updated menu options with Routes card added and descriptions removed
+  // Updated menu options with Dashboard added as second option
   const options = [
     {
       label: "Live Map",
       icon: <img src={menuIcon1} className="w-8 h-8" alt="Live Map" />,
       color: "bg-blue-50 hover:bg-blue-100",
       link: "/live-map",
+    },
+    {
+      label: "Dashboard",
+      icon: <img src={menuIcon9} className="w-8 h-8" alt="Dashboard" />,
+      color: "bg-purple-50 hover:bg-purple-100",
+      link: "/dashboard",
     },
     {
       label: "Geofence",
@@ -78,12 +85,12 @@ const StartingPage = () => {
       color: "bg-yellow-50 hover:bg-yellow-100",
       link: "/replay",
     },
-    {
-      label: "Places",
-      icon: <img src={menuIcon4} className="w-8 h-8" alt="Places" />,
-      color: "bg-purple-50 hover:bg-purple-100",
-      link: "/places",
-    },
+    // {
+    //   label: "Places",
+    //   icon: <img src={menuIcon4} className="w-8 h-8" alt="Places" />,
+    //   color: "bg-purple-50 hover:bg-purple-100",
+    //   link: "/places",
+    // },
     {
       label: "Alerts",
       icon: <img src={menuIcon5} className="w-8 h-8" alt="Alerts" />,
@@ -205,7 +212,7 @@ const StartingPage = () => {
         </div>
       </div>
 
-      {/* Main Content - Now shows 8 items with smaller cards */}
+      {/* Main Content - Now shows 9 items with Dashboard as second */}
       <div className="flex-grow flex items-center justify-center py-8">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-7 max-w-6xl mx-auto">

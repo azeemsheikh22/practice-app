@@ -1,11 +1,14 @@
-import React from "react";
+import React, { useMemo, memo, useCallback, useRef, useState, useEffect } from "react";
 import TreeItem from "./TreeItem";
-import { Search, Layers, Car, Users, ChevronDown } from "lucide-react";
+import { Layers, Car, Users, ChevronDown } from "lucide-react";
+import { toast } from "react-hot-toast"; // Make sure to install this package if not already
 
-const TreeView = ({
+// Memoize TreeItem to prevent unnecessary re-renders
+const MemoizedTreeItem = memo(TreeItem);
+
+const TreeView = memo(({
   selectedFilter,
   searchQuery,
-  onSearchChange,
   onFilterChange,
   filteredTree,
   treeData,
@@ -16,85 +19,228 @@ const TreeView = ({
   onDeselectAll,
   selectedVehicleIds,
   isLoading = false,
+  sidebarHeight,
+  isMobile = false,
+  mobileHeight,
 }) => {
-  // Replace the handleFilterChange function
-  const handleFilterChange = (e) => {
-    const newFilter = e.target.value;
+  // Define maximum vehicle limit
+  const MAX_VEHICLE_LIMIT = 500;
 
-    // ✅ Don't clear any selections when switching filters
-    // Let the parent component handle selection restoration
+  // Memoize tree container height calculation
+  const treeContainerHeight = useMemo(() => {
+    if (isMobile) {
+      if (mobileHeight) {
+        if (typeof mobileHeight === "string" && mobileHeight.includes("px")) {
+          const heightValue = parseInt(mobileHeight);
+          const filterHeight = 70;
+          const buttonHeight = 70;
+          const padding = 20;
+          const treeHeight = heightValue - filterHeight - buttonHeight - padding;
+          return `${Math.max(treeHeight, 400)}px`;
+        }
+        return mobileHeight;
+      }
+      return "calc(100vh - 180px)";
+    }
+    if (!sidebarHeight) return "calc(100vh - 300px)";
+    const heightValue = parseInt(sidebarHeight);
+    const headerHeight = 80;
+    const buttonHeight = 60;
+    const padding = 40;
+    const treeHeight = heightValue - headerHeight - buttonHeight - padding;
+    const minHeight = 300;
+    const maxHeight = Math.max(treeHeight, minHeight);
+    return `${maxHeight}px`;
+  }, [sidebarHeight, isMobile, mobileHeight]);
 
+  // Memoize expensive group selection state calculations with caching
+  const memoizedGroupStates = useMemo(() => {
+    const stateCache = new Map();
+    const getAllDescendantIds = (item) => {
+      const ids = [];
+      const traverse = (node) => {
+        if (node.children && node.children.length > 0) {
+          node.children.forEach(child => {
+            ids.push(child.id);
+            traverse(child);
+          });
+        }
+      };
+      traverse(item);
+      return ids;
+    };
+    const getGroupSelectionState = (group) => {
+      if (stateCache.has(group.id)) {
+        return stateCache.get(group.id);
+      }
+      if (!group.children || group.children.length === 0) {
+        const state = { isSelected: selectedItems.includes(group.id), isIndeterminate: false };
+        stateCache.set(group.id, state);
+        return state;
+      }
+      const descendantIds = getAllDescendantIds(group);
+      const selectedDescendantCount = descendantIds.filter(id => selectedItems.includes(id)).length;
+      let state;
+      if (selectedDescendantCount === 0) {
+        state = { isSelected: false, isIndeterminate: false };
+      } else if (selectedDescendantCount === descendantIds.length) {
+        state = { isSelected: true, isIndeterminate: false };
+      } else {
+        state = { isSelected: false, isIndeterminate: true };
+      }
+      stateCache.set(group.id, state);
+      return state;
+    };
+    return getGroupSelectionState;
+  }, [selectedItems]);
+
+  // ✅ Performance: Cleanup timeouts
+  useEffect(() => {
+    return () => {
+      if (selectionTimeoutRef.current) {
+        clearTimeout(selectionTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Memoize filter change handler
+  const handleFilterChange = useCallback((e) => {
+    if (selectedItems.length > 0) {
+      onDeselectAll();
+    }
     onFilterChange(e);
-  };
+  }, [selectedItems.length, onDeselectAll, onFilterChange]);
 
-  // ✅ FIXED: Count only vehicles when in vehicle mode, only groups when in group mode
-  const getSelectedCount = () => {
+  // Memoize selected count calculation
+  const selectedCount = useMemo(() => {
     return selectedVehicleIds.length;
-  };
+  }, [selectedVehicleIds.length]);
 
-  const handleSelectAllVehicles = (isChecked) => {
+  // ✅ Performance: Debounce selection updates for bulk operations
+  const selectionTimeoutRef = useRef(null);
+  const pendingSelectionsRef = useRef([]);
+
+  const processPendingSelections = useCallback(() => {
+    if (pendingSelectionsRef.current.length === 0) return;
+    
+    const selections = [...pendingSelectionsRef.current];
+    pendingSelectionsRef.current = [];
+    
+    // Process in batch
+    selections.forEach(({ item, isChecked }) => {
+      onItemSelect(item, isChecked);
+    });
+  }, [onItemSelect]);
+
+  // Enhanced item selection handler with vehicle limit check and debouncing
+  const handleItemSelectWithLimit = useCallback((item, isChecked) => {
+    // If unchecking, always allow
+    if (!isChecked) {
+      onItemSelect(item, isChecked);
+      return;
+    }
+    
+    // Check if this is a vehicle or group
+    const isVehicle = item.Type === "Vehicle";
+    const isGroup = item.Type === "Group";
+    
+    // If it's a single vehicle, simple check
+    if (isVehicle && selectedVehicleIds.length >= MAX_VEHICLE_LIMIT) {
+      toast.error(`Cannot select more than ${MAX_VEHICLE_LIMIT} vehicles for optimal performance.`);
+      return;
+    }
+    
+    // If it's a group, we need to estimate how many vehicles would be added
+    if (isGroup && item.children?.length > 0) {
+      // Rough estimate of how many vehicles would be added
+      let vehicleCount = 0;
+      const countVehicles = (node) => {
+        if (node.Type === "Vehicle") {
+          vehicleCount++;
+        } else if (node.children?.length > 0) {
+          node.children.forEach(countVehicles);
+        }
+      };
+      
+      item.children.forEach(countVehicles);
+      
+      if (selectedVehicleIds.length + vehicleCount > MAX_VEHICLE_LIMIT) {
+        toast.error(`Cannot select more than ${MAX_VEHICLE_LIMIT} vehicles. This group would exceed the limit.`);
+        return;
+      }
+    }
+    
+    // ✅ Performance: Add to pending selections for batch processing
+    pendingSelectionsRef.current.push({ item, isChecked });
+    
+    // Clear existing timeout
+    if (selectionTimeoutRef.current) {
+      clearTimeout(selectionTimeoutRef.current);
+    }
+    
+    // Set new timeout for batch processing
+    selectionTimeoutRef.current = setTimeout(processPendingSelections, 50);
+  }, [selectedVehicleIds.length, processPendingSelections, MAX_VEHICLE_LIMIT]);
+
+  // Memoize vehicle selection handlers
+  const handleSelectAllVehicles = useCallback((isChecked) => {
     const vehicleItems = treeData.filter((item) => item.Type === "Vehicle");
+    
+    // Check if selecting all would exceed limit
+    if (isChecked && vehicleItems.length > MAX_VEHICLE_LIMIT) {
+      toast.error(`Cannot select more than ${MAX_VEHICLE_LIMIT} vehicles. There are ${vehicleItems.length} vehicles total.`);
+      return;
+    }
+    
     if (vehicleItems.length === 0) return;
-
     const allVehiclesItem = {
       id: "all-vehicles-container",
       Type: "Group",
       children: vehicleItems,
       valueId: null,
     };
-
     onItemSelect(allVehiclesItem, isChecked);
-  };
+  }, [treeData, onItemSelect, MAX_VEHICLE_LIMIT]);
 
-  const areAllVehiclesSelected = () => {
+  // Memoize all vehicles selection state
+  const areAllVehiclesSelected = useMemo(() => {
     const vehicleItems = treeData.filter((item) => item.Type === "Vehicle");
-    const selectedVehicleIds = selectedItems.filter((id) => {
+    const selectedVehicleItems = selectedItems.filter((id) => {
       const item = treeData.find((i) => i.id === id);
       return item && item.Type === "Vehicle";
     });
+    return vehicleItems.length > 0 && vehicleItems.length === selectedVehicleItems.length;
+  }, [treeData, selectedItems]);
 
-    return (
-      vehicleItems.length > 0 &&
-      vehicleItems.length === selectedVehicleIds.length
-    );
-  };
-
-  const renderTreeItem = (item, level = 0) => {
+  // Optimize renderTreeItem with useCallback and memoization
+  const renderTreeItem = useCallback((item, level = 0) => {
     const isGroup = item.Type === "Group";
     const isExpanded = expandedGroups[item.id];
-    const isSelected = selectedItems.includes(item.id);
-
-    // ✅ FIX: Check if group actually has children
-    const hasChildren =
-      isGroup &&
-      item.children &&
-      Array.isArray(item.children) &&
-      item.children.length > 0;
-
+    const { isSelected, isIndeterminate } = isGroup
+      ? memoizedGroupStates(item)
+      : { isSelected: selectedItems.includes(item.id), isIndeterminate: false };
+    const hasChildren = isGroup && item.children && Array.isArray(item.children) && item.children.length > 0;
     return (
       <React.Fragment key={item.id}>
-        <TreeItem
+        <MemoizedTreeItem
           item={item}
           level={level}
           isSelected={isSelected}
+          isIndeterminate={isIndeterminate}
           isExpanded={isExpanded}
-          hasChildren={hasChildren} // ✅ NEW: Pass hasChildren prop
+          hasChildren={hasChildren}
           onToggleExpand={onToggleGroup}
-          onSelect={onItemSelect}
+          onSelect={handleItemSelectWithLimit}
         />
-
-        {/* ✅ FIX: Only render children section if group has actual children */}
         {isGroup && hasChildren && isExpanded && (
-          <div className="ml-3 border-l border-gray-200 pl-2 overflow-hidden transition-all duration-200 ease-in-out">
+          <div className="ml-3 border-l border-gray-200 overflow-hidden transition-all duration-200 ease-in-out">
             {item.children.map((child) => renderTreeItem(child, level + 1))}
           </div>
         )}
-
-        {/* ✅ FIX: Only show loading for groups that should have children but are empty */}
         {isGroup &&
           isExpanded &&
           (!item.children || item.children.length === 0) &&
-          isLoading && ( // ✅ Only show loading if actually loading
+          isLoading && (
             <div className="ml-3 pl-2 py-1.5 transition-opacity duration-200 ease-in-out">
               <div className="flex items-center text-gray-400 text-sm">
                 <div className="w-3 h-3 border-2 border-gray-300 border-t-primary rounded-full mr-2 animate-spin" />
@@ -104,12 +250,30 @@ const TreeView = ({
           )}
       </React.Fragment>
     );
-  };
+  }, [expandedGroups, selectedItems, memoizedGroupStates, onToggleGroup, handleItemSelectWithLimit, isLoading]);
 
-  // ✅ FIXED: Vehicle items rendering
-  const renderVehicleItems = () => {
+  // ✅ Performance: Virtual scrolling for large datasets
+  const ITEM_HEIGHT = 48; // Approximate height of each tree item
+  const [virtualScrollStart, setVirtualScrollStart] = useState(0);
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 50 });
+  const scrollContainerRef = useRef(null);
+
+  const handleScroll = useCallback((e) => {
+    const scrollTop = e.target.scrollTop;
+    const containerHeight = e.target.clientHeight;
+    const startIndex = Math.floor(scrollTop / ITEM_HEIGHT);
+    const endIndex = Math.min(
+      startIndex + Math.ceil(containerHeight / ITEM_HEIGHT) + 5,
+      Math.max(0, filteredTree?.length || 0)
+    );
+    
+    setVisibleRange({ start: startIndex, end: endIndex });
+    setVirtualScrollStart(scrollTop);
+  }, [filteredTree?.length]);
+
+  // Memoize vehicle items rendering with virtual scrolling
+  const renderVehicleItems = useCallback(() => {
     const vehicleItems = treeData.filter((item) => item.Type === "Vehicle");
-
     if (isLoading || vehicleItems.length === 0) {
       return (
         <div className="text-center py-6">
@@ -120,12 +284,17 @@ const TreeView = ({
         </div>
       );
     }
-
     const filteredVehicles = vehicleItems.filter(
       (item) =>
         !searchQuery.trim() ||
         item.text.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    // ✅ Performance: Only render visible items for large datasets
+    const shouldUseVirtualScrolling = filteredVehicles.length > 100;
+    const visibleVehicles = shouldUseVirtualScrolling 
+      ? filteredVehicles.slice(visibleRange.start, visibleRange.end)
+      : filteredVehicles;
 
     return (
       <>
@@ -133,7 +302,7 @@ const TreeView = ({
           <input
             type="checkbox"
             id="select-all-vehicles"
-            checked={areAllVehiclesSelected()}
+            checked={areAllVehiclesSelected}
             onChange={(e) => handleSelectAllVehicles(e.target.checked)}
             className="sr-only"
           />
@@ -142,7 +311,7 @@ const TreeView = ({
             className="flex items-center cursor-pointer w-full"
           >
             <div className="mr-2 flex-shrink-0 w-4 h-4 flex items-center justify-center">
-              {areAllVehiclesSelected() ? (
+              {areAllVehiclesSelected ? (
                 <div className="transition-transform duration-200 ease-in-out transform scale-100">
                   <svg
                     width="16"
@@ -176,34 +345,60 @@ const TreeView = ({
               )}
             </div>
             <div className="text-dark font-medium text-sm">
-              Select All Vehicles
+              Select All Vehicles ({filteredVehicles.length})
             </div>
           </label>
         </div>
-
-        {filteredVehicles.map((item, index) => (
-          <div
-            key={item.id}
-            className="transition-all duration-200 ease-in-out transform translate-y-0 opacity-100"
-            style={{ transitionDelay: `${index * 30}ms` }}
-          >
-            <TreeItem
-              item={item}
-              isSelected={selectedItems.includes(item.id)}
-              onToggleExpand={onToggleGroup}
-              onSelect={onItemSelect}
-            />
+        
+        {shouldUseVirtualScrolling ? (
+          // Virtual scrolling container
+          <div style={{ height: `${filteredVehicles.length * ITEM_HEIGHT}px`, position: 'relative' }}>
+            <div style={{ 
+              transform: `translateY(${visibleRange.start * ITEM_HEIGHT}px)`,
+              position: 'absolute',
+              width: '100%'
+            }}>
+              {visibleVehicles.map((item, index) => (
+                <div
+                  key={item.id}
+                  style={{ height: `${ITEM_HEIGHT}px` }}
+                >
+                  <MemoizedTreeItem
+                    item={item}
+                    isSelected={selectedItems.includes(item.id)}
+                    isIndeterminate={false}
+                    onToggleExpand={onToggleGroup}
+                    onSelect={handleItemSelectWithLimit}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
-        ))}
+        ) : (
+          // Regular rendering for smaller datasets
+          visibleVehicles.map((item, index) => (
+            <div
+              key={item.id}
+              className="transition-all duration-200 ease-in-out transform translate-y-0 opacity-100"
+              style={{ transitionDelay: `${Math.min(index * 30, 300)}ms` }}
+            >
+              <MemoizedTreeItem
+                item={item}
+                isSelected={selectedItems.includes(item.id)}
+                isIndeterminate={false}
+                onToggleExpand={onToggleGroup}
+                onSelect={handleItemSelectWithLimit}
+              />
+            </div>
+          ))
+        )}
       </>
     );
-  };
+  }, [treeData, isLoading, searchQuery, areAllVehiclesSelected, handleSelectAllVehicles, selectedItems, onToggleGroup, handleItemSelectWithLimit, visibleRange]);
 
-  // ✅ FIXED: Driver items rendering - no loading loop
-  const renderDriverItems = () => {
+  // Memoize driver items rendering
+  const renderDriverItems = useCallback(() => {
     const actualDrivers = treeData.filter((item) => item.Type === "Driver");
-
-    // ✅ Show loading only when isLoading is true AND no drivers found
     if (isLoading && actualDrivers.length === 0) {
       return (
         <div className="text-center py-6">
@@ -214,8 +409,6 @@ const TreeView = ({
         </div>
       );
     }
-
-    // ✅ If no drivers found after loading, show no drivers message
     if (!isLoading && actualDrivers.length === 0) {
       return (
         <div className="text-center py-6">
@@ -231,31 +424,30 @@ const TreeView = ({
         </div>
       );
     }
-
-    // ✅ Show drivers if available
     const filteredDrivers = actualDrivers.filter(
       (driver) =>
         !searchQuery.trim() ||
         driver.text.toLowerCase().includes(searchQuery.toLowerCase())
     );
-
     return filteredDrivers.map((driver, index) => (
       <div
         key={driver.id}
         className="transition-all duration-200 ease-in-out transform translate-y-0 opacity-100"
         style={{ transitionDelay: `${index * 30}ms` }}
       >
-        <TreeItem
+        <MemoizedTreeItem
           item={driver}
           isSelected={selectedItems.includes(driver.id)}
+          isIndeterminate={false}
           onToggleExpand={onToggleGroup}
-          onSelect={onItemSelect}
+          onSelect={handleItemSelectWithLimit}
         />
       </div>
     ));
-  };
+  }, [treeData, isLoading, searchQuery, selectedItems, onToggleGroup, handleItemSelectWithLimit]);
 
-  const renderLoadingSkeleton = () => {
+  // Memoize loading skeleton
+  const renderLoadingSkeleton = useCallback(() => {
     return Array(5)
       .fill(0)
       .map((_, index) => (
@@ -272,11 +464,12 @@ const TreeView = ({
           )}
         </div>
       ));
-  };
+  }, []);
 
   return (
-    <div className="p-3 transition-opacity duration-300 ease-in-out opacity-100">
-      <div className="mb-3 relative transition-all duration-200 ease-in-out transform translate-y-0 opacity-100">
+    <div className="p-2 transition-opacity duration-300 ease-in-out opacity-100 h-full flex flex-col">
+      {/* Filter Section - Fixed */}
+      <div className="mb-3 relative transition-all duration-200 ease-in-out transform translate-y-0 opacity-100 flex-shrink-0">
         <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
           {selectedFilter === "group" ? (
             <Layers size={16} className="text-primary" />
@@ -300,9 +493,13 @@ const TreeView = ({
           <ChevronDown size={14} className="text-gray-500" />
         </div>
       </div>
-
-      {/* ✅ FIXED: Tree View with proper loading states */}
-      <div className="ml-1 mt-3 space-y-1 bg-white xl:max-h-[61vh] overflow-auto transition-opacity duration-300 ease-in-out opacity-100">
+      {/* Tree View with dynamic height */}
+      <div
+        ref={scrollContainerRef}
+        className="space-y-1 overflow-auto transition-opacity duration-300 ease-in-out opacity-100 flex-1"
+        style={{ height: treeContainerHeight }}
+        onScroll={selectedFilter === "vehicle" ? handleScroll : undefined}
+      >
         {selectedFilter === "group" ? (
           isLoading ? (
             renderLoadingSkeleton()
@@ -329,17 +526,24 @@ const TreeView = ({
           renderDriverItems()
         )}
       </div>
-
-      <div className="mt-3 transition-all duration-200 ease-in-out transform translate-y-0 opacity-100">
+      {/* Deselect Button - Fixed at bottom */}
+      <div className="mt-3 transition-all duration-200 ease-in-out flex-shrink-0">
         <button
           onClick={onDeselectAll}
-          className="w-full p-2 cursor-pointer bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors duration-200 ease-in-out font-medium text-sm border border-red-200"
+          className="w-full p-2 cursor-pointer bg-dark text-white rounded-md hover:bg-dark transition-colors duration-200 font-medium text-sm border border-dark"
         >
-          Deselect All ({getSelectedCount()})
+          Deselect All ({selectedCount})
+          {/* Show limit indicator */}
+          {selectedCount > 0 && (
+            <span className="ml-1 text-xs opacity-80">
+              {selectedCount}/{MAX_VEHICLE_LIMIT}
+            </span>
+          )}
         </button>
       </div>
     </div>
   );
-};
+});
 
 export default TreeView;
+

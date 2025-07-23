@@ -25,19 +25,20 @@ const GeofenceManager = ({
   const prevGeofencesRef = useRef({});
   const prevShowGeofencesRef = useRef(showGeofences);
   const geofenceShapesRef = useRef({});
-  
+
   // ✅ PERFORMANCE: Track map state for viewport culling
   const [mapBounds, setMapBounds] = useState(null);
   const [mapZoom, setMapZoom] = useState(7);
 
   const showShapes = useSelector((state) => state.geofence.showShapes);
+  const selectedGeofenceShapes = useSelector((state) => state.geofence.selectedGeofenceShapes);
 
   // ✅ PERFORMANCE: Memoized icon creation with caching
   const iconCache = useRef(new Map());
-  
+
   const createGeofenceIcon = useCallback((iconName) => {
     if (!iconName) return null;
-    
+
     // Check cache first
     if (iconCache.current.has(iconName)) {
       return iconCache.current.get(iconName);
@@ -85,9 +86,9 @@ const GeofenceManager = ({
       const lat = parseFloat(latitude);
       const lng = parseFloat(longitude);
 
-      if (isNaN(lat) || isNaN(lng) || 
-          lat < -90 || lat > 90 || 
-          lng < -180 || lng > 180) {
+      if (isNaN(lat) || isNaN(lng) ||
+        lat < -90 || lat > 90 ||
+        lng < -180 || lng > 180) {
         return null;
       }
 
@@ -96,10 +97,10 @@ const GeofenceManager = ({
       switch (ShapeType?.toLowerCase()) {
         case "circle":
           if (!radius) return null;
-          
+
           let radiusValue = parseFloat(radius);
           if (isNaN(radiusValue) || radiusValue <= 0) return null;
-          
+
           radiusValue = Math.min(Math.max(radiusValue, 1), 100000);
 
           return L.circle([lat, lng], {
@@ -116,7 +117,7 @@ const GeofenceManager = ({
 
           try {
             let coordinates;
-            
+
             if (Polygonlatlng.includes(',') && !Polygonlatlng.includes(';')) {
               // Format: "lat1 lng1,lat2 lng2,lat3 lng3"
               coordinates = Polygonlatlng.split(",")
@@ -127,8 +128,8 @@ const GeofenceManager = ({
                   const coordLng = parseFloat(parts[1]);
 
                   if (isNaN(coordLat) || isNaN(coordLng) ||
-                      coordLat < -90 || coordLat > 90 ||
-                      coordLng < -180 || coordLng > 180) {
+                    coordLat < -90 || coordLat > 90 ||
+                    coordLng < -180 || coordLng > 180) {
                     throw new Error(`Invalid coordinate: ${coord}`);
                   }
 
@@ -142,8 +143,8 @@ const GeofenceManager = ({
                   const [coordLat, coordLng] = coord.split(",").map(parseFloat);
 
                   if (isNaN(coordLat) || isNaN(coordLng) ||
-                      coordLat < -90 || coordLat > 90 ||
-                      coordLng < -180 || coordLng > 180) {
+                    coordLat < -90 || coordLat > 90 ||
+                    coordLng < -180 || coordLng > 180) {
                     throw new Error(`Invalid coordinate: ${coord}`);
                   }
 
@@ -167,7 +168,7 @@ const GeofenceManager = ({
 
         case "rectangle":
           if (!radius) return null;
-          
+
           let rectRadiusValue = parseFloat(radius);
           if (isNaN(rectRadiusValue) || rectRadiusValue <= 0) return null;
 
@@ -236,8 +237,8 @@ const GeofenceManager = ({
     const lng = parseFloat(longitude);
 
     if (isNaN(lat) || isNaN(lng) ||
-        lat < -90 || lat > 90 || 
-        lng < -180 || lng > 180) return null;
+      lat < -90 || lat > 90 ||
+      lng < -180 || lng > 180) return null;
 
     return [lat, lng];
   }, []);
@@ -253,10 +254,10 @@ const GeofenceManager = ({
   // ✅ PERFORMANCE: Viewport-based filtering for large datasets
   const filteredGeofences = useMemo(() => {
     if (!geofences || !Array.isArray(geofences)) return [];
-    
-    let filtered = geofences.filter(geofence => 
-      geofence.id && 
-      geofence.chkShowOnMap === "true" && 
+
+    let filtered = geofences.filter(geofence =>
+      geofence.id &&
+      geofence.chkShowOnMap === "true" &&
       geofence.icon
     );
 
@@ -276,7 +277,7 @@ const GeofenceManager = ({
     if (!mapInstanceRef.current) return;
 
     const map = mapInstanceRef.current;
-    
+
     const updateMapState = debounce(() => {
       setMapBounds(map.getBounds());
       setMapZoom(map.getZoom());
@@ -295,8 +296,14 @@ const GeofenceManager = ({
   // ✅ PERFORMANCE: Debounced shapes visibility handler
   const debouncedHandleShapesVisibility = useMemo(
     () => debounce((map) => {
-      Object.values(geofenceShapesRef.current).forEach((shape) => {
-        if (showShapes) {
+      Object.entries(geofenceShapesRef.current).forEach(([geofenceId, shape]) => {
+        const shouldShowShape =
+          // Show if global shapes are enabled
+          showShapes ||
+          // OR if this specific geofence is in the selected shapes array
+          selectedGeofenceShapes.includes(parseInt(geofenceId));
+
+        if (shouldShowShape) {
           if (!map.hasLayer(shape)) {
             shape.addTo(map);
           }
@@ -307,7 +314,7 @@ const GeofenceManager = ({
         }
       });
     }, 50),
-    [showShapes]
+    [showShapes, selectedGeofenceShapes] // Add selectedGeofenceShapes to dependencies
   );
 
   // ✅ PERFORMANCE: Optimized main update effect with batching
@@ -504,13 +511,13 @@ const GeofenceManager = ({
       delete window.viewGeofenceMetrics;
     };
   }, [
-    mapInstanceRef, 
-    filteredGeofences, 
-    showGeofences, 
-    createGeofenceIcon, 
-    createGeofenceShape, 
-    generateGeofencePopupContent, 
-    getCoordinates, 
+    mapInstanceRef,
+    filteredGeofences,
+    showGeofences,
+    createGeofenceIcon,
+    createGeofenceShape,
+    generateGeofencePopupContent,
+    getCoordinates,
     hasGeofenceChanged,
     onGeofenceContextMenu
   ]);
@@ -519,7 +526,7 @@ const GeofenceManager = ({
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     debouncedHandleShapesVisibility(mapInstanceRef.current);
-  }, [showShapes, debouncedHandleShapesVisibility]);
+  }, [showShapes, selectedGeofenceShapes, debouncedHandleShapesVisibility]); // Add selectedGeofenceShapes
 
   // ✅ PERFORMANCE: Optimized cleanup on unmount
   useEffect(() => {

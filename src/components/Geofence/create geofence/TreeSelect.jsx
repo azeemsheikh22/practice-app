@@ -342,47 +342,38 @@ const TreeSelect = ({
       {/* Select Button */}
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full min-h-[42px] px-3 py-2 border rounded-lg cursor-pointer transition-all duration-200 ${
+        className={`w-full min-h-[40px] px-3 py-2 border rounded-lg cursor-pointer transition-all duration-200 ${
           isOpen
-            ? "border-[#D52B1E] ring-2 ring-[#D52B1E]/20 bg-white"
-            : "border-gray-300 hover:border-[#D52B1E]/50 bg-white hover:bg-gray-50"
+            ? "border-[#1e4a6f] ring-2 ring-[#1e4a6f]/20 bg-white"
+            : "border-gray-300 hover:border-[#1e4a6f]/50 bg-white hover:bg-gray-50"
         }`}
       >
         <div className="flex items-center justify-between">
           <div className="flex-1 flex flex-wrap gap-1">
             {selectedGroups.length === 0 ? (
               <div className="flex items-center">
-                <img
-                  src={icon1}
-                  alt="group"
-                  className="w-4 h-4 mr-2 opacity-60"
-                />
+          
                 <span className="text-gray-500 text-sm">{placeholder}</span>
               </div>
             ) : selectedGroups.length <= 2 ? (
               selectedGroups.map((group) => (
                 <span
                   key={group.id}
-                  className="inline-flex items-center bg-[#D52B1E]/10 text-[#D52B1E] text-xs px-2.5 py-1 rounded-full max-w-[120px] border border-[#D52B1E]/20"
+                  className="inline-flex items-center bg-[#1e4a6f]/10 text-[#1e4a6f] text-xs px-2.5 py-1 rounded-full max-w-[120px] border border-[#1e4a6f]/20"
                 >
-                  <img
-                    src={icon1}
-                    alt="group"
-                    className="w-2.5 h-2.5 mr-1 flex-shrink-0"
-                  />
+
                   <span className="truncate font-medium">{group.text}</span>
                   <button
                     onClick={(e) => removeSelectedGroup(group.id, e)}
-                    className="ml-1.5 hover:bg-[#D52B1E]/20 rounded-full p-0.5 flex-shrink-0 transition-colors duration-150"
+                    className="ml-1.5 hover:bg-[#1e4a6f]/20 rounded-full p-0.5 flex-shrink-0 transition-colors duration-150"
                   >
-                    <X size={10} className="text-[#D52B1E]" />
+                    <X size={10} className="text-[#1e4a6f]" />
                   </button>
                 </span>
               ))
             ) : (
               <div className="flex items-center">
-                <div className="flex items-center bg-[#D52B1E]/10 text-[#D52B1E] text-xs px-2.5 py-1 rounded-full border border-[#D52B1E]/20">
-                  <img src={icon1} alt="group" className="w-2.5 h-2.5 mr-1" />
+                <div className="flex items-center bg-[#1e4a6f]/10 text-[#1e4a6f] text-xs px-2.5 py-1 rounded-full border border-[#1e4a6f]/20">
                   <span className="font-medium">
                     {selectedGroups.length} groups selected
                   </span>
@@ -395,7 +386,7 @@ const TreeSelect = ({
             {selectedGroups.length > 0 && (
               <button
                 onClick={clearAll}
-                className="text-gray-400 hover:text-[#D52B1E] hover:bg-[#D52B1E]/10 p-1.5 rounded-md transition-all duration-150"
+                className="text-gray-400 hover:text-[#1e4a6f] hover:bg-[#1e4a6f]/10 p-1.5 rounded-md transition-all duration-150"
                 title="Clear all selections"
               >
                 <X size={14} />
@@ -408,7 +399,7 @@ const TreeSelect = ({
               }`}
             >
               {isOpen ? (
-                <ChevronUp size={16} className="text-[#D52B1E]" />
+                <ChevronUp size={16} className="text-[#1e4a6f]" />
               ) : (
                 <ChevronDown size={16} className="text-gray-400" />
               )}

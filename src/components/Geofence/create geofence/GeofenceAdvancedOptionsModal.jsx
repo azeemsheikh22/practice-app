@@ -21,6 +21,8 @@ const GeofenceAdvancedOptionsModal = ({ isOpen, onClose }) => {
     geofenceCatListError,
   } = useSelector((state) => state.geofence);
 
+  console.log(geofenceCatList)
+
   const dispatch = useDispatch();
 
   // FETCH DATA ON COMPONENT MOUNT

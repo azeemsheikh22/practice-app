@@ -1,17 +1,8 @@
-import React, {
-  useEffect,
-  useRef,
-  useCallback,
-  useState,
-  useMemo,
-} from "react";
+import React, { useEffect, useRef, useCallback, useState } from "react";
 import L from "leaflet";
 import "leaflet.markercluster/dist/leaflet.markercluster.js";
-import updateVehicleMarkers, {
-  resetCluster,
-} from "../../utils/map/vehicleMarkers";
 import { useSelector, useDispatch } from "react-redux";
-import { selectCarData } from "../../features/gpsTrackingSlice";
+import { selectCarData, selectSelectedVehicles } from "../../features/gpsTrackingSlice";
 import {
   selectSelectedVehicleId,
   selectZoomToVehicle,
@@ -20,447 +11,624 @@ import {
   selectShowAllLabels,
   selectShowGeofences,
 } from "../../features/mapInteractionSlice";
-import { selectSelectedVehicles } from "../../features/gpsTrackingSlice";
-import "../../styles/mapTooltips.css";
+import { generateVehiclePopupContent } from "./generateVehiclePopupContent";
 import movingIcon from "../../assets/moving-vehicle.png";
 import stoppedIcon from "../../assets/stopped-vehicle.png";
 import idleIcon from "../../assets/idle-vehicle.png";
 import GeofenceManager from "./GeofenceManager";
 import RouteManager from "./RouteManager";
+import "../../styles/mapTooltips.css";
 
-// ✅ PERFORMANCE: Preload vehicle icons for better performance
-const preloadIcons = () => {
-  const icons = [movingIcon, stoppedIcon, idleIcon];
-  icons.forEach((src) => {
-    const img = new Image();
-    img.src = src;
-  });
-};
+// ✅ ICON CACHE
+const iconCache = new Map();
+const MAX_CACHE_SIZE = 50;
 
-preloadIcons();
+const createVehicleIcon = (status, head = 0) => {
+  const statusKey = status?.toLowerCase() || "stop";
+  const headKey = Math.round(head / 15) * 15;
+  const cacheKey = `${statusKey}-${headKey}`;
 
-// ✅ PERFORMANCE: Cache vehicle icons to avoid recreating them
-const vehicleIconCache = {
-  moving: {},
-  idle: {},
-  stop: {},
-};
-
-// ✅ PERFORMANCE: Debounce function for updates
-const debounce = (func, wait) => {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
-
-// ✅ PERFORMANCE: Optimized vehicle data management with better caching
-const manageVehicleData = (newCarData, forceUpdate = false) => {
-  try {
-    if (!newCarData || newCarData.length === 0) {
-      const storedDataString = localStorage.getItem("carData");
-      return storedDataString ? JSON.parse(storedDataString) : [];
-    }
-
-    if (forceUpdate) {
-      localStorage.setItem("carData", JSON.stringify(newCarData));
-      return newCarData;
-    }
-
-    let storedData = [];
-    const storedDataString = localStorage.getItem("carData");
-    if (storedDataString) {
-      storedData = JSON.parse(storedDataString);
-    }
-
-    // ✅ PERFORMANCE: Better change detection
-    if (
-      Math.abs(storedData.length - newCarData.length) >
-      storedData.length * 0.3
-    ) {
-      localStorage.setItem("carData", JSON.stringify(newCarData));
-      return newCarData;
-    }
-
-    // ✅ PERFORMANCE: Use Map for O(1) lookups instead of array operations
-    const existingVehiclesMap = new Map();
-    storedData.forEach((vehicle) => {
-      if (vehicle.car_id) {
-        existingVehiclesMap.set(vehicle.car_id, vehicle);
-      }
-    });
-
-    // ✅ PERFORMANCE: Batch updates
-    let hasChanges = false;
-    newCarData.forEach((newVehicle) => {
-      if (!newVehicle.car_id) return;
-
-      const existingVehicle = existingVehiclesMap.get(newVehicle.car_id);
-
-      if (existingVehicle) {
-        if (existingVehicle.gps_time !== newVehicle.gps_time) {
-          existingVehiclesMap.set(newVehicle.car_id, newVehicle);
-          hasChanges = true;
-        }
-      } else {
-        existingVehiclesMap.set(newVehicle.car_id, newVehicle);
-        hasChanges = true;
-      }
-    });
-
-    if (hasChanges) {
-      const updatedData = Array.from(existingVehiclesMap.values());
-      localStorage.setItem("carData", JSON.stringify(updatedData));
-      return updatedData;
-    }
-
-    return storedData;
-  } catch (error) {
-    console.error("Error managing vehicle data:", error);
-    return newCarData;
+  if (iconCache.has(cacheKey)) {
+    return iconCache.get(cacheKey);
   }
+
+  if (iconCache.size > MAX_CACHE_SIZE) {
+    iconCache.clear();
+  }
+
+  let iconUrl;
+  switch (statusKey) {
+    case "moving":
+      iconUrl = movingIcon;
+      break;
+    case "idle":
+      iconUrl = idleIcon;
+      break;
+    default:
+      iconUrl = stoppedIcon;
+  }
+
+  const shouldRotate = statusKey === "moving";
+  const rotation = shouldRotate ? headKey - 140 : 0;
+
+  const icon = L.divIcon({
+    className: "vehicle-marker",
+    html: `
+      <div style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
+        <img src="${iconUrl}" alt="${statusKey}" 
+             style="width: 22px; height: 22px; transform: rotate(${rotation}deg);" />
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
+    tooltipAnchor: [0, -4],
+  });
+
+  iconCache.set(cacheKey, icon);
+  return icon;
 };
 
 const VehicleMarkersManager = ({
   mapInstanceRef,
-  searchQuery,
   markersRef = useRef({}),
   markerClusterRef = useRef(null),
   onVehicleContextMenu,
   onGeofenceContextMenu,
 }) => {
-  const prevPositionsRef = useRef({});
-  const updateTimerRef = useRef(null);
-  const lastUpdateTimeRef = useRef(0);
+  const dispatch = useDispatch();
+  const [hasZoomedToPakistan, setHasZoomedToPakistan] = useState(false);
   const geofenceMarkersRef = useRef({});
+  const currentOpenTooltip = useRef(null);
+  
+  // ✅ Label performance optimization
+  const labelRafIdRef = useRef(null);
+  const labelQueueRef = useRef([]);
+  const visibleLabelsRef = useRef(new Set());
+  const lastLabelUpdateRef = useRef(0);
+  const labelUpdateThrottleRef = useRef(new Map()); // Track last update time per marker
+  const MAX_VISIBLE_LABELS = 100; // Maximum labels shown at once
+  const LABEL_BATCH_SIZE = 10; // Process 10 labels per frame
+  const LABEL_UPDATE_THROTTLE = 2000; // Only update labels every 2 seconds
 
-  // ✅ PERFORMANCE: Add viewport tracking for culling
-  const [mapBounds, setMapBounds] = useState(null);
-  const [mapZoom, setMapZoom] = useState(7);
-
-  const [processedData, setProcessedData] = useState([]);
-
-  const [hasAutoZoomed, setHasAutoZoomed] = useState(false);
-  const [lastVehicleCount, setLastVehicleCount] = useState(0);
-  const autoZoomTimeoutRef = useRef(null);
-
-  const showAllLabels = useSelector(selectShowAllLabels);
-  const iconClustering = useSelector(selectIconClustering);
+  // ✅ SELECTORS
+  const carData = useSelector(selectCarData) || [];
+  const selectedVehicles = useSelector(selectSelectedVehicles) || []; // ✅ MAIN ARRAY
   const selectedVehicleId = useSelector(selectSelectedVehicleId);
   const zoomToVehicle = useSelector(selectZoomToVehicle);
+  const iconClustering = useSelector(selectIconClustering);
+  const showAllLabels = useSelector(selectShowAllLabels);
   const showGeofences = useSelector(selectShowGeofences);
-  const selectedVehicles = useSelector(selectSelectedVehicles); // ✅ Add this selector
-
+  const movingStatusFilter = useSelector((state) => state.gpsTracking.movingStatusFilter);
   const { filteredMapGeofences } = useSelector((state) => state.geofence);
 
-  const dispatch = useDispatch();
-  const carData = useSelector(selectCarData) || [];
 
-  // ✅ NEW: Add dedicated clear markers function
-  const clearAllMarkers = useCallback(() => {
+  const isValidCoordinate = useCallback((lat, lng) =>
+    typeof lat === "number" && typeof lng === "number" &&
+    lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 &&
+    lat !== 0 && lng !== 0
+    , []);
+
+  // ✅ INSTANT CLEAR/SHOW LOGIC - Single Function
+  const syncMarkersWithSelection = useCallback(() => {
     if (!mapInstanceRef.current) return;
-    
-    // Clear individual markers
-    Object.values(markersRef.current).forEach((marker) => {
-      try {
-        if (mapInstanceRef.current.hasLayer(marker)) {
-          mapInstanceRef.current.removeLayer(marker);
-        }
-      } catch (error) {
-        console.error("Error removing marker:", error);
-      }
-    });
-    
-    // Clear marker cluster
-    if (markerClusterRef.current) {
-      try {
-        if (mapInstanceRef.current.hasLayer(markerClusterRef.current)) {
-          mapInstanceRef.current.removeLayer(markerClusterRef.current);
-        }
-        markerClusterRef.current.clearLayers();
-      } catch (error) {
-        console.error("Error clearing cluster:", error);
-      }
-    }
-    
-    // Reset references
-    markersRef.current = {};
-    prevPositionsRef.current = {};
-  }, [mapInstanceRef]);
-
-  // ✅ NEW: Watch selectedVehicles directly for immediate clearing
-  useEffect(() => {
-    // If no vehicles selected, immediately clear markers
-    if (selectedVehicles.length === 0) {
-      clearAllMarkers();
-    }
-  }, [selectedVehicles, clearAllMarkers]);
-
-  // useEffect mein event listener add karein
-  useEffect(() => {
-    const handleResetAutoZoom = () => {
-      setHasAutoZoomed(false);
-      setLastVehicleCount(0);
-    };
-
-    window.addEventListener("resetAutoZoom", handleResetAutoZoom);
-
-    return () => {
-      window.removeEventListener("resetAutoZoom", handleResetAutoZoom);
-    };
-  }, []);
-
-  // ✅ PERFORMANCE: Optimized array comparison
-  const areArraysEqual = useCallback((arr1, arr2) => {
-    if (arr1.length !== arr2.length) return false;
-
-    // Sample check for large arrays
-    if (arr1.length > 1000) {
-      const sampleSize = Math.min(100, arr1.length);
-      for (let i = 0; i < sampleSize; i++) {
-        const randomIndex = Math.floor(Math.random() * arr1.length);
-        const item1 = arr1[randomIndex];
-        const item2 = arr2[randomIndex];
-        if (
-          !item1 ||
-          !item2 ||
-          item1.car_id !== item2.car_id ||
-          item1.gps_time !== item2.gps_time
-        ) {
-          return false;
-        }
-      }
-      return true;
-    }
-
-    return arr1.every((item1, index) => {
-      const item2 = arr2[index];
-      return (
-        item1.car_id === item2.car_id &&
-        item1.gps_time === item2.gps_time &&
-        item1.latitude === item2.latitude &&
-        item1.longitude === item2.longitude
-      );
-    });
-  }, []);
-
-  // ✅ PERFORMANCE: Track map viewport changes
-  useEffect(() => {
-    if (!mapInstanceRef.current) return;
-
     const map = mapInstanceRef.current;
-
-    const updateMapState = debounce(() => {
-      setMapBounds(map.getBounds());
-      setMapZoom(map.getZoom());
-    }, 100);
-
-    map.on("moveend", updateMapState);
-    map.on("zoomend", updateMapState);
-
-    // Initial state
-    updateMapState();
-
-    return () => {
-      map.off("moveend", updateMapState);
-      map.off("zoomend", updateMapState);
-    };
-  }, [mapInstanceRef.current]);
-
-  // ✅ PERFORMANCE: Optimized data processing with viewport culling
-  useEffect(() => {
-    if (!carData || carData.length === 0) {
-      localStorage.setItem("carData", JSON.stringify([]));
-      if (processedData.length > 0) {
-        setProcessedData([]);
-      }
-    } else {
-      const isFilteredData =
-        carData.length < 50 ||
-        carData.every((car) => car.movingstatus === carData[0]?.movingstatus);
-
-      const optimizedData = manageVehicleData(carData, isFilteredData);
-
-      if (!areArraysEqual(processedData, optimizedData)) {
-        setProcessedData(optimizedData);
-      }
-    }
-  }, [carData, processedData, areArraysEqual]);
-
-  // ✅ PERFORMANCE: Viewport-based filtering for large datasets
-  const filteredCarData = useMemo(() => {
-    let dataToFilter = processedData;
-
-    // ✅ PERFORMANCE: Viewport culling for large datasets
-    if (dataToFilter.length > 500 && mapBounds && mapZoom < 12) {
-      dataToFilter = dataToFilter.filter((car) => {
-        if (!car.latitude || !car.longitude) return false;
-        const lat = parseFloat(car.latitude);
-        const lng = parseFloat(car.longitude);
-        return mapBounds.contains([lat, lng]);
+    // ✅ STEP 1: If no vehicles selected, clear everything instantly
+    if (selectedVehicles.length === 0) {
+      Object.values(markersRef.current).forEach(marker => {
+        if (map.hasLayer(marker)) {
+          map.removeLayer(marker);
+        }
       });
+
+      if (markerClusterRef.current) {
+        markerClusterRef.current.clearLayers();
+        if (map.hasLayer(markerClusterRef.current)) {
+          map.removeLayer(markerClusterRef.current);
+        }
+      }
+
+      markersRef.current = {};
+      return;
     }
 
-    // Search filtering
-    if (!searchQuery || searchQuery.trim() === "") {
-      return dataToFilter;
-    } else {
-      const query = searchQuery.toLowerCase().trim();
-      return dataToFilter.filter((car) => {
-        return (
-          (car.carname && car.carname.toLowerCase().includes(query)) ||
-          (car.location && car.location.toLowerCase().includes(query))
-        );
-      });
-    }
-  }, [searchQuery, processedData, mapBounds, mapZoom]);
+    // ✅ STEP 2: Create Set for O(1) lookup
+    const selectedSet = new Set(selectedVehicles);
 
+    // ✅ STEP 3: Remove unselected markers with filter check
+    Object.keys(markersRef.current).forEach(carIdStr => {
+      const carId = parseInt(carIdStr);
+      const marker = markersRef.current[carIdStr];
 
-  // ✅ PERFORMANCE: Memoized coordinate validation
-  const isValidCoordinate = useCallback(
-    (lat, lng) =>
-      typeof lat === "number" &&
-      typeof lng === "number" &&
-      !isNaN(lat) &&
-      !isNaN(lng) &&
-      lat !== 0 &&
-      lng !== 0 &&
-      lat >= -90 &&
-      lat <= 90 &&
-      lng >= -180 &&
-      lng <= 180,
-    []
-  );
+      // ✅ NEW: Check filter first before removing
+      const car = carData.find(c => c.car_id === carId);
+      const matchesFilter = !movingStatusFilter ||
+        movingStatusFilter === 'all' ||
+        (car && car.movingstatus?.toLowerCase() === movingStatusFilter.toLowerCase());
 
-  // ✅ PERFORMANCE: Optimized icon creation with better caching
-  const createVehicleIcon = useCallback((status, head = 0) => {
-    const statusKey = status?.toLowerCase() || "stop";
-    const headKey = Math.round(head / 10) * 10; // Reduced precision for better caching
-
-    if (vehicleIconCache[statusKey]?.[headKey]) {
-      return vehicleIconCache[statusKey][headKey];
-    }
-
-    let iconUrl;
-    switch (statusKey) {
-      case "moving":
-        iconUrl = movingIcon;
-        break;
-      case "idle":
-        iconUrl = idleIcon;
-        break;
-      case "stop":
-      default:
-        iconUrl = stoppedIcon;
-        break;
-    }
-
-    const shouldRotate = statusKey === "moving";
-    const rotation = shouldRotate ? headKey + -140 : 0;
-
-    const newIcon = L.divIcon({
-      className: "vehicle-marker",
-      html: `
-        <div style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-          <div class="vehicle-icon" style="transform: rotate(${rotation}deg); width: 22px; height: 22px;">
-            <img src="${iconUrl}" alt="${statusKey}" style="width: 100%; height: 100%;" loading="lazy" />
-          </div>
-        </div>
-      `,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
-      popupAnchor: [0, -14],
-      tooltipAnchor: [0, -4],
+      if (!selectedSet.has(carId)) {
+        // Vehicle not selected - remove completely
+        if (iconClustering && markerClusterRef.current) {
+          markerClusterRef.current.removeLayer(marker);
+        } else if (map.hasLayer(marker)) {
+          map.removeLayer(marker);
+        }
+        delete markersRef.current[carIdStr]; // Remove reference
+      } else if (!matchesFilter) {
+        // Vehicle selected but doesn't match filter - hide only
+        if (iconClustering && markerClusterRef.current) {
+          if (markerClusterRef.current.hasLayer(marker)) {
+            markerClusterRef.current.removeLayer(marker);
+          }
+        } else if (map.hasLayer(marker)) {
+          map.removeLayer(marker);
+        }
+        // ✅ DON'T delete from markersRef - keep reference for later
+      }
     });
 
-    if (!vehicleIconCache[statusKey]) {
-      vehicleIconCache[statusKey] = {};
-    }
-    vehicleIconCache[statusKey][headKey] = newIcon;
 
-    return newIcon;
+    // ✅ STEP 4: Add/Update selected vehicles with filter
+    const selectedVehicleData = carData.filter(car =>
+      car &&
+      car.car_id &&
+      selectedSet.has(car.car_id) && // Only selected vehicles
+      isValidCoordinate(car.latitude, car.longitude)
+    );
+
+    selectedVehicleData.forEach(car => {
+      const existingMarker = markersRef.current[car.car_id];
+
+      // ✅ NEW: Check if vehicle matches current filter
+      const shouldShowVehicle = !movingStatusFilter ||
+        movingStatusFilter === 'all' ||
+        car.movingstatus?.toLowerCase() === movingStatusFilter.toLowerCase();
+
+      if (existingMarker) {
+        // Update existing marker
+        updateExistingMarker(existingMarker, car);
+
+        // ✅ NEW: Show/Hide based on filter
+        if (shouldShowVehicle) {
+          // Show marker
+          if (iconClustering && markerClusterRef.current) {
+            if (!markerClusterRef.current.hasLayer(existingMarker)) {
+              markerClusterRef.current.addLayer(existingMarker);
+            }
+          } else {
+            if (!map.hasLayer(existingMarker)) {
+              existingMarker.addTo(map);
+            }
+          }
+        } else {
+          // Hide marker (don't remove from markersRef)
+          if (iconClustering && markerClusterRef.current) {
+            if (markerClusterRef.current.hasLayer(existingMarker)) {
+              markerClusterRef.current.removeLayer(existingMarker);
+            }
+          } else {
+            if (map.hasLayer(existingMarker)) {
+              map.removeLayer(existingMarker);
+            }
+          }
+        }
+      } else {
+        // Create new marker
+        createNewMarker(car, map);
+
+        // ✅ NEW: Hide immediately if doesn't match filter
+        if (!shouldShowVehicle) {
+          const newMarker = markersRef.current[car.car_id];
+          if (newMarker) {
+            if (iconClustering && markerClusterRef.current) {
+              markerClusterRef.current.removeLayer(newMarker);
+            } else {
+              map.removeLayer(newMarker);
+            }
+          }
+        }
+      }
+    });
+
+
+    // ✅ STEP 5: Handle clustering
+    handleClustering(map);
+
+    // ✅ STEP 6: Map click handler
+    map.off("click", closeAllNonPermanentTooltips);
+    map.on("click", closeAllNonPermanentTooltips);
+
+  }, [carData, selectedVehicles, iconClustering, showAllLabels, isValidCoordinate, movingStatusFilter]);
+
+  // ✅ LABELS: Close tooltips
+  const closeAllNonPermanentTooltips = useCallback(() => {
+    Object.values(markersRef.current).forEach((marker) => {
+      if (marker.getTooltip() && !marker.getTooltip().options.permanent) {
+        marker.closeTooltip();
+      }
+    });
+    currentOpenTooltip.current = null;
   }, []);
-  // ✅ PERFORMANCE: Debounced update function
-  const debouncedUpdateVehicleMarkers = useMemo(
-    () =>
-      debounce(() => {
-        if (!mapInstanceRef.current) return;
 
-        updateVehicleMarkers(
-          mapInstanceRef,
-          markersRef,
-          filteredCarData,
-          prevPositionsRef,
-          isValidCoordinate,
-          createVehicleIcon,
-          L,
-          markerClusterRef,
-          iconClustering,
-          showAllLabels,
-          onVehicleContextMenu
-        );
-        lastUpdateTimeRef.current = Date.now();
-      }, 150), // Increased debounce time for better performance
-    [
-      filteredCarData,
-      isValidCoordinate,
-      createVehicleIcon,
-      iconClustering,
-      showAllLabels,
-      mapInstanceRef,
-      onVehicleContextMenu,
-    ]
-  );
-
-  const handleUpdateVehicleMarkers = useCallback(() => {
+  // ✅ LABELS: Smart tooltip update (throttled for performance)
+  const updateMarkerTooltip = useCallback((marker, tooltipText, forceUpdate = false) => {
+    if (!marker) return;
+    
+    const markerId = marker._leaflet_id;
     const now = Date.now();
-    if (now - lastUpdateTimeRef.current < 200) {
-      // Increased throttle time
-      if (!updateTimerRef.current) {
-        updateTimerRef.current = setTimeout(() => {
-          debouncedUpdateVehicleMarkers();
-          updateTimerRef.current = null;
-        }, 200 - (now - lastUpdateTimeRef.current));
+    const lastUpdate = labelUpdateThrottleRef.current.get(markerId) || 0;
+    
+    // ✅ Skip update if too recent (unless forced or labels just toggled)
+    if (!forceUpdate && (now - lastUpdate) < LABEL_UPDATE_THROTTLE && marker.getTooltip()) {
+      return;
+    }
+    
+    // ✅ Check if tooltip text actually changed
+    const currentTooltip = marker.getTooltip();
+    if (currentTooltip && currentTooltip._content === tooltipText && !forceUpdate) {
+      return;
+    }
+    
+    if (marker.getTooltip()) {
+      if (marker._tooltip && (marker._tooltip.options.permanent !== showAllLabels || forceUpdate)) {
+        marker.unbindTooltip();
+        marker.bindTooltip(tooltipText, {
+          permanent: showAllLabels,
+          direction: "top",
+          className: "custom-tooltip",
+          opacity: showAllLabels ? 0.6 : 1,
+          offset: [0, -5],
+          sticky: !showAllLabels,
+          interactive: false,
+        });
+
+        // ✅ Only open if within label limit
+        if (showAllLabels && visibleLabelsRef.current.size < MAX_VISIBLE_LABELS) {
+          marker.openTooltip();
+          visibleLabelsRef.current.add(markerId);
+        }
       }
+    } else {
+      marker.bindTooltip(tooltipText, {
+        permanent: showAllLabels,
+        direction: "top",
+        className: "custom-tooltip",
+        opacity: showAllLabels ? 0.6 : 1,
+        offset: [0, -5],
+        sticky: !showAllLabels,
+        interactive: false,
+      });
+
+      // ✅ Only open if within label limit
+      if (showAllLabels && visibleLabelsRef.current.size < MAX_VISIBLE_LABELS) {
+        marker.openTooltip();
+        visibleLabelsRef.current.add(markerId);
+      }
+    }
+    
+    // ✅ Update throttle tracker
+    labelUpdateThrottleRef.current.set(markerId, now);
+  }, [showAllLabels]);
+
+  // ✅ LABELS: Setup events
+  const setupMarkerEvents = useCallback((marker, tooltipText) => {
+    marker.off("mouseover").off("mouseout").off("click");
+
+    if (!showAllLabels) {
+      let showTooltipTimeout;
+
+      marker.on("mouseover", function () {
+        // ✅ NEW: Don't show tooltip if popup is open for this marker
+        if (this.isPopupOpen()) {
+          return;
+        }
+
+        closeAllNonPermanentTooltips();
+        clearTimeout(showTooltipTimeout);
+
+        showTooltipTimeout = setTimeout(() => {
+          if (currentOpenTooltip.current && currentOpenTooltip.current !== this) {
+            currentOpenTooltip.current.closeTooltip();
+          }
+          this.openTooltip();
+          currentOpenTooltip.current = this;
+        }, 200);
+      });
+
+      marker.on("mouseout", function () {
+        clearTimeout(showTooltipTimeout);
+        this.closeTooltip();
+        if (currentOpenTooltip.current === this) {
+          currentOpenTooltip.current = null;
+        }
+      });
+    }
+
+    marker.on("click", function (e) {
+      L.DomEvent.stopPropagation(e);
+      closeAllNonPermanentTooltips();
+      setTimeout(() => {
+        this.openPopup();
+        // ✅ NEW: Close tooltip when popup is opened
+        if (this.getTooltip()) {
+          this.closeTooltip();
+        }
+      }, 50);
+    });
+  }, [showAllLabels, closeAllNonPermanentTooltips]);
+
+  // ✅ Batched label processing to prevent lag
+  const processLabelQueue = useCallback(() => {
+    const queue = labelQueueRef.current;
+    if (queue.length === 0) {
+      labelRafIdRef.current = null;
       return;
     }
 
-    debouncedUpdateVehicleMarkers();
-  }, [debouncedUpdateVehicleMarkers]);
+    // Process batch of labels
+    const batch = queue.splice(0, LABEL_BATCH_SIZE);
+    
+    batch.forEach(({ action, marker, tooltipText }) => {
+      try {
+        if (!marker) return;
+        
+        switch (action) {
+          case 'show':
+            if (visibleLabelsRef.current.size < MAX_VISIBLE_LABELS) {
+              if (marker.getTooltip()) {
+                marker.openTooltip();
+                visibleLabelsRef.current.add(marker._leaflet_id);
+              }
+            }
+            break;
+          case 'hide':
+            if (marker.getTooltip()) {
+              marker.closeTooltip();
+              visibleLabelsRef.current.delete(marker._leaflet_id);
+            }
+            break;
+          case 'update':
+            if (marker.getTooltip()) {
+              marker.unbindTooltip();
+            }
+            updateMarkerTooltip(marker, tooltipText, true); // Force update
+            setupMarkerEvents(marker, tooltipText);
+            
+            if (showAllLabels && visibleLabelsRef.current.size < MAX_VISIBLE_LABELS) {
+              marker.openTooltip();
+              visibleLabelsRef.current.add(marker._leaflet_id);
+            }
+            break;
+        }
+      } catch (error) {
+        console.warn('Label processing error:', error);
+      }
+    });
 
-  // ✅ MAIN FIX: Handle filteredCarData changes with immediate clearing
+    // Continue processing if queue has more items
+    if (queue.length > 0) {
+      labelRafIdRef.current = requestAnimationFrame(processLabelQueue);
+    } else {
+      labelRafIdRef.current = null;
+    }
+  }, [showAllLabels, updateMarkerTooltip, setupMarkerEvents]);
+
+  // ✅ Queue label operation
+  const queueLabelOperation = useCallback((action, marker, tooltipText = null) => {
+    labelQueueRef.current.push({ action, marker, tooltipText });
+    
+    if (!labelRafIdRef.current) {
+      labelRafIdRef.current = requestAnimationFrame(processLabelQueue);
+    }
+  }, [processLabelQueue]);
+
+  // ✅ UPDATE EXISTING MARKER
+  const updateExistingMarker = useCallback((marker, car) => {
+    const { latitude, longitude, movingstatus, head, carname } = car;
+
+    marker.setLatLng([latitude, longitude]);
+
+    const currentStatus = marker._vehicleStatus;
+    const currentHeading = marker._vehicleHeading || 0;
+    const headingDiff = Math.abs((head || 0) - currentHeading);
+
+    const isMovingVehicle = movingstatus?.toLowerCase() === "moving";
+    const shouldUpdateIcon =
+      currentStatus !== movingstatus ||
+      (isMovingVehicle && headingDiff > 10);
+
+    if (shouldUpdateIcon) {
+      marker.setIcon(createVehicleIcon(movingstatus, head));
+      marker._vehicleStatus = movingstatus;
+      marker._vehicleHeading = head || 0;
+    }
+
+    if (marker.isPopupOpen()) {
+      try {
+        const popupContent = generateVehiclePopupContent(car);
+        marker.getPopup().setContent(popupContent);
+      } catch (error) {
+        console.error("Error updating popup:", error);
+      }
+    }
+
+    const tooltipText = carname || `Vehicle ${car.car_id}`;
+    updateMarkerTooltip(marker, tooltipText);
+    setupMarkerEvents(marker, tooltipText);
+
+  }, [updateMarkerTooltip, setupMarkerEvents]);
+
+  // ✅ CREATE NEW MARKER - Fix context menu event
+  const createNewMarker = useCallback((car, map) => {
+    const { car_id, latitude, longitude, movingstatus, head, carname } = car;
+    const icon = createVehicleIcon(movingstatus, head);
+    const marker = L.marker([latitude, longitude], { icon });
+
+    marker._vehicleStatus = movingstatus;
+    marker._vehicleHeading = head || 0;
+
+    marker.bindPopup(() => {
+      try {
+        return generateVehiclePopupContent(car);
+      } catch (error) {
+        return `<div><h3>${carname}</h3><p>Error loading details</p></div>`;
+      }
+    }, {
+      closeButton: true,
+      className: "custom-popup",
+      autoPan: true,
+    });
+
+    const tooltipText = carname || `Vehicle ${car_id}`;
+    updateMarkerTooltip(marker, tooltipText);
+    setupMarkerEvents(marker, tooltipText);
+
+    // ✅ FIXED: Vehicle context menu with proper event handling
+    if (onVehicleContextMenu) {
+      marker.on("contextmenu", (e) => {
+        L.DomEvent.preventDefault(e);
+        L.DomEvent.stopPropagation(e); // ✅ Stop event bubbling
+
+        const containerPoint = map.latLngToContainerPoint(e.latlng);
+        const mapContainer = map.getContainer();
+        const rect = mapContainer.getBoundingClientRect();
+
+        // ✅ Calculate screen coordinates
+        const screenX = rect.left + containerPoint.x + window.scrollX;
+        const screenY = rect.top + containerPoint.y + window.scrollY;
+        onVehicleContextMenu(car, screenX, screenY);
+      });
+    }
+
+    if (iconClustering && markerClusterRef.current) {
+      markerClusterRef.current.addLayer(marker);
+    } else {
+      marker.addTo(map);
+    }
+
+    markersRef.current[car_id] = marker;
+  }, [showAllLabels, onVehicleContextMenu, iconClustering, updateMarkerTooltip, setupMarkerEvents]);
+
+
+  // ✅ CLUSTERING
+  const handleClustering = useCallback((map) => {
+    if (!markerClusterRef.current) return;
+
+    const cluster = markerClusterRef.current;
+
+    if (iconClustering) {
+      if (!map.hasLayer(cluster)) {
+        Object.values(markersRef.current).forEach(marker => {
+          if (map.hasLayer(marker)) {
+            map.removeLayer(marker);
+          }
+          cluster.addLayer(marker);
+        });
+        map.addLayer(cluster);
+      }
+    } else {
+      if (map.hasLayer(cluster)) {
+        map.removeLayer(cluster);
+        Object.values(markersRef.current).forEach(marker => {
+          marker.addTo(map);
+        });
+      }
+    }
+  }, [iconClustering]);
+
+  const zoomToPakistan = useCallback(() => {
+    if (!mapInstanceRef.current || hasZoomedToPakistan) return;
+
+    const markerCount = Object.keys(markersRef.current).length;
+    if (markerCount > 0) {
+      mapInstanceRef.current.setView([30.3753, 69.3451], 5.5, {
+        animate: true,
+        duration: 1.5,
+      });
+      setHasZoomedToPakistan(true);
+    }
+  }, [hasZoomedToPakistan]);
+
+  // ✅ MAIN EFFECT - INSTANT SYNC
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
-    // ✅ CRITICAL: If no data, immediately clear all markers
-    if (filteredCarData.length === 0) {
-      clearAllMarkers();
-      return;
+    // ✅ INSTANT EXECUTION - No debounce, no delay
+    syncMarkersWithSelection();
+
+    // ✅ ZOOM TO PAKISTAN (only if markers exist)
+    if (selectedVehicles.length > 0) {
+      setTimeout(zoomToPakistan, 1000);
     }
 
-    // Normal update if data exists
-    try {
-      handleUpdateVehicleMarkers();
-    } catch (error) {
-      console.error("Error updating vehicle markers:", error);
-    }
+  }, [selectedVehicles, carData, syncMarkersWithSelection, zoomToPakistan, movingStatusFilter]);
 
-    return () => {
-      if (updateTimerRef.current) {
-        clearTimeout(updateTimerRef.current);
-        updateTimerRef.current = null;
+  // ✅ OPTIMIZED LABELS EFFECT - Only run when labels toggle (not on data updates)
+  useEffect(() => {
+    if (selectedVehicles.length === 0) return;
+    
+    const now = Date.now();
+    
+    // ✅ Throttle label effect to prevent excessive updates
+    if (now - lastLabelUpdateRef.current < 1000) {
+      return; // Skip if updated less than 1 second ago
+    }
+    
+    lastLabelUpdateRef.current = now;
+    
+    // ✅ Clear existing label queue and visible labels tracking
+    labelQueueRef.current = [];
+    visibleLabelsRef.current.clear();
+    
+    // ✅ Cancel any pending label operations
+    if (labelRafIdRef.current) {
+      cancelAnimationFrame(labelRafIdRef.current);
+      labelRafIdRef.current = null;
+    }
+    
+    // ✅ Queue label operations in batches to prevent lag
+    const selectedSet = new Set(selectedVehicles);
+    const markersToProcess = [];
+    
+    Object.entries(markersRef.current).forEach(([carIdStr, marker]) => {
+      const carId = parseInt(carIdStr);
+      const car = carData.find(v => v.car_id === carId && selectedSet.has(v.car_id));
+
+      if (car && marker) {
+        const tooltipText = car.carname || `Vehicle ${car.car_id}`;
+        markersToProcess.push({ marker, tooltipText });
       }
-    };
-  }, [filteredCarData, handleUpdateVehicleMarkers, clearAllMarkers, mapInstanceRef]);
+    });
+    
+    // ✅ Prioritize markers in viewport for labels
+    markersToProcess.sort((a, b) => {
+      if (!mapInstanceRef.current) return 0;
+      
+      try {
+        const boundsA = mapInstanceRef.current.getBounds().contains(a.marker.getLatLng());
+        const boundsB = mapInstanceRef.current.getBounds().contains(b.marker.getLatLng());
+        
+        if (boundsA && !boundsB) return -1;
+        if (!boundsA && boundsB) return 1;
+        return 0;
+      } catch (error) {
+        return 0;
+      }
+    });
+    
+    // ✅ Queue label operations
+    markersToProcess.forEach(({ marker, tooltipText }) => {
+      if (showAllLabels) {
+        queueLabelOperation('update', marker, tooltipText);
+      } else {
+        queueLabelOperation('hide', marker);
+      }
+    });
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAllLabels]); // ✅ Only depend on showAllLabels, not data changes
 
-  // ✅ Zoom to vehicle effect
+  // ✅ ZOOM TO VEHICLE EFFECT
   useEffect(() => {
     if (zoomToVehicle && selectedVehicleId && mapInstanceRef.current) {
-      mapInstanceRef.current.closePopup();
       const marker = markersRef.current[selectedVehicleId];
       if (marker) {
         mapInstanceRef.current.setView(marker.getLatLng(), 18);
@@ -468,163 +636,46 @@ const VehicleMarkersManager = ({
         dispatch(resetZoomFlag());
       }
     }
-  }, [selectedVehicleId, zoomToVehicle, dispatch, mapInstanceRef]);
+  }, [selectedVehicleId, zoomToVehicle, dispatch]);
 
-  // ✅ Icon clustering effect
+  // ✅ CLUSTERING TOGGLE EFFECT
   useEffect(() => {
-    if (mapInstanceRef.current && markerClusterRef.current) {
-      const map = mapInstanceRef.current;
-      const markerCluster = markerClusterRef.current;
-
-      if (iconClustering) {
-        if (!map.hasLayer(markerCluster)) {
-          Object.values(markersRef.current).forEach((marker) => {
-            if (map.hasLayer(marker)) {
-              map.removeLayer(marker);
-            }
-          });
-
-          markerCluster.clearLayers();
-          Object.values(markersRef.current).forEach((marker) => {
-            markerCluster.addLayer(marker);
-          });
-          map.addLayer(markerCluster);
-        }
-      } else {
-        if (map.hasLayer(markerCluster)) {
-          map.removeLayer(markerCluster);
-          Object.values(markersRef.current).forEach((marker) => {
-            marker.addTo(map);
-          });
-        }
-      }
-
-      // Only update if we have data
-      if (filteredCarData.length > 0) {
-        handleUpdateVehicleMarkers();
-      }
+    if (mapInstanceRef.current && selectedVehicles.length > 0) {
+      handleClustering(mapInstanceRef.current);
     }
-  }, [iconClustering, handleUpdateVehicleMarkers, filteredCarData, mapInstanceRef]);
+  }, [iconClustering, handleClustering, selectedVehicles.length]);
 
-  // ✅ Cluster reset interval
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (
-        mapInstanceRef.current &&
-        markerClusterRef.current &&
-        iconClustering
-      ) {
-        resetCluster(
-          markerClusterRef,
-          markersRef,
-          mapInstanceRef.current,
-          iconClustering
-        );
-      }
-    }, 60000); // 60 seconds
-
-    return () => clearInterval(intervalId);
-  }, [iconClustering, mapInstanceRef]);
-
-  // NEW: Auto zoom function
-  const performAutoZoom = useCallback(() => {
-    if (!mapInstanceRef.current || hasAutoZoomed) return;
-
-    const currentVehicleCount = filteredCarData.length;
-
-    // Only auto zoom if:
-    // 1. We haven't auto zoomed before
-    // 2. We have vehicles now
-    // 3. Vehicle count increased from 0 or significantly changed
-    if (
-      currentVehicleCount > 0 &&
-      (lastVehicleCount === 0 ||
-        Math.abs(currentVehicleCount - lastVehicleCount) >=
-          Math.max(1, lastVehicleCount * 0.3))
-    ) {
-      // Clear any existing timeout
-      if (autoZoomTimeoutRef.current) {
-        clearTimeout(autoZoomTimeoutRef.current);
-      }
-
-      // Delay auto zoom to ensure markers are rendered
-      autoZoomTimeoutRef.current = setTimeout(() => {
-        const markerCount = Object.keys(markersRef.current).length;
-
-        if (markerCount === 0) {
-          // No markers, zoom to Pakistan
-          mapInstanceRef.current.setView([30.3753, 69.3451], 5.5, {
-            animate: true,
-            duration: 1.5,
-          });
-        } else if (markerCount === 1) {
-          // Single marker, zoom to it
-          const marker = Object.values(markersRef.current)[0];
-          if (marker) {
-            mapInstanceRef.current.setView(marker.getLatLng(), 18, {
-              animate: true,
-              duration: 1.5,
-            });
-          }
-        } else {
-          // Multiple markers, fit bounds
-          const validMarkers = Object.values(markersRef.current).filter(
-            (marker) => {
-              const pos = marker.getLatLng();
-              return isValidCoordinate(pos.lat, pos.lng);
-            }
-          );
-
-          if (validMarkers.length > 0) {
-            const bounds = L.latLngBounds(
-              validMarkers.map((marker) => marker.getLatLng())
-            );
-            if (bounds.isValid()) {
-              mapInstanceRef.current.fitBounds(bounds, {
-                padding: [50, 50],
-                animate: true,
-                duration: 1.5,
-              });
-            }
-          }
-        }
-
-        setHasAutoZoomed(true);
-        setLastVehicleCount(currentVehicleCount);
-      }, 1000); // 1 second delay to ensure markers are ready
-    }
-  }, [
-    filteredCarData,
-    hasAutoZoomed,
-    lastVehicleCount,
-    isValidCoordinate,
-    mapInstanceRef,
-  ]);
-
-  // NEW: Reset auto zoom when no vehicles
-  useEffect(() => {
-    if (filteredCarData.length === 0 && hasAutoZoomed) {
-      setHasAutoZoomed(false);
-      setLastVehicleCount(0);
-    }
-  }, [filteredCarData.length, hasAutoZoomed]);
-
-  // NEW: Trigger auto zoom when markers are updated
-  useEffect(() => {
-    if (filteredCarData.length > 0) {
-      performAutoZoom();
-    }
-  }, [filteredCarData, performAutoZoom]);
-
-  // ✅ Cleanup effects
+  // ✅ ENHANCED CLEANUP EFFECT
   useEffect(() => {
     return () => {
-      if (autoZoomTimeoutRef.current) {
-        clearTimeout(autoZoomTimeoutRef.current);
+      // ✅ Cancel any pending label operations
+      if (labelRafIdRef.current) {
+        cancelAnimationFrame(labelRafIdRef.current);
       }
-      if (updateTimerRef.current) {
-        clearTimeout(updateTimerRef.current);
+      
+      // ✅ Clear label queues
+      labelQueueRef.current = [];
+      visibleLabelsRef.current.clear();
+      labelUpdateThrottleRef.current.clear();
+      
+      // Clear all markers on unmount
+      if (mapInstanceRef.current) {
+        Object.values(markersRef.current).forEach(marker => {
+          if (mapInstanceRef.current.hasLayer(marker)) {
+            mapInstanceRef.current.removeLayer(marker);
+          }
+        });
+
+        if (markerClusterRef.current) {
+          markerClusterRef.current.clearLayers();
+          if (mapInstanceRef.current.hasLayer(markerClusterRef.current)) {
+            mapInstanceRef.current.removeLayer(markerClusterRef.current);
+          }
+        }
       }
+
+      markersRef.current = {};
+      iconCache.clear();
     };
   }, []);
 
@@ -637,14 +688,10 @@ const VehicleMarkersManager = ({
         geofenceMarkersRef={geofenceMarkersRef}
         onGeofenceContextMenu={onGeofenceContextMenu}
       />
-
-      {/* ADD RouteManager - context menu handler optional hai */}
-      <RouteManager
-        mapInstanceRef={mapInstanceRef}
-        onRouteContextMenu={null} // Ya ye prop hi remove kar dein
-      />
+      <RouteManager mapInstanceRef={mapInstanceRef} onRouteContextMenu={null} />
     </>
   );
 };
 
 export default VehicleMarkersManager;
+

@@ -5,6 +5,7 @@ const TreeItem = ({
   item,
   level = 0,
   isSelected,
+  isIndeterminate = false, // ✅ NEW: Indeterminate state prop
   isExpanded,
   onToggleExpand,
   onSelect,
@@ -39,6 +40,69 @@ const TreeItem = ({
         return null; // No icon for groups
     }
   };
+
+  // ✅ NEW: Render checkbox with indeterminate state
+  const renderCheckbox = () => {
+    if (isIndeterminate) {
+      // Indeterminate state (some children selected) - DARK FILLED
+      return (
+        <div className="transition-transform duration-200 ease-in-out transform scale-100">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-primary"
+          >
+            <rect width="18" height="18" x="3" y="3" rx="2" fill="currentColor" />
+            <path d="M8 12h8" stroke="white" strokeWidth="2" /> {/* White line on dark background */}
+          </svg>
+        </div>
+      );
+    } else if (isSelected) {
+      // Fully selected state
+      return (
+        <div className="transition-transform duration-200 ease-in-out transform scale-100">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-primary"
+          >
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+        </div>
+      );
+    } else {
+      // Unselected state
+      return (
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="text-gray-400"
+        >
+          <rect width="18" height="18" x="3" y="3" rx="2" />
+        </svg>
+      );
+    }
+  };
+
 
   return (
     <div
@@ -75,40 +139,9 @@ const TreeItem = ({
         htmlFor={`item-${item.id}`}
         className="flex items-center cursor-pointer w-full select-none"
       >
-        {/* Checkbox visual */}
+        {/* ✅ NEW: Checkbox visual with indeterminate support */}
         <div className="mr-2 flex-shrink-0 w-5 h-5 flex items-center justify-center">
-          {isSelected ? (
-            <div className="transition-transform duration-200 ease-in-out transform scale-100">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="text-primary"
-              >
-                <rect width="18" height="18" x="3" y="3" rx="2" />
-                <path d="m9 12 2 2 4-4" />
-              </svg>
-            </div>
-          ) : (
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-gray-400"
-            >
-              <rect width="18" height="18" x="3" y="3" rx="2" />
-            </svg>
-          )}
+          {renderCheckbox()}
         </div>
 
         {/* Icon only for Vehicle and Driver */}
@@ -120,7 +153,7 @@ const TreeItem = ({
 
         {/* Label */}
         <div
-          className="text-dark text-[13px] truncate max-w-[180px] font-medium"
+          className="text-dark text-[12px] truncate max-w-[180px] font-medium"
           title={item.text}
         >
           {item.text}

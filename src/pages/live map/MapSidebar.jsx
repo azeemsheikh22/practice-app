@@ -1,9 +1,7 @@
-import { useState, useMemo, useEffect, useCallback, memo } from "react";
+import { useState, useMemo, useEffect, useCallback, memo, lazy, Suspense, useTransition } from "react";
 import { Minimize2, Maximize2 } from "lucide-react";
 import sideIcon1 from "../../assets/sideicon.PNG";
 import sideIcon2 from "../../assets/sideicon2.PNG";
-import TreeView from "../../components/sidebar/TreeView";
-import VehicleList from "../../components/sidebar/VehicleList";
 import { useDispatch, useSelector } from "react-redux";
 import {
   clearRawVehicleList,
@@ -20,7 +18,65 @@ import {
 } from "../../features/mapInteractionSlice";
 import { setGlobalSearchQuery } from "../../features/locationSearchSlice";
 
-// ✅ OPTIMIZATION 1: Debounce hook for search
+// Lazy load components for better initial loading
+const TreeView = lazy(() => import("../../components/sidebar/TreeView"));
+const VehicleList = lazy(() => import("../../components/sidebar/VehicleList"));
+
+// ✅ Custom hook for dynamic height calculation
+const useDynamicHeight = () => {
+  const [sidebarHeight, setSidebarHeight] = useState("calc(100vh - 6rem)");
+
+  useEffect(() => {
+    const calculateHeight = () => {
+      const screenHeight = window.innerHeight;
+      const navbarHeight = 64; // 4rem = 64px
+      const topMargin = 16; // 1rem = 16px
+      const bottomMargin = 16; // 1rem = 16px
+
+      // Calculate available height
+      const availableHeight =
+        screenHeight - navbarHeight - topMargin - bottomMargin;
+
+      // Set minimum and maximum heights based on screen size
+      let finalHeight;
+
+      if (screenHeight <= 768) {
+        // Mobile/Tablet - Use more space
+        finalHeight = Math.max(availableHeight, 500);
+      } else if (screenHeight <= 1024) {
+        // Medium screens
+        finalHeight = Math.max(availableHeight * 0.85, 600);
+      } else if (screenHeight <= 1440) {
+        // Large screens
+        finalHeight = Math.max(availableHeight * 0.82, 700);
+      } else {
+        // Very large screens - Don't make it too tall
+        finalHeight = Math.min(availableHeight * 0.78, 800);
+      }
+
+      setSidebarHeight(`${finalHeight}px`);
+    };
+
+    calculateHeight();
+
+    // Debounced resize handler
+    let timeoutId;
+    const handleResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(calculateHeight, 150);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  return sidebarHeight;
+};
+
+// ✅ Optimized debounce hook for search
 const useDebounce = (value, delay) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -37,7 +93,21 @@ const useDebounce = (value, delay) => {
   return debouncedValue;
 };
 
-const MapSidebar = memo(() => {
+// ✅ Optimized deep copy function
+const deepCopyItemOptimized = (item) => {
+  if (!item) return null;
+  
+  const copy = { ...item };
+  if (Array.isArray(item.children) && item.children.length > 0) {
+    copy.children = item.children.map(child => deepCopyItemOptimized(child));
+  } else {
+    copy.children = [];
+  }
+  
+  return copy;
+};
+
+const MapSidebar = memo(({ onWidthChange }) => {
   const [activeTab, setActiveTab] = useState("view");
   const [isExpanded, setIsExpanded] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("group");
@@ -45,13 +115,15 @@ const MapSidebar = memo(() => {
   const [expandedGroups, setExpandedGroups] = useState({});
   const [originalExpandedGroups, setOriginalExpandedGroups] = useState({});
   const [selectedVehicleIds, setSelectedVehicleIds] = useState([]);
+  const [isPending, startTransition] = useTransition(); // For smooth tab transitions
 
-  // ✅ OPTIMIZATION 2: Debounced search query
+  // ✅ Use dynamic height
+  const sidebarHeight = useDynamicHeight();
+
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
   const dispatch = useDispatch();
 
-  // ✅ OPTIMIZATION 3: Memoized selectors
+  // Selectors
   const connectionStatus = useSelector(selectConnectionStatus);
   const visuallySelectedItems = useSelector(selectVisuallySelectedItems);
   const rawCarData = useSelector(selectCarData);
@@ -61,13 +133,19 @@ const MapSidebar = memo(() => {
   );
   const selectedVehiclesFromSlice = useSelector(selectSelectedVehicles);
 
-
-  // ✅ OPTIMIZATION 4: Memoized car data
+  // Memoized car data
   const carData = useMemo(() => {
     return rawCarData || [];
   }, [rawCarData]);
 
-  // ✅ OPTIMIZATION 5: Memoized loading state
+  useEffect(() => {
+    if (onWidthChange) {
+      const currentWidth = isExpanded ? 340 : 60;
+      onWidthChange(currentWidth);
+    }
+  }, [isExpanded, onWidthChange]);
+
+  // Memoized loading state
   const isLoading = useMemo(() => {
     return (
       connectionStatus === "connecting" ||
@@ -81,13 +159,13 @@ const MapSidebar = memo(() => {
     setSearchQuery(globalSearchQuery || "");
   }, [globalSearchQuery]);
 
-  // ✅ OPTIMIZATION 6: Memoized tree organization function
+  // Tree organization function - optimized with memoization
   const organizeDataIntoTree = useCallback((data) => {
     if (!data || !Array.isArray(data) || data.length === 0) {
       return [];
     }
 
-    const map = new Map(); // Use Map instead of object for better performance
+    const map = new Map();
     const roots = [];
 
     // First pass: create a map of all items
@@ -123,7 +201,7 @@ const MapSidebar = memo(() => {
       }
     }
 
-    // ✅ OPTIMIZATION 7: Optimized sorting
+    // Optimized sorting function
     const sortChildren = (node) => {
       if (node?.children?.length > 0) {
         node.children.sort((a, b) => {
@@ -139,84 +217,90 @@ const MapSidebar = memo(() => {
     return roots;
   }, []);
 
-  // ✅ OPTIMIZATION 8: Memoized tree structure with dependency optimization
+  // Memoized tree structure with performance tracking
   const treeStructure = useMemo(() => {
+    if (!rawVehicles || rawVehicles.length === 0) return [];
+    
     return organizeDataIntoTree(rawVehicles);
   }, [rawVehicles, organizeDataIntoTree]);
 
-  // Auto-expand root nodes effect
+  // Auto-expand root nodes effect - optimized
   useEffect(() => {
-    if (rawVehicles?.length > 0) {
-      const rootNodes = rawVehicles.filter((item) => item.parent === "#");
+    if (!rawVehicles?.length) return;
+    
+    const rootNodes = rawVehicles.filter((item) => item.parent === "#");
+    if (rootNodes.length === 0) return;
 
-      if (rootNodes.length > 0) {
-        const expandedRootNodes = rootNodes.reduce((acc, node) => {
-          acc[node.id] = true;
-          return acc;
-        }, {});
+    const expandedRootNodes = {};
+    rootNodes.forEach(node => {
+      expandedRootNodes[node.id] = true;
+    });
 
-        setExpandedGroups((prev) => ({
-          ...prev,
-          ...expandedRootNodes,
-        }));
-      }
-    }
+    setExpandedGroups(prev => ({
+      ...prev,
+      ...expandedRootNodes,
+    }));
   }, [rawVehicles]);
 
-  // ✅ OPTIMIZATION 9: Memoized helper functions
+  // Helper functions for search - optimized
   const getGroupsToExpand = useCallback((items, searchQuery) => {
+    if (!items || !searchQuery || !searchQuery.trim()) return new Set();
+    
+    const lowerQuery = searchQuery.toLowerCase();
     const groupsToExpand = new Set();
 
     const checkItem = (item) => {
-      if (item.Type === "Group" && item.children?.length > 0) {
-        const hasMatchingChild = item.children.some((child) => {
-          if (child.Type === "Vehicle") {
-            return child.text
-              ?.toLowerCase()
-              .includes(searchQuery.toLowerCase());
-          } else if (child.Type === "Group") {
-            return checkItem(child);
-          }
-          return false;
-        });
-
-        if (hasMatchingChild) {
-          groupsToExpand.add(item.id);
+      if (!item || item.Type !== "Group" || !item.children?.length) return false;
+      
+      const hasMatchingChild = item.children.some((child) => {
+        if (child.Type === "Vehicle") {
+          return child.text?.toLowerCase().includes(lowerQuery);
+        } else if (child.Type === "Group") {
+          return checkItem(child);
         }
+        return false;
+      });
 
-        item.children.forEach(checkItem);
+      if (hasMatchingChild) {
+        groupsToExpand.add(item.id);
       }
+
+      item.children.forEach(checkItem);
+      return hasMatchingChild;
     };
 
     items.forEach(checkItem);
     return groupsToExpand;
   }, []);
 
-  // ✅ OPTIMIZATION 10: Optimized search effect with debounced query
+  // Search effect - optimized
   useEffect(() => {
-    if (debouncedSearchQuery.trim()) {
-      if (Object.keys(originalExpandedGroups).length === 0) {
-        setOriginalExpandedGroups({ ...expandedGroups });
-      }
-
-      const groupsToExpand = getGroupsToExpand(
-        treeStructure,
-        debouncedSearchQuery
-      );
-
-      setExpandedGroups((prev) => {
-        const newState = { ...prev };
-        groupsToExpand.forEach((groupId) => {
-          newState[groupId] = true;
-        });
-        return newState;
-      });
-    } else {
+    if (!debouncedSearchQuery.trim()) {
       if (Object.keys(originalExpandedGroups).length > 0) {
         setExpandedGroups(originalExpandedGroups);
         setOriginalExpandedGroups({});
       }
+      return;
     }
+    
+    if (Object.keys(originalExpandedGroups).length === 0) {
+      setOriginalExpandedGroups({ ...expandedGroups });
+    }
+
+    const groupsToExpand = getGroupsToExpand(
+      treeStructure,
+      debouncedSearchQuery
+    );
+
+    if (groupsToExpand.size === 0) return;
+
+    setExpandedGroups((prev) => {
+      const newState = { ...prev };
+      groupsToExpand.forEach((groupId) => {
+        newState[groupId] = true;
+      });
+      return newState;
+    });
   }, [
     debouncedSearchQuery,
     treeStructure,
@@ -225,217 +309,91 @@ const MapSidebar = memo(() => {
     getGroupsToExpand,
   ]);
 
-  // Replace the group restoration useEffect with this improved version
-  useEffect(() => {
-    if (
-      selectedFilter === "group" &&
-      rawVehicles?.length > 0 &&
-      selectedVehiclesFromSlice.length > 0
-    ) {
-      const groupsToSelect = [];
-      const vehiclesToSelect = [];
-
-      // Helper function to get all vehicle valueIds in a group (recursively)
-      const getAllVehicleValueIds = (group) => {
-        const vehicleIds = [];
-
-        if (group.children) {
-          group.children.forEach((child) => {
-            if (child.Type === "Vehicle" && child.valueId) {
-              vehicleIds.push(Number(child.valueId));
-            } else if (child.Type === "Group") {
-              vehicleIds.push(...getAllVehicleValueIds(child));
-            }
-          });
-        }
-
-        return vehicleIds;
-      };
-
-      // Helper function to check if a group should be selected
-      const shouldGroupBeSelected = (group) => {
-        const groupVehicleIds = getAllVehicleValueIds(group);
-
-        // If group has no vehicles, check if it was previously selected
-        // We can determine this by checking if any of its child groups are selected
-        if (groupVehicleIds.length === 0) {
-          // For empty groups, check if all child groups are selected
-          if (group.children && group.children.length > 0) {
-            const childGroups = group.children.filter(
-              (child) => child.Type === "Group"
-            );
-            if (childGroups.length > 0) {
-              return childGroups.every((childGroup) =>
-                shouldGroupBeSelected(childGroup)
-              );
-            }
-          }
-          return false; // Empty group with no children
-        }
-
-        // For groups with vehicles, check if ALL vehicles are selected
-        return groupVehicleIds.every((vehicleId) =>
-          selectedVehiclesFromSlice.includes(vehicleId)
-        );
-      };
-
-      // Recursive function to process tree items
-      const processTreeItems = (items) => {
-        items.forEach((item) => {
-          if (item.Type === "Group") {
-            if (shouldGroupBeSelected(item)) {
-              groupsToSelect.push(item.id);
-            }
-
-            // Process child groups recursively
-            if (item.children) {
-              processTreeItems(item.children);
-            }
-          } else if (item.Type === "Vehicle") {
-            if (
-              item.valueId &&
-              selectedVehiclesFromSlice.includes(Number(item.valueId))
-            ) {
-              vehiclesToSelect.push(item.id);
-            }
-          }
-        });
-      };
-
-      processTreeItems(treeStructure);
-
-      const allSelectionsToRestore = [...groupsToSelect, ...vehiclesToSelect];
-      if (allSelectionsToRestore.length > 0) {
-        dispatch(setVisuallySelectedItems(allSelectionsToRestore));
-      }
-    }
-  }, [
-    selectedFilter,
-    rawVehicles,
-    selectedVehiclesFromSlice,
-    treeStructure,
-    dispatch,
-  ]);
-
-  // Update the existing vehicle restoration useEffect
-  useEffect(() => {
-    if (
-      selectedFilter === "vehicle" &&
-      rawVehicles?.length > 0 &&
-      selectedVehiclesFromSlice.length > 0
-    ) {
-      const vehicleItems = rawVehicles.filter(
-        (item) => item.Type === "Vehicle"
-      );
-      const vehicleIdsToSelect = [];
-
-      vehicleItems.forEach((vehicle) => {
-        if (
-          vehicle.valueId &&
-          selectedVehiclesFromSlice.includes(Number(vehicle.valueId))
-        ) {
-          vehicleIdsToSelect.push(vehicle.id);
-        }
-      });
-
-      if (vehicleIdsToSelect.length > 0) {
-        dispatch(setVisuallySelectedItems(vehicleIdsToSelect));
-      }
-    }
-  }, [selectedFilter, rawVehicles, selectedVehiclesFromSlice, dispatch]);
-
-  // ✅ OPTIMIZATION 11: Memoized search functions
+  // Search functions - optimized
   const itemMatchesSearch = useCallback((item, query) => {
-    const matchesText = item.text?.toLowerCase().includes(query.toLowerCase());
-    if (matchesText) return true;
+    if (!item || !query || !query.trim()) return true;
+    
+    const lowerQuery = query.toLowerCase();
+    
+    // Check if item text matches
+    if (item.text?.toLowerCase().includes(lowerQuery)) return true;
 
+    // Check children recursively
     if (item.children?.length > 0) {
-      return item.children.some((child) => itemMatchesSearch(child, query));
+      return item.children.some((child) => itemMatchesSearch(child, lowerQuery));
     }
 
     return false;
   }, []);
 
-  const deepCopyItem = useCallback((item) => {
-    return {
-      ...item,
-      children: item.children
-        ? item.children.map((child) => deepCopyItem(child))
-        : [],
-    };
-  }, []);
-
-  // ✅ OPTIMIZATION 12: Optimized filtered tree with better memoization
+  // Memoized filtered tree with performance optimization
   const filteredTree = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) {
+    if (!debouncedSearchQuery.trim() || !treeStructure?.length) {
       return treeStructure;
     }
 
     const filterTree = (items) => {
-      const filteredItems = [];
-
-      for (const item of items) {
+      if (!items?.length) return [];
+      
+      return items.reduce((filtered, item) => {
         if (itemMatchesSearch(item, debouncedSearchQuery)) {
-          const itemCopy = deepCopyItem(item);
-
+          const itemCopy = deepCopyItemOptimized(item);
+          
           if (itemCopy.children?.length > 0) {
             itemCopy.children = filterTree(itemCopy.children);
           }
-
-          filteredItems.push(itemCopy);
+          
+          filtered.push(itemCopy);
         }
-      }
-
-      return filteredItems;
+        return filtered;
+      }, []);
     };
 
     const filtered = filterTree(treeStructure);
+    return filtered.length ? filtered : treeStructure;
+  }, [treeStructure, debouncedSearchQuery, itemMatchesSearch]);
 
-    if (filtered.length === 0) {
-      return treeStructure;
-    }
-
-    return filtered;
-  }, [treeStructure, debouncedSearchQuery, itemMatchesSearch, deepCopyItem]);
-
-  // ✅ OPTIMIZATION 13: Memoized helper functions for item selection
+  // Helper functions for item selection - optimized
   const getAllChildIds = useCallback((item) => {
+    if (!item || !item.children?.length) return [];
+    
     const ids = [];
-
-    const collectIds = (node) => {
+    const stack = [...item.children];
+    
+    while (stack.length > 0) {
+      const node = stack.pop();
+      ids.push(node.id);
+      
       if (node.children?.length > 0) {
-        for (const child of node.children) {
-          ids.push(child.id);
-          collectIds(child);
-        }
+        stack.push(...node.children);
       }
-    };
-
-    collectIds(item);
+    }
+    
     return ids;
   }, []);
 
   const getAllChildValueIds = useCallback((item) => {
+    if (!item || !item.children?.length) return [];
+    
     const valueIds = [];
-
-    const collectValueIds = (node) => {
-      if (node.children?.length > 0) {
-        for (const child of node.children) {
-          if (child.Type === "Vehicle" && child.valueId) {
-            valueIds.push(child.valueId);
-          }
-          if (child.Type === "Group") {
-            collectValueIds(child);
-          }
-        }
+    const stack = [...item.children];
+    
+    while (stack.length > 0) {
+      const node = stack.pop();
+      
+      if (node.Type === "Vehicle" && node.valueId) {
+        valueIds.push(node.valueId);
       }
-    };
-
-    collectValueIds(item);
+      
+      if (node.Type === "Group" && node.children?.length > 0) {
+        stack.push(...node.children);
+      }
+    }
+    
     return valueIds;
   }, []);
 
-  // ✅ OPTIMIZATION 14: Memoized event handlers
+  // Event handlers - optimized
   const toggleGroup = useCallback((groupId) => {
     setExpandedGroups((prev) => ({
       ...prev,
@@ -445,26 +403,25 @@ const MapSidebar = memo(() => {
 
   const handleItemSelect = useCallback(
     (item, isChecked) => {
-      // ✅ Handle special case for clearing only groups
-      if (item.Type === "ClearGroups") {
-        dispatch(setVisuallySelectedItems(item.vehicleSelections || []));
-        return;
-      }
-
+      if (!item) return;
+      
       let newVisuallySelectedItems = [...visuallySelectedItems];
       let newSelectedVehicleIds = [...selectedVehicleIds];
 
       if (isChecked) {
+        // Add current item
         if (!newVisuallySelectedItems.includes(item.id)) {
           newVisuallySelectedItems.push(item.id);
         }
 
+        // Add vehicle ID if it's a vehicle
         if (item.Type === "Vehicle" && item.valueId) {
           if (!newSelectedVehicleIds.includes(item.valueId)) {
             newSelectedVehicleIds.push(item.valueId);
           }
         }
 
+        // Add all children if it's a group
         if (item.Type === "Group" && item.children?.length > 0) {
           const childIds = getAllChildIds(item);
           childIds.forEach((id) => {
@@ -481,16 +438,19 @@ const MapSidebar = memo(() => {
           });
         }
       } else {
+        // Remove current item
         newVisuallySelectedItems = newVisuallySelectedItems.filter(
           (id) => id !== item.id
         );
 
+        // Remove vehicle ID if it's a vehicle
         if (item.Type === "Vehicle" && item.valueId) {
           newSelectedVehicleIds = newSelectedVehicleIds.filter(
             (id) => id !== item.valueId
           );
         }
 
+        // Remove all children if it's a group
         if (item.Type === "Group" && item.children?.length > 0) {
           const childIds = getAllChildIds(item);
           newVisuallySelectedItems = newVisuallySelectedItems.filter(
@@ -522,29 +482,33 @@ const MapSidebar = memo(() => {
   const deselectAll = useCallback(() => {
     setSelectedVehicleIds([]);
     dispatch(setVisuallySelectedItems([]));
-    dispatch(updateVehicleFilter([])); // This should only be called when user explicitly deselects all
+    dispatch(updateVehicleFilter([]));
   }, [dispatch]);
 
   const handleFilterChange = useCallback(
     (e) => {
       const newFilter = e.target.value;
-      setSelectedFilter(newFilter);
-      setSearchQuery("");
-      dispatch(setGlobalSearchQuery(""));
+      
+      // Use transition for smoother UI during filter change
+      startTransition(() => {
+        setSelectedFilter(newFilter);
+        setSearchQuery("");
+        dispatch(setGlobalSearchQuery(""));
 
-      // ✅ Don't clear visual selections immediately - let useEffect handle restoration
-      // dispatch(setVisuallySelectedItems([])); // Remove this line
+        setSelectedVehicleIds([]);
+        dispatch(setVisuallySelectedItems([]));
+        dispatch(updateVehicleFilter([]));
+        dispatch(clearRawVehicleList());
 
-      dispatch(clearRawVehicleList());
+        let scope = 3;
+        if (newFilter === "vehicle") {
+          scope = 1;
+        } else if (newFilter === "driver") {
+          scope = 2;
+        }
 
-      let scope = 3;
-      if (newFilter === "vehicle") {
-        scope = 1;
-      } else if (newFilter === "driver") {
-        scope = 2;
-      }
-
-      dispatch(requestVehicleListWithScope(scope));
+        dispatch(requestVehicleListWithScope(scope));
+      });
     },
     [dispatch]
   );
@@ -558,91 +522,166 @@ const MapSidebar = memo(() => {
     [dispatch]
   );
 
-  // ✅ OPTIMIZATION 15: Memoized tab handlers
-  const handleViewTab = useCallback(() => setActiveTab("view"), []);
-  const handleVehiclesTab = useCallback(() => setActiveTab("vehicles"), []);
-  const handleToggleExpand = useCallback(
-    () => setIsExpanded((prev) => !prev),
-    []
-  );
+  // Tab handlers with transitions for smoother UI
+  const handleViewTab = useCallback(() => {
+    startTransition(() => {
+      setActiveTab("view");
+    });
+  }, []);
+  
+  const handleVehiclesTab = useCallback(() => {
+    startTransition(() => {
+      setActiveTab("vehicles");
+    });
+  }, []);
+  
+  const handleToggleExpand = useCallback(() => {
+    setIsExpanded((prev) => !prev);
+  }, []);
 
   return (
-    <div className="max-h-[90vh] bg-white mx-3 my-4 border rounded-sm border-gray-300 flex flex-col animate-fade-in">
-      {/* Top Navigation - Fixed */}
-      <div className="flex relative flex-shrink-0">
-        <div
-          className={`flex-1 flex flex-col items-center justify-center cursor-pointer transition-opacity duration-200 h-[38px] ${
-            activeTab === "view" ? "" : "opacity-50"
-          }`}
-          onClick={handleViewTab}
-        >
-          <img src={sideIcon1} className="h-6" alt="" />
+    <div className={`bg-white flex flex-col transition-all duration-500 ease-in-out ${isExpanded ? 'w-[340px]' : 'w-[60px]'} h-full overflow-hidden relative`}>
+      {/* Loading overlay during transitions */}
+      {isPending && (
+        <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
         </div>
-        <div
-          className={`flex-1 p-2 flex flex-col items-center justify-center cursor-pointer transition-opacity duration-200 h-[38px] ${
-            activeTab === "vehicles" ? "" : "opacity-50"
-          }`}
-          onClick={handleVehiclesTab}
-        >
-          <img src={sideIcon2} className="h-5" alt="" />
-        </div>
+      )}
 
-        {/* Expand/Collapse Button */}
-        <div
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer p-1.5 hover:bg-gray-100 rounded-full transition-colors duration-200"
-          onClick={handleToggleExpand}
-        >
-          {isExpanded ? (
-            <Minimize2 size={16} className="text-gray-600" />
-          ) : (
-            <Maximize2 size={16} className="text-gray-600" />
-          )}
-        </div>
-      </div>
+      {isExpanded ? (
+        // ✅ EXPANDED VIEW - Smooth fade in
+        <div className="animate-in fade-in slide-in-from-left duration-300 h-full flex flex-col">
+          {/* Top Navigation - Expanded */}
+          <div className="flex relative flex-shrink-0 bg-[#1F557F]">
+            <div
+              className={`flex-1 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 h-[40px] ${activeTab === "view" ? "bg-white/10" : "opacity-50 hover:opacity-75"}`}
+              onClick={handleViewTab}
+            >
+              <img src={sideIcon1} className="h-[22px] transition-transform duration-200" alt="" />
+            </div>
+            <div
+              className={`flex-1 p-2 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 h-[40px] ${activeTab === "vehicles" ? "bg-white/10" : "opacity-50 hover:opacity-75"}`}
+              onClick={handleVehiclesTab}
+            >
+              <img src={sideIcon2} className="h-[24px] transition-transform duration-200" alt="" />
+            </div>
 
-      <div className="relative h-1 flex-shrink-0">
-        <div
-          className="absolute h-1 bg-primary transition-all duration-300 ease-in-out"
-          style={{
-            left: activeTab === "view" ? "0%" : "50%",
-            width: "50%",
-          }}
-        ></div>
-      </div>
+            {/* Expand/Collapse Button */}
+            <div
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer p-1.5 hover:bg-white/10 rounded-full transition-all duration-300 group"
+              onClick={handleToggleExpand}
+            >
+              <Minimize2 size={16} className="text-white group-hover:text-white/80 transition-all duration-200 group-hover:rotate-90" />
+            </div>
+          </div>
 
-      {/* Scrollable Content Area */}
-      <div className={`flex-grow border-t border-gray-200`}>
-        {isExpanded && (
-          <>
+          {/* Content Area - Expanded */}
+          <div className="flex-grow overflow-hidden border-r-4 border-[#1F557F]">
             {activeTab === "view" && (
-              <div className="transition-opacity duration-200 ease-in-out">
-                <TreeView
-                  selectedFilter={selectedFilter}
-                  searchQuery={searchQuery}
-                  onSearchChange={handleSearchChange}
-                  onFilterChange={handleFilterChange}
-                  filteredTree={filteredTree}
-                  selectedVehicleIds={selectedVehiclesFromSlice} // ✅ This should be the slice data
-                  treeData={rawVehicles}
-                  selectedItems={visuallySelectedItems} // ✅ This should be the visual selections
-                  expandedGroups={expandedGroups}
-                  onToggleGroup={toggleGroup}
-                  onItemSelect={handleItemSelect}
-                  onDeselectAll={deselectAll}
-                  isLoading={isLoading}
-                />
+              <div className="transition-all duration-300 ease-in-out h-full animate-in fade-in slide-in-from-bottom">
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+                  </div>
+                }>
+                  <TreeView
+                    selectedFilter={selectedFilter}
+                    searchQuery={searchQuery}
+                    onSearchChange={handleSearchChange}
+                    onFilterChange={handleFilterChange}
+                    filteredTree={filteredTree}
+                    selectedVehicleIds={selectedVehiclesFromSlice}
+                    treeData={rawVehicles}
+                    selectedItems={visuallySelectedItems}
+                    expandedGroups={expandedGroups}
+                    onToggleGroup={toggleGroup}
+                    onItemSelect={handleItemSelect}
+                    onDeselectAll={deselectAll}
+                    isLoading={isLoading}
+                    sidebarHeight={sidebarHeight}
+                  />
+                </Suspense>
               </div>
             )}
 
-            {/* Vehicles Section */}
             {activeTab === "vehicles" && (
-              <div className="transition-opacity duration-200 ease-in-out">
-                <VehicleList carData={carData} />
+              <div className="transition-all duration-300 ease-in-out h-full animate-in fade-in slide-in-from-bottom">
+                <Suspense fallback={
+                  <div className="flex items-center justify-center h-full">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-700"></div>
+                  </div>
+                }>
+                  <VehicleList
+                    carData={carData}
+                    isExpanded={isExpanded}
+                    sidebarHeight={sidebarHeight}
+                  />
+                </Suspense>
               </div>
             )}
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      ) : (
+        // ✅ COLLAPSED VIEW - Smooth animations
+        <div className="flex flex-col h-full animate-in fade-in slide-in-from-right duration-300">
+          {/* Expand Button - Top */}
+          <div
+            className="h-[50px] flex items-center justify-center cursor-pointer bg-[#1F557F] hover:bg-[#1e4a6f] transition-all duration-300 border-b border-white/20 group"
+            onClick={handleToggleExpand}
+            title="Expand Sidebar"
+          >
+            <Maximize2 size={18} className="text-white group-hover:scale-110 group-hover:rotate-90 transition-all duration-300" />
+          </div>
+
+          {/* Tab 1 - Vehicle Selection */}
+          <div
+            className={`flex-1 flex items-center justify-center cursor-pointer transition-all duration-300 bg-[#1F557F] border-b border-white/20 group ${activeTab === "view"
+              ? "bg-[#1a4a6b] shadow-inner "
+              : "hover:bg-[#1e4a6f] "
+              }`}
+            onClick={() => {
+              if (!isExpanded) {
+                handleToggleExpand();
+                setTimeout(() => handleViewTab(), 200);
+              } else {
+                handleViewTab();
+              }
+            }}
+            title="Vehicle Selection"
+          >
+            <img
+              src={sideIcon1}
+              className={`h-[25px] transition-all duration-300 group-hover:scale-110 ${activeTab === "view" ? "scale-110 brightness-110" : "opacity-80"
+                }`}
+              alt="Vehicle Selection"
+            />
+          </div>
+
+          {/* Tab 2 - Vehicle Status */}
+          <div
+            className={`flex-1 flex items-center justify-center cursor-pointer transition-all duration-300 bg-[#1F557F] group ${activeTab === "vehicles"
+              ? "bg-[#1a4a6b] shadow-inner scale-105"
+              : "hover:bg-[#1e4a6f] hover:scale-102"
+              }`}
+            onClick={() => {
+              if (!isExpanded) {
+                handleToggleExpand();
+                setTimeout(() => handleVehiclesTab(), 200);
+              } else {
+                handleVehiclesTab();
+              }
+            }}
+            title="Vehicle Status"
+          >
+            <img
+              src={sideIcon2}
+              className={`h-[26px] transition-all duration-300 group-hover:scale-110 ${activeTab === "vehicles" ? "scale-110 brightness-110" : "opacity-80"
+                }`}
+              alt="Vehicle Status"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 });

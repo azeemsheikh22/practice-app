@@ -41,7 +41,7 @@ export default function GeofenceHeader() {
   const cardData = [
     {
       id: "total",
-      icon: <MapPin size={14} className="text-[#D52B1E]" />,
+      icon: <MapPin size={14} className="text-[#25689f]" />, // ✅ Primary blue
       value: loading ? "..." : totalGeofences.toLocaleString(),
       label: "Total Geofences",
       buttonText: "Show All",
@@ -54,7 +54,7 @@ export default function GeofenceHeader() {
     },
     {
       id: "correct",
-      icon: <AlertTriangle size={14} className="text-[#D52B1E]" />,
+      icon: <AlertTriangle size={14} className="text-orange-500" />, // ✅ Changed to orange for warning
       value: loading ? "..." : geofencesToCorrect.toLocaleString(),
       label: "Geofence to Correct",
       buttonText: "Correct Now",
@@ -67,7 +67,7 @@ export default function GeofenceHeader() {
     },
     {
       id: "suggested",
-      icon: <CheckCircle size={14} className="text-[#D52B1E]" />,
+      icon: <CheckCircle size={14} className="text-green-500" />, // ✅ Green for success/suggestions
       value: "0",
       label: "Suggested Geofence",
       buttonText: "View and Edit",
@@ -92,14 +92,14 @@ export default function GeofenceHeader() {
         {/* Left side - Stats text */}
         <div className="flex items-center">
           <div className="flex items-center space-x-1.5">
-            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+            <div className="w-1.5 h-1.5 bg-[#25689f] rounded-full animate-pulse"></div> {/* ✅ Primary blue */}
             <h2 className="text-sm font-semibold text-gray-800">
               Showing{" "}
-              <span className="text-blue-600">
+              <span className="text-[#25689f]"> {/* ✅ Primary blue */}
                 {loading ? "..." : totalGeofences}
               </span>{" "}
               of{" "}
-              <span className="text-blue-600">
+              <span className="text-[#25689f]"> {/* ✅ Primary blue */}
                 {loading ? "..." : totalGeofences}
               </span>{" "}
               Geofences
@@ -114,19 +114,19 @@ export default function GeofenceHeader() {
             whileHover="hover"
             whileTap="tap"
             onClick={() => setIsManageCategoriesOpen(true)}
-            className="btn btn-ghost btn-sm text-gray-700 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-all duration-200 h-auto min-h-0 px-2.5 py-1 text-xs"
+            className="btn btn-ghost btn-sm text-gray-700 hover:bg-[#25689f]/10 border border-gray-200 hover:border-[#25689f] transition-all duration-200 h-auto min-h-0 px-2.5 py-1 text-xs" // ✅ Blue hover effects
           >
             <MapPin size={12} className="mr-1" />
             Manage Categories
           </motion.button>
 
-          {/* ✅ Updated Create Geofence button */}
+          {/* ✅ Create Geofence button with consistent blue theme */}
           <motion.button
             variants={buttonVariants}
             whileHover="hover"
             whileTap="tap"
             onClick={handleCreateGeofence}
-            className="btn btn-primary btn-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 border-none text-white shadow-md hover:shadow-lg transition-all duration-200 h-auto min-h-0 px-2.5 py-1 text-xs"
+            className="btn btn-primary btn-sm bg-[#25689f] hover:bg-[#1F557F] border-none text-white shadow-md hover:shadow-lg transition-all duration-200 h-auto min-h-0 px-2.5 py-1 text-xs" // ✅ Consistent blue theme
           >
             <MapPin size={12} className="mr-1" />
             Create Geofence
@@ -167,9 +167,9 @@ export default function GeofenceHeader() {
             }}
             className="relative bg-gradient-to-br from-white to-gray-50 rounded-lg p-3 shadow-md shadow-gray-300/20 hover:shadow-gray-400/30 transition-all duration-300 overflow-hidden group cursor-pointer border border-gray-200 min-h-[85px]"
           >
-            {/* Background decorative elements - smaller */}
-            <div className="absolute top-0 right-0 w-10 h-10 bg-[#D52B1E]/10 rounded-full transform translate-x-5 -translate-y-5"></div>
-            <div className="absolute bottom-0 left-0 w-6 h-6 bg-black/5 rounded-full transform -translate-x-3 translate-y-3"></div>
+            {/* Background decorative elements - Updated to blue theme */}
+            <div className="absolute top-0 right-0 w-10 h-10 bg-[#25689f]/10 rounded-full transform translate-x-5 -translate-y-5"></div> {/* ✅ Primary blue */}
+            <div className="absolute bottom-0 left-0 w-6 h-6 bg-[#1F557F]/5 rounded-full transform -translate-x-3 translate-y-3"></div> {/* ✅ Dark blue */}
 
             {/* Card Content */}
             <div className="relative z-10 h-full flex flex-col">
@@ -177,8 +177,14 @@ export default function GeofenceHeader() {
               <div className="flex items-center justify-between w-full">
                 {/* Left side - Icon and content */}
                 <div className="flex items-center space-x-2.5">
-                  <div className="p-1 bg-[#D52B1E]/10 backdrop-blur-sm rounded-md group-hover:bg-[#D52B1E]/20 transition-all duration-300 border border-[#D52B1E]/20">
-                    <div className="w-3.5 h-3.5 flex items-center justify-center text-[#D52B1E]">
+                  <div className={`p-1 backdrop-blur-sm rounded-md group-hover:bg-opacity-30 transition-all duration-300 border ${
+                    card.id === 'correct' 
+                      ? 'bg-orange-50 group-hover:bg-orange-100 border-orange-200' // ✅ Orange for warnings
+                      : card.id === 'suggested'
+                      ? 'bg-green-50 group-hover:bg-green-100 border-green-200' // ✅ Green for suggestions
+                      : 'bg-[#25689f]/10 group-hover:bg-[#25689f]/20 border-[#25689f]/20' // ✅ Blue for normal
+                  }`}>
+                    <div className="w-3.5 h-3.5 flex items-center justify-center">
                       {card.icon}
                     </div>
                   </div>
@@ -193,13 +199,13 @@ export default function GeofenceHeader() {
                   </div>
                 </div>
 
-                {/* Right side - Action Button */}
+                {/* Right side - Action Button - ✅ ALL BUTTONS NOW BLUE THEME */}
                 <div className="flex-shrink-0">
                   <motion.button
                     variants={buttonVariants}
                     whileHover="hover"
                     whileTap="tap"
-                    className="px-2.5 py-1 bg-[#D52B1E] hover:bg-[#B8241A] text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-xs flex items-center space-x-1"
+                    className="px-2.5 py-1 bg-[#25689f] hover:bg-[#1F557F] text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-xs flex items-center space-x-1" // ✅ All buttons use blue theme now
                   >
                     <span>{card.buttonText}</span>
                     <svg
@@ -220,13 +226,13 @@ export default function GeofenceHeader() {
               </div>
             </div>
 
-            {/* Hover glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#D52B1E]/0 via-[#D52B1E]/5 to-[#D52B1E]/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
+            {/* Hover glow effect - ✅ All blue theme */}
+            <div className="absolute inset-0 bg-gradient-to-r from-[#25689f]/0 via-[#25689f]/5 to-[#25689f]/0 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
           </motion.div>
         ))}
       </div>
 
-      {/* Loading Indicator */}
+      {/* Loading Indicator - Updated to blue */}
       {loading && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -234,7 +240,7 @@ export default function GeofenceHeader() {
           className="flex items-center justify-center py-2"
         >
           <div className="flex items-center space-x-1.5 text-gray-600">
-            <div className="w-2.5 h-2.5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-2.5 h-2.5 border-2 border-[#25689f] border-t-transparent rounded-full animate-spin"></div> {/* ✅ Primary blue */}
             <span className="text-xs font-medium">Loading geofences...</span>
           </div>
         </motion.div>

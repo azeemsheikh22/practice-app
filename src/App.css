@@ -3,12 +3,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap');
 
 :root {
-  --primary-color: #D52B1E;
-  /* --primary-color: #2C75B0; */
-
+  /* Keep your existing colors */
   --text-color: #111111;
-  --bg-dark: #111111;
+  --primary-color: #25689f;
+  --bg-dark: #1F557F;
+  
+  /* Add these for consistency */
+  --primary-hover: #1e4a6f;
+  --primary-light: #2c75b0;
+  --accent-red: #D52B1E; /* For alerts/important actions */
 }
+
 
 .app-main {
   font-family: "Poppins", sans-serif;

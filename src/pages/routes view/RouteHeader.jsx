@@ -78,7 +78,7 @@ export default function RouteHeader() {
             </p>
           </div>
 
-          {/* ✅ COMPACT Create Route Button */}
+          {/* ✅ COMPACT Create Route Button - Updated with theme colors */}
           <div className="flex-shrink-0">
             <motion.button
               variants={buttonVariants}
@@ -96,7 +96,7 @@ export default function RouteHeader() {
                   alert("Please allow popups for this site to create routes");
                 }
               }}
-              className="btn btn-primary btn-sm bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 border-none text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center px-3 py-1.5 text-sm h-auto min-h-0"
+              className="btn btn-primary btn-sm bg-gradient-to-r from-[#25689f] to-[#1F557F] hover:from-[#1F557F] hover:to-[#184567] border-none text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center px-3 py-1.5 text-sm h-auto min-h-0"
             >
               <Plus size={14} className="mr-1.5" />
               Create New Route
@@ -108,7 +108,7 @@ export default function RouteHeader() {
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           {/* ✅ COMPACT Left side - Search and showing info */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1">
-            {/* ✅ COMPACT Search Input */}
+            {/* ✅ COMPACT Search Input - Updated with theme colors */}
             <div className="relative flex-1 max-w-sm">
               <Search
                 size={16}
@@ -119,17 +119,17 @@ export default function RouteHeader() {
                 placeholder="Search for a route..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 w-full"
+                className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#25689f] focus:border-transparent outline-none transition-all duration-200 w-full"
               />
             </div>
 
-            {/* ✅ COMPACT Showing info */}
+            {/* ✅ COMPACT Showing info - Updated with theme colors */}
             <div className="flex items-center space-x-1.5 flex-shrink-0">
-              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+              <div className="w-1.5 h-1.5 bg-[#25689f] rounded-full animate-pulse"></div>
               <span className="text-xs text-gray-600">
-                Showing <span className="font-semibold text-blue-600">50</span>{" "}
+                Showing <span className="font-semibold text-[#25689f]">50</span>{" "}
                 of{" "}
-                <span className="font-semibold text-blue-600">
+                <span className="font-semibold text-[#25689f]">
                   {totalRoutes}
                 </span>{" "}
                 routes
@@ -137,7 +137,7 @@ export default function RouteHeader() {
             </div>
           </div>
 
-          {/* ✅ COMPACT Right side - Download button */}
+          {/* ✅ COMPACT Right side - Download button - Updated with theme colors */}
           <div className="flex-shrink-0">
             <div className="relative" ref={downloadRef}>
               <motion.button
@@ -167,7 +167,7 @@ export default function RouteHeader() {
                         option.action();
                         setIsDownloadOpen(false);
                       }}
-                      className="flex items-center w-full px-2.5 py-1.5 text-xs text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                      className="flex items-center w-full px-2.5 py-1.5 text-xs text-gray-700 hover:bg-[#25689f]/10 hover:text-[#25689f] transition-colors duration-150"
                     >
                       {option.icon}
                       <span className="ml-1.5">{option.label}</span>

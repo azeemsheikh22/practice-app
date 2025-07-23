@@ -44,6 +44,8 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
     showShapes,
   } = useSelector((state) => state.geofence);
 
+  console.log(userGeofences)
+
   // Route selectors
   const {
     routes,
@@ -372,7 +374,7 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
   }).length;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-[300]">
+    <div className="fixed inset-0 flex items-center justify-center z-[905]">
       <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
 
       <motion.div

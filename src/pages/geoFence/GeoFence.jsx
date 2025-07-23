@@ -15,7 +15,7 @@ export default function GeoFence() {
     if (!geofences || geofences.length === 0) {
       dispatch(fetchGeofences());
     }
-  }, [dispatch, geofences]);
+  }, [dispatch]);
 
   return (
     <div className="min-h-screen bg-gray-100">

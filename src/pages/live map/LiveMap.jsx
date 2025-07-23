@@ -1,19 +1,23 @@
-import React, { 
-  useState, 
-  useEffect, 
-  useRef, 
-  useCallback, 
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
   useMemo,
   Suspense,
-  lazy 
+  lazy,
 } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Navbar from "../../components/navber/Navbar";
 import MapSidebar from "./MapSidebar";
 import MapSidebarOptions from "../../components/map sidebar options/MapSidebarOptions";
 import LocationSearch from "../../components/map/LocationSearch";
-import { Search, MapPin, Table, ChevronUp, X, Settings } from "lucide-react";
-import mapicon from "../../assets/mapicon.png";
+import { MapPin, Table, ChevronUp, Settings } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { setGlobalSearchQuery } from "../../features/locationSearchSlice";
+import NetworkStatus from "../../components/map/NetworkStatus";
+
 
 // ✅ PERFORMANCE: Lazy load heavy components
 const MapContainer = lazy(() => import("./MapContainer"));
@@ -31,42 +35,95 @@ const LoadingSpinner = React.memo(({ message = "Loading..." }) => (
 ));
 
 const LiveMap = () => {
-  // ✅ PERFORMANCE: Group related state together
+  // ✅ PERFORMANCE: Group related state together - Updated without search toggle
   const [uiState, setUiState] = useState({
     isMobileSidebarOpen: false,
     isMobile: false,
     isDataTableOpen: false,
-    isSearchOpen: false,
+    // ✅ REMOVED: isSearchOpen since search is always visible
     isMapOptionsOpen: false,
   });
 
   const [searchQuery, setSearchQuery] = useState("");
-  
+  const dispatch = useDispatch();
   const searchInputRef = useRef(null);
   const mapContainerRef = useRef(null);
 
   // ✅ PERFORMANCE: Memoized state updaters
   const updateUiState = useCallback((updates) => {
-    setUiState(prev => ({ ...prev, ...updates }));
+    setUiState((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // ✅ PERFORMANCE: Debounced resize handler
+  // ✅ ADD: Sidebar width state
+  const [sidebarWidth, setSidebarWidth] = useState(340); // Default width
+
+  // ✅ ADD: Callback to handle width changes
+  const handleSidebarWidthChange = useCallback((width) => {
+    setSidebarWidth(width);
+    
+    // ✅ NEW: Trigger map resize after sidebar width changes
+    setTimeout(() => {
+      if (mapContainerRef.current) {
+        // Trigger resize event to update map
+        window.dispatchEvent(new Event('resize'));
+        
+        // Force map invalidation and redraw
+        if (mapContainerRef.current.invalidateSize) {
+          mapContainerRef.current.invalidateSize();
+        }
+      }
+    }, 300); // Small delay to allow DOM to update
+  }, []);
+
+
+  // ✅ Add mobile height calculation function
+  const calculateMobileHeight = useCallback(() => {
+    if (typeof window !== "undefined") {
+      const windowHeight = window.innerHeight;
+      const navbarHeight = 64; // 16 * 4 = 64px (h-16)
+      const tabsHeight = 60; // Tabs height
+      const paddingBuffer = 20; // Extra padding
+
+      return windowHeight - navbarHeight - tabsHeight - paddingBuffer;
+    }
+    return "calc(100vh - 144px)"; // Fallback
+  }, []);
+
+  // ✅ Add mobile height state
+  const [mobileTreeHeight, setMobileTreeHeight] = useState(
+    calculateMobileHeight()
+  );
+
+  // ✅ Update resize handler to include mobile height calculation
   const handleResize = useMemo(() => {
     let timeoutId;
     return () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        updateUiState({ isMobile: window.innerWidth < 1280 });
+        const isMobile = window.innerWidth < 1280;
+        updateUiState({ isMobile });
+
+        // ✅ Update mobile tree height on resize
+        if (isMobile) {
+          setMobileTreeHeight(calculateMobileHeight());
+        }
+        
+        // ✅ NEW: Force map resize on window resize
+        if (mapContainerRef.current) {
+          if (mapContainerRef.current.invalidateSize) {
+            mapContainerRef.current.invalidateSize();
+          }
+        }
       }, 100);
     };
-  }, [updateUiState]);
+  }, [updateUiState, calculateMobileHeight]);
 
   // Check if device is mobile
   useEffect(() => {
     const checkMobile = () => {
       updateUiState({ isMobile: window.innerWidth < 1280 });
     };
-    
+
     checkMobile();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -81,17 +138,6 @@ const LiveMap = () => {
       return () => clearTimeout(timeoutId);
     }
   }, [uiState.isSearchOpen]);
-
-  // ✅ PERFORMANCE: Memoized callback functions
-  const handleFitToMap = useCallback(() => {
-    if (mapContainerRef.current) {
-      mapContainerRef.current.closeAllPopups();
-      const success = mapContainerRef.current.fitToAllMarkers();
-      if (!success) {
-        mapContainerRef.current.zoomToPakistan();
-      }
-    }
-  }, []);
 
   const handleLocationSelect = useCallback((location) => {
     if (mapContainerRef.current) {
@@ -116,14 +162,11 @@ const LiveMap = () => {
     }
   }, [uiState.isSearchOpen, updateUiState]);
 
-  const closeSearch = useCallback(() => {
+  // ✅ NEW: Clear search function for always visible search
+  const clearSearch = useCallback(() => {
     setSearchQuery("");
-    updateUiState({ isSearchOpen: false });
-  }, [updateUiState]);
-
-  const handleSearchQueryChange = useCallback((query) => {
-    setSearchQuery(query);
-  }, []);
+    dispatch(setGlobalSearchQuery(""));
+  }, [dispatch]);
 
   const openMapOptions = useCallback(() => {
     updateUiState({ isMapOptionsOpen: true });
@@ -141,176 +184,201 @@ const LiveMap = () => {
     updateUiState({ isMobileSidebarOpen: false });
   }, [updateUiState]);
 
+
+  const handleSearchQueryChange = useCallback((query) => {
+    setSearchQuery(query);
+  }, []);
+
   // ✅ PERFORMANCE: Memoized animation variants
-  const overlayVariants = useMemo(() => ({
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-    exit: { opacity: 0 }
-  }), []);
+  const overlayVariants = useMemo(
+    () => ({
+      hidden: { opacity: 0 },
+      visible: { opacity: 1 },
+      exit: { opacity: 0 },
+    }),
+    []
+  );
 
-  const slideVariants = useMemo(() => ({
-    hidden: { x: "100%" },
-    visible: { x: 0 },
-    exit: { x: "100%" }
-  }), []);
+  const slideVariants = useMemo(
+    () => ({
+      hidden: { x: "100%" },
+      visible: { x: 0 },
+      exit: { x: "100%" },
+    }),
+    []
+  );
 
-  const fadeVariants = useMemo(() => ({
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: { opacity: 1, scale: 1 },
-    exit: { opacity: 0, scale: 0.95 }
-  }), []);
-
-  // ✅ PERFORMANCE: Memoized components
-  const DesktopControls = useMemo(() => (
-    <div className="absolute left-[355px] top-19 z-10 hidden xl:flex space-x-2">
-      {/* Search Component */}
-      <div className="transition-all duration-300 ease-in-out">
-        {uiState.isSearchOpen ? (
-          <LocationSearch
-            ref={searchInputRef}
-            onLocationSelect={handleLocationSelect}
-            searchQuery={searchQuery}
-            setSearchQuery={handleSearchQueryChange}
-            onClose={closeSearch}
-          />
-        ) : (
-          <button
-            onClick={toggleSearch}
-            className="bg-white h-[42px] w-[42px] cursor-pointer rounded-sm shadow-md hover:bg-gray-50 flex items-center justify-center border border-gray-200 transition-all duration-200 hover:scale-105 active:scale-95"
-            title="Search Locations"
-          >
-            <Search size={20} className="text-dark" />
-          </button>
-        )}
-      </div>
-
-      {/* Fit to Map Button */}
-      <button
-        onClick={handleFitToMap}
-        className="bg-white py-2 px-3 cursor-pointer h-[42px] flex gap-3 text-dark shadow-md rounded-sm border border-gray-200 text-[14px] font-medium justify-center items-center hover:bg-gray-50 group transition-all duration-200 hover:scale-105 active:scale-95"
-        title="Fit to Map"
-      >
-        <img
-          src={mapicon}
-          alt="fit"
-          className="h-6 w-6 group-hover:scale-110 transition-transform duration-200"
-        />
-      </button>
-
-      {/* Map Options Button */}
-      <button
-        onClick={openMapOptions}
-        className="bg-white py-2 px-3 h-[42px] cursor-pointer flex gap-3 text-dark shadow-md rounded-sm border border-gray-200 text-[14px] font-medium justify-center items-center hover:bg-gray-50 group transition-all duration-200 hover:scale-105 active:scale-95"
-        title="Map Settings"
-      >
-        <Settings
-          size={20}
-          className="group-hover:scale-110 transition-transform duration-200 text-gray-700"
-        />
-      </button>
-    </div>
-  ), [
-    uiState.isSearchOpen,
-    handleLocationSelect,
-    searchQuery,
-    handleSearchQueryChange,
-    closeSearch,
-    toggleSearch,
-    handleFitToMap,
-    openMapOptions
-  ]);
-
-  const MobileControls = useMemo(() => (
-    <div className="fixed bottom-6 left-0 right-0 flex justify-center items-center z-20 xl:hidden">
-      <div className="bg-white rounded-full shadow-lg flex overflow-hidden">
-        <button
-          onClick={handleFitToMap}
-          className="px-5 py-3 border-r border-gray-200 hover:bg-gray-50 transition-all duration-200 active:scale-95"
-          title="Fit to Map"
-        >
-          <img src={mapicon} alt="Fit to Map" className="h-6 w-6" />
-        </button>
-        
-        <button
-          onClick={toggleDataTable}
-          className="px-5 py-3 border-r border-gray-200 hover:bg-gray-50 transition-all duration-200 active:scale-95"
-          title="Toggle Data Table"
-        >
-          <Table
-            size={24}
-            className={`${uiState.isDataTableOpen ? "text-primary" : "text-dark"}`}
-          />
-        </button>
-        
-        <button
-          onClick={openMapOptions}
-          className="px-5 py-3 border-r border-gray-200 hover:bg-gray-50 transition-all duration-200 active:scale-95"
-          title="Map Settings"
-        >
-          <Settings size={24} className="text-dark" />
-        </button>
-        
-        <button
-          onClick={openMobileSidebar}
-          className="px-5 py-3 hover:bg-gray-50 transition-all duration-200 active:scale-95"
-          title="Open Menu"
-        >
-          <div className="relative">
-            <MapPin size={24} className="text-dark" />
-            <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full animate-pulse"></span>
+  const DesktopControls = useMemo(
+    () => (
+      <div className="flex items-center justify-between w-full pr-4 ps-2 h-[40px] bg-[#1F557F] relative z-40">
+        {/* Left side - Search input */}
+        <div className="flex items-center space-x-2">
+          {/* Always visible Search Component - FIXED Z-INDEX */}
+          <div className="transition-all duration-300 ease-in-out relative z-50">
+            <LocationSearch
+              ref={searchInputRef}
+              onLocationSelect={handleLocationSelect}
+              searchQuery={searchQuery}
+              setSearchQuery={handleSearchQueryChange}
+              onClear={clearSearch}
+              isCompact={true}
+            />
           </div>
-        </button>
+        </div>
+
+        {/* Right side - Network Status & Control buttons */}
+        <div className="flex items-center space-x-3">
+          {/* ✅ Network Status Indicator */}
+          <NetworkStatus />
+
+          {/* Map Options Button */}
+          <button
+            onClick={openMapOptions}
+            className="h-[32px] px-2 cursor-pointer flex gap-1 text-white/90 hover:text-white text-[13px] font-medium justify-center items-center group transition-all duration-200 hover:scale-105 active:scale-95 rounded"
+            title="Map Settings"
+          >
+            <Settings
+              size={16}
+              className="group-hover:scale-110 group-hover:rotate-90 transition-all duration-300"
+            />
+            <span className="hidden lg:inline-block text-xs font-medium">
+              Settings
+            </span>
+          </button>
+
+          {/* ✅ REMOVED: Fit to Map Button - moved to MapContainer */}
+        </div>
       </div>
-    </div>
-  ), [handleFitToMap, toggleDataTable, uiState.isDataTableOpen, openMapOptions, openMobileSidebar]);
+    ),
+    [
+      handleLocationSelect,
+      searchQuery,
+      handleSearchQueryChange,
+      clearSearch,
+      openMapOptions,
+    ]
+  );
+
+
+
+
+  // ✅ Update mobile controls to pass height
+  const MobileControls = useMemo(
+    () => (
+      <div className="fixed bottom-6 left-0 right-0 flex justify-center items-center z-20 xl:hidden">
+        <div className="bg-white rounded-full shadow-lg flex overflow-hidden">
+
+          <button
+            onClick={toggleDataTable}
+            className="px-5 py-3 border-r border-gray-200 hover:bg-gray-50 transition-all duration-200 active:scale-95"
+            title="Toggle Data Table"
+          >
+            <Table
+              size={24}
+              className={`${uiState.isDataTableOpen ? "text-primary" : "text-dark"
+                }`}
+            />
+          </button>
+
+          <button
+            onClick={openMapOptions}
+            className="px-5 py-3 border-r border-gray-200 hover:bg-gray-50 transition-all duration-200 active:scale-95"
+            title="Map Settings"
+          >
+            <Settings size={24} className="text-dark" />
+          </button>
+
+          <button
+            onClick={openMobileSidebar}
+            className="px-5 py-3 hover:bg-gray-50 transition-all duration-200 active:scale-95"
+            title="Open Menu"
+          >
+            <div className="relative">
+              <MapPin size={24} className="text-dark" />
+              <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full animate-pulse"></span>
+            </div>
+          </button>
+        </div>
+      </div>
+    ),
+    [
+      toggleDataTable,
+      uiState.isDataTableOpen,
+      openMapOptions,
+      openMobileSidebar,
+    ]
+  );
 
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-gray-100">
+    <div className="h-screen w-full overflow-hidden bg-white">
       {/* Navigation Bar */}
-      <div className="relative z-40">
+      <div className="h-[9vh] overflow-hidden z-50">
         <Navbar />
       </div>
+      <div className="h-[91vh] flex flex-row">
+        {/* Desktop Sidebar */}
+        <div className="z-[730] hidden xl:block">
+          <MapSidebar onWidthChange={handleSidebarWidthChange} />
+        </div>
 
-      {/* Map Container - Hardware accelerated */}
-      <div 
-        className="absolute inset-0 z-0 top-16 transition-all duration-300"
-        style={{ 
-          transform: 'translate3d(0,0,0)',
-          willChange: 'transform'
-        }}
-      >
-        <Suspense fallback={<LoadingSpinner message="Loading map..." />}>
-          <MapContainer ref={mapContainerRef} searchQuery={searchQuery} />
-        </Suspense>
+
+        <div className="w-[100%] flex flex-col">
+          {/* Desktop Controls with heading and buttons - Fixed 45px height */}
+          <div className="hidden xl:block">{DesktopControls}</div>
+
+
+
+          <div className="h-full w-[100%]">
+            <Suspense fallback={<LoadingSpinner message="Loading map..." />}>
+              <MapContainer 
+                ref={mapContainerRef} 
+                searchQuery={searchQuery}
+                sidebarWidth={sidebarWidth} // ✅ NEW: Pass sidebar width to MapContainer
+              />
+            </Suspense>
+          </div>
+
+
+          {/* Data Table - Optimized */}
+          <Suspense fallback={null}>
+            <MapDataTable
+              isOpen={uiState.isDataTableOpen}
+              onToggle={toggleDataTable}
+              sidebarWidth={sidebarWidth} // ✅ CHANGED: Dynamic width instead of fixed 340
+            />
+          </Suspense>
+
+        </div>
       </div>
 
-      {/* Desktop Sidebar */}
-      <div className="absolute left-1 h-[calc(100%-6rem)] w-[354px] z-30 hidden xl:block">
-        <MapSidebar />
-      </div>
-
-      {/* Desktop Controls */}
-      {DesktopControls}
-
-      {/* Desktop Data Table Toggle Button */}
-      <div className="fixed bottom-6 right-20 z-20 hidden xl:block">
-        <button
-          onClick={toggleDataTable}
-          className={`flex items-center justify-center rounded-full shadow-lg transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 ${
-            uiState.isDataTableOpen
-              ? "bg-primary text-white p-3"
-              : "bg-white text-gray-700 p-3 hover:bg-gray-50"
-          }`}
-          title={uiState.isDataTableOpen ? "Close Data Table" : "Open Data Table"}
-        >
-          <Table size={22} />
-          {!uiState.isDataTableOpen && (
+      {/* Desktop Data Table Toggle Button - HIDE WHEN OPEN */}
+      {!uiState.isDataTableOpen && (
+        <div className="fixed bottom-6 right-20 z-20 hidden xl:block">
+          <button
+            onClick={toggleDataTable}
+            className="flex items-center justify-center rounded-full shadow-lg transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 bg-white text-gray-700 p-3 hover:bg-gray-50"
+            title="Open Data Table"
+          >
+            <Table size={22} />
             <div className="absolute -top-1 -right-1 h-5 w-5 bg-primary rounded-full flex items-center justify-center">
               <ChevronUp size={14} className="text-white" />
             </div>
-          )}
-        </button>
-      </div>
+          </button>
+        </div>
+      )}
+
+      {/* Mobile Controls */}
+      {MobileControls}
+
+      {/* Map Sidebar Options Modal - Optimized */}
+      <AnimatePresence mode="wait">
+        {uiState.isMapOptionsOpen && (
+          <MapSidebarOptions
+            isOpen={uiState.isMapOptionsOpen}
+            onClose={closeMapOptions}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Mobile Controls */}
       {MobileControls}
@@ -329,93 +397,77 @@ const LiveMap = () => {
       <AnimatePresence mode="wait">
         {uiState.isMobile && uiState.isSearchOpen && (
           <motion.div
-            className="fixed inset-0 bg-white bg-opacity-90 backdrop-blur-sm z-40 flex items-start justify-center pt-20"
-            variants={overlayVariants}
+          className="fixed inset-0 bg-white bg-opacity-90 backdrop-blur-sm z-50 flex flex-col"
+          variants={overlayVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          transition={{ duration: 0.2 }}
+        >
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold">Search Location</h2>
+            <button
+              onClick={toggleSearch}
+              className="p-2 rounded-full hover:bg-gray-100"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+          <div className="p-4">
+            <LocationSearch
+              ref={searchInputRef}
+              onLocationSelect={(location) => {
+                handleLocationSelect(location);
+                toggleSearch();
+              }}
+              searchQuery={searchQuery}
+              setSearchQuery={handleSearchQueryChange}
+              onClear={clearSearch}
+            />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* Mobile Sidebar - Optimized */}
+    <AnimatePresence mode="wait">
+      {uiState.isMobile && uiState.isMobileSidebarOpen && (
+        <>
+     
+          <motion.div
+            className="fixed inset-y-0 right-0 w-[100%] bg-white z-[800] shadow-xl"
+            variants={slideVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
-            transition={{ duration: 0.2 }}
-            style={{ willChange: 'opacity' }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
-            <motion.div
-              className="w-[90%] max-w-md"
-              variants={fadeVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={{ duration: 0.2, delay: 0.1 }}
-            >
-              <LocationSearch
-                onLocationSelect={(location) => {
-                  handleLocationSelect(location);
-                  toggleSearch();
-                }}
-                searchQuery={searchQuery}
-                setSearchQuery={handleSearchQueryChange}
-                isMobile={true}
+            <Suspense fallback={<LoadingSpinner message="Loading sidebar..." />}>
+              <MobileSidebar 
+                onClose={closeMobileSidebar} 
+                mobileHeight={mobileTreeHeight} 
               />
-              <button
-                onClick={toggleSearch}
-                className="mt-4 mx-auto block text-gray-500 hover:text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100 transition-all duration-200"
-              >
-                Cancel
-              </button>
-            </motion.div>
+            </Suspense>
           </motion.div>
-        )}
-      </AnimatePresence>
-      {/* Mobile Sidebar - Optimized */}
-      <AnimatePresence mode="wait">
-        {uiState.isMobileSidebarOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm z-50"
-              variants={overlayVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={{ duration: 0.2 }}
-              onClick={closeMobileSidebar}
-              style={{ willChange: 'opacity' }}
-            />
-            
-            {/* Sidebar Content */}
-            <motion.div
-              className="fixed inset-0 bg-white z-50"
-              variants={slideVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={{ 
-                type: "tween", 
-                duration: 0.25,
-                ease: "easeInOut"
-              }}
-              style={{ 
-                backfaceVisibility: 'hidden',
-                transform: 'translateZ(0)'
-              }}
-            >
-              <Suspense fallback={<LoadingSpinner message="Loading sidebar..." />}>
-                <MobileSidebar onClose={closeMobileSidebar} />
-              </Suspense>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Data Table - Optimized */}
-      <Suspense fallback={null}>
-        <MapDataTable
-          isOpen={uiState.isDataTableOpen}
-          onToggle={toggleDataTable}
-          sidebarWidth={346}
-        />
-      </Suspense>
-    </div>
-  );
+        </>
+      )}
+    </AnimatePresence>
+  </div>
+);
 };
 
-export default React.memo(LiveMap);
+export default LiveMap;
 

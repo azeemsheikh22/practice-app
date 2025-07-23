@@ -10,6 +10,9 @@ import Replay from "../pages/replay/Replay";
 import RoutesView from "../pages/routes view/RouteView";
 import MatrixPage from "../components/Geofence/matrix/MatrixPage"; // ADD THIS IMPORT
 import CreateRoute from "../pages/routes view/create route/CreateRoute";
+import ChartDashboard from "../pages/chart dashboard/ChartDashboard";
+import NotFound from "../pages/not found/NotFound";
+import AdminNavigation from "../admin/AdminRoot";
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -100,9 +103,29 @@ function AllRoute() {
         }
       />
 
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <ChartDashboard />
+          </ProtectedRoute>
+        }
+      />
+
       <Route path="/create-route" element={<CreateRoute />} />
+      
+      {/* Admin Routes with nested sub-routes */}
+      <Route 
+        path="/admin/*" 
+        element={
+          <ProtectedRoute>
+            <AdminNavigation />
+          </ProtectedRoute>
+        } 
+      />
 
       <Route path="/login" element={<Login />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

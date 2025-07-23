@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   MapPin,
   Clock,
   Gauge,
   MoreVertical,
-  ChevronUp,
-  ChevronRight,
+  Battery,
+  Wifi,
+  Activity,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedVehicle } from "../../features/mapInteractionSlice";
@@ -15,65 +17,48 @@ import movingIcon from "../../assets/moving-vehicle.png";
 import stoppedIcon from "../../assets/stopped-vehicle.png";
 import idleIcon from "../../assets/idle-vehicle.png";
 
-// Cleanup function for localStorage
-const cleanupOldMenuStates = () => {
-  try {
-    const keys = Object.keys(localStorage);
-    const menuKeys = keys.filter((key) => key.startsWith("vehicleMenu_"));
-
-    // Keep only last 50 menu states
-    if (menuKeys.length > 50) {
-      const oldKeys = menuKeys.slice(0, menuKeys.length - 50);
-      oldKeys.forEach((key) => localStorage.removeItem(key));
-    }
-  } catch (error) {
-    console.warn("Failed to cleanup localStorage:", error);
-  }
-};
-
-const VehicleCard = ({ car }) => {
+const VehicleCard = React.memo(({ car }) => {
   const dispatch = useDispatch();
   const selectedVehicleId = useSelector(
     (state) => state.mapInteraction.selectedVehicleId
   );
   const isSelected = selectedVehicleId === car.car_id;
 
-  // LocalStorage se initial state get karein
-  const getInitialMenuState = () => {
-    try {
-      const savedState = localStorage.getItem(`vehicleMenu_${car.car_id}`);
-      return savedState ? JSON.parse(savedState) : false;
-    } catch (error) {
-      return false;
-    }
-  };
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+  const menuButtonRef = useRef(null);
+  const menuRef = useRef(null);
 
-  const [menuOpen, setMenuOpen] = useState(getInitialMenuState);
-  const [activeSubmenu, setActiveSubmenu] = useState(null);
+  // ✅ STABLE: Memoize car data to prevent unnecessary re-renders
+  // Added new fields: signalstrength, mileage, voltage
+  const stableCarData = useMemo(() => ({
+    car_id: car.car_id,
+    carname: car.carname,
+    movingstatus: car.movingstatus,
+    location: car.location,
+    speed: car.speed,
+    gps_time: car.gps_time,
+    head: car.head,
+    signalstrength: car.signalstrength,
+    mileage: car.mileage,
+    voltage: car.voltage,
+    engine: car.engine,
+  }), [
+    car.car_id,
+    car.carname,
+    car.movingstatus,
+    car.location,
+    car.speed,
+    car.gps_time,
+    car.head,
+    car.signalstrength,
+    car.mileage,
+    car.voltage,
+    car.engine,
+  ]);
 
-  // Cleanup localStorage on component mount
-  useEffect(() => {
-    cleanupOldMenuStates();
-  }, []);
-
-  // Calculate dynamic height based on active submenus
-  const getMenuHeight = () => {
-    if (!menuOpen) return "max-h-0";
-
-    let baseHeight = 400; // Base height for main menu items
-
-    if (activeSubmenu === "directions") {
-      baseHeight += 80; // Add height for directions submenu (2 items)
-    }
-    if (activeSubmenu === "vehicleOptions") {
-      baseHeight += 160; // Add height for vehicle options submenu (4 items)
-    }
-
-    return `max-h-[${baseHeight}px]`;
-  };
-
-  // Get status color
-  const getStatusColor = (status) => {
+  // Get status color - memoized
+  const getStatusColor = useCallback((status) => {
     if (!status) return "bg-blue-500";
 
     switch (status.toLowerCase()) {
@@ -89,10 +74,10 @@ const VehicleCard = ({ car }) => {
       default:
         return "bg-blue-500";
     }
-  };
+  }, []);
 
-  // Get vehicle icon based on status
-  const getVehicleIcon = (status) => {
+  // Get vehicle icon based on status - memoized
+  const getVehicleIcon = useCallback((status) => {
     switch (status?.toLowerCase()) {
       case "moving":
         return movingIcon;
@@ -102,10 +87,10 @@ const VehicleCard = ({ car }) => {
       default:
         return stoppedIcon;
     }
-  };
+  }, []);
 
-  // Format date and time to be more readable
-  const formatDateTime = (timeString) => {
+  // Format date and time - memoized
+  const formatDateTime = useCallback((timeString) => {
     if (!timeString) return "N/A";
     try {
       const date = new Date(timeString);
@@ -121,373 +106,365 @@ const VehicleCard = ({ car }) => {
     } catch (e) {
       return "N/A";
     }
-  };
+  }, []);
 
-  const handleCardClick = () => {
+  // Get signal strength icon based on value
+  const getSignalStrengthIcon = useCallback((strength) => {
+    const signalValue = parseInt(strength) || 0;
+    if (signalValue >= 5) return "text-green-500";
+    if (signalValue >= 3) return "text-yellow-500";
+    return "text-red-500";
+  }, []);
+
+  // Format mileage with commas and fixed decimal
+  const formatMileage = useCallback((mileage) => {
+    if (mileage === null || mileage === undefined) return "N/A";
+    return parseFloat(mileage).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }, []);
+
+  // Format voltage
+  const formatVoltage = useCallback((voltage) => {
+    if (voltage === null || voltage === undefined) return "N/A";
+    return parseFloat(voltage).toFixed(1) + "V";
+  }, []);
+
+  const handleCardClick = useCallback(() => {
     if (!menuOpen) {
-      dispatch(setSelectedVehicle(car.car_id));
+      dispatch(setSelectedVehicle(stableCarData.car_id));
     }
-  };
+  }, [dispatch, stableCarData.car_id, menuOpen]);
 
-  const handleMenuToggle = (e) => {
+  // Menu position calculation - memoized
+  const calculateMenuPosition = useCallback(() => {
+    if (menuButtonRef.current) {
+      const buttonRect = menuButtonRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      const menuWidth = 180;
+      const menuHeight = 280;
+      
+      let x = buttonRect.right + 8;
+      let y = buttonRect.top;
+      
+      // Adjust horizontal position
+      if (x + menuWidth > viewportWidth) {
+        x = buttonRect.left - menuWidth - 8;
+      }
+      
+      // Adjust vertical position
+      if (y + menuHeight > viewportHeight) {
+        y = Math.max(8, viewportHeight - menuHeight - 8);
+      }
+      
+      return { x, y };
+    }
+    return { x: 0, y: 0 };
+  }, []);
+
+  const handleMenuToggle = useCallback((e) => {
     e.stopPropagation();
-    const newMenuState = !menuOpen;
-    setMenuOpen(newMenuState);
-    setActiveSubmenu(null); // Reset submenu when closing
-
-    // LocalStorage mein save karein
-    try {
-      localStorage.setItem(
-        `vehicleMenu_${car.car_id}`,
-        JSON.stringify(newMenuState)
-      );
-    } catch (error) {
-      console.warn("Failed to save menu state to localStorage:", error);
+    
+    if (!menuOpen) {
+      const position = calculateMenuPosition();
+      setMenuPosition(position);
+      setMenuOpen(true);
+    } else {
+      setMenuOpen(false);
     }
-  };
+  }, [menuOpen, calculateMenuPosition]);
 
-  const handleMenuItemClick = (action, e) => {
+  const handleMenuItemClick = useCallback((action, e) => {
     e.stopPropagation();
 
     // Handle different menu actions
     switch (action) {
-      case "findNearest":
-        console.log("Find Nearest clicked for", car.carname);
+      case "zoomTo":
+        console.log("Zoom To clicked for", stableCarData.carname);
         break;
       case "viewReplay":
-        console.log("View Replay clicked for", car.carname);
+        console.log("View Replay clicked for", stableCarData.carname);
         break;
       case "dailyReport":
-        console.log("Daily Report clicked for", car.carname);
-        break;
-      case "detailedReport":
-        console.log("Detailed Report clicked for", car.carname);
-        break;
-      case "zoomTo":
-        console.log("Zoom To clicked for", car.carname);
-        break;
-      case "createGeofence":
-        console.log("Create Geofence clicked for", car.carname);
-        break;
-      case "removeFromMap":
-        console.log("Remove from Map clicked for", car.carname);
+        console.log("Daily Report clicked for", stableCarData.carname);
         break;
       case "directionsTo":
-        console.log("Directions To clicked for", car.carname);
-        break;
-      case "directionsFrom":
-        console.log("Directions From clicked for", car.carname);
+        console.log("Directions To clicked for", stableCarData.carname);
         break;
       case "editVehicle":
-        console.log("Edit Vehicle clicked for", car.carname);
+        console.log("Edit Vehicle clicked for", stableCarData.carname);
         break;
-      case "editDriver":
-        console.log("Edit Driver clicked for", car.carname);
-        break;
-      case "sendMessage":
-        console.log("Send Message clicked for", car.carname);
-        break;
-      case "roadsideAssistance":
-        console.log("Roadside Assistance clicked for", car.carname);
+      case "removeFromMap":
+        console.log("Remove from Map clicked for", stableCarData.carname);
         break;
       default:
         break;
     }
 
-    // Menu close kar ke localStorage update karein
+    // Close menu
     setMenuOpen(false);
-    setActiveSubmenu(null);
-    try {
-      localStorage.setItem(`vehicleMenu_${car.car_id}`, JSON.stringify(false));
-    } catch (error) {
-      console.warn("Failed to save menu state to localStorage:", error);
-    }
-  };
+  }, [stableCarData.carname]);
 
-  const handleSubmenuToggle = (submenuName, e) => {
-    e.stopPropagation();
-    setActiveSubmenu(activeSubmenu === submenuName ? null : submenuName);
-  };
-
-  // Listen for close events from other cards (global menu management)
+  // ✅ STABLE EVENT HANDLING: Only depend on menuOpen, not car data
   useEffect(() => {
-    const handleCloseOtherMenus = (event) => {
-      if (event.detail.excludeId !== car.car_id && menuOpen) {
+    if (!menuOpen) return;
+
+    let isClosing = false;
+
+    const handleClickOutside = (event) => {
+      if (isClosing) return;
+      
+      // Only close if click is truly outside both menu and button
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target) &&
+        menuButtonRef.current &&
+        !menuButtonRef.current.contains(event.target)
+      ) {
+        isClosing = true;
         setMenuOpen(false);
-        setActiveSubmenu(null);
-        try {
-          localStorage.setItem(
-            `vehicleMenu_${car.car_id}`,
-            JSON.stringify(false)
-          );
-        } catch (error) {
-          console.warn("Failed to save menu state to localStorage:", error);
-        }
       }
     };
 
-    window.addEventListener("closeOtherMenus", handleCloseOtherMenus);
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape' && !isClosing) {
+        isClosing = true;
+        setMenuOpen(false);
+      }
+    };
+
+    // Add listeners with delay to prevent immediate closing
+    const timer = setTimeout(() => {
+      document.addEventListener("mousedown", handleClickOutside, { passive: true });
+      document.addEventListener("keydown", handleEscapeKey, { passive: true });
+    }, 100);
 
     return () => {
-      window.removeEventListener("closeOtherMenus", handleCloseOtherMenus);
+      clearTimeout(timer);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscapeKey);
     };
-  }, [car.car_id, menuOpen]);
+  }, [menuOpen]); // ✅ Only depend on menuOpen
 
-  // Trigger close other menus when opening this menu
-  useEffect(() => {
-    if (menuOpen) {
-      window.dispatchEvent(
-        new CustomEvent("closeOtherMenus", {
-          detail: { excludeId: car.car_id },
-        })
-      );
-    }
-  }, [menuOpen, car.car_id]);
+  // ✅ STABLE MENU COMPONENT: Use stableCarData
+  const MenuComponent = useMemo(() => {
+    if (!menuOpen) return null;
 
-  return (
-    <div
-      className={`vehicle-card-container relative border rounded-lg cursor-pointer transition-all duration-300 hover:shadow-md overflow-visible
-        ${
-          isSelected
-            ? "border-blue-500 bg-blue-50 shadow-md"
-            : "border-gray-300 bg-white hover:border-blue-300"
-        }`}
-      onClick={handleCardClick}
-      style={{
-        marginBottom: "10px",
-        willChange: "transform",
-        contain: "layout style paint",
-      }}
-    >
-      <div className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center">
-            <div className="mr-3 flex-shrink-0">
-              <img
-                src={getVehicleIcon(car.movingstatus)}
-                alt="Vehicle"
-                className="w-5 h-5 transition-transform duration-200"
-                style={
-                  car.movingstatus?.toLowerCase() === "moving"
-                    ? {
-                        transform: `rotate(${(car.head || 0) - 140}deg)`,
-                      }
-                    : {}
-                }
-              />
-            </div>
-            <div className="font-semibold text-gray-900 truncate max-w-[150px]">
-              {car.carname || `Vehicle ${car.car_id}`}
-            </div>
-          </div>
-
-          <div className="flex items-center">
-            <div
-              className={`px-2 py-0.5 rounded-full text-white text-xs mr-2 ${getStatusColor(
-                car.movingstatus
-              )}`}
-            >
-              {car.movingstatus || "Unknown"}
-            </div>
-
-            {/* 3-dot menu button */}
-            <button
-              onClick={handleMenuToggle}
-              className="menu-button p-1 rounded-full hover:bg-gray-100 cursor-pointer transition-colors duration-200"
-            >
-              {menuOpen ? (
-                <ChevronUp size={14} className="text-gray-600" />
-              ) : (
-                <MoreVertical size={14} className="text-gray-600" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex mb-2.5 text-xs text-gray-800">
-          <MapPin size={14} className="mr-2 flex-shrink-0 mt-0.5" />
-          <div className="line-clamp-2 leading-tight">
-            {car.location || "Unknown location"}
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between text-xs text-gray-800">
-          <div className="flex items-center">
-            <Gauge size={14} className="mr-2 flex-shrink-0" />
-            <span>{car.speed || "0"} km/h</span>
-          </div>
-
-          <div className="flex items-center">
-            <Clock size={14} className="mr-2 flex-shrink-0" />
-            <span>{formatDateTime(car.gps_time)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Expandable menu section with dynamic height */}
+    return (
       <div
-        className={`bg-gray-50 border-t border-gray-200 transition-all duration-300 overflow-hidden ${
-          menuOpen ? "py-2" : "py-0"
-        }`}
+        ref={menuRef}
+        className="fixed bg-white border border-gray-300 rounded-lg shadow-xl z-[99999] w-[180px] select-none"
         style={{
-          maxHeight: menuOpen
-            ? activeSubmenu === "directions"
-              ? "480px"
-              : activeSubmenu === "vehicleOptions"
-              ? "560px"
-              : "400px"
-            : "0px",
-          transition: "max-height 0.3s ease-in-out",
+          left: `${menuPosition.x}px`,
+          top: `${menuPosition.y}px`,
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
+          pointerEvents: 'auto',
         }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onContextMenu={(e) => e.preventDefault()}
       >
-        <div className="p-2 space-y-1">
-          {/* Find Nearest */}
-          <button
-            onClick={(e) => handleMenuItemClick("findNearest", e)}
-            className="w-full text-left text-sm py-2 px-3 text-gray-800 hover:bg-gray-100 rounded font-medium"
-          >
-            Find Nearest
-          </button>
+        {/* Header */}
+        <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+          <div className="font-medium text-sm text-gray-900 truncate">
+            {stableCarData.carname || `Vehicle ${stableCarData.car_id}`}
+          </div>
+        </div>
 
-          {/* View Replay */}
-          <button
-            onClick={(e) => handleMenuItemClick("viewReplay", e)}
-            className="w-full text-left text-sm py-2 px-3 text-gray-800 hover:bg-gray-100 rounded font-medium"
-          >
-            View Replay
-          </button>
-
-          {/* Run Daily Report */}
-          <button
-            onClick={(e) => handleMenuItemClick("dailyReport", e)}
-            className="w-full text-left text-sm py-2 px-3 text-gray-800 hover:bg-gray-100 rounded font-medium"
-          >
-            Run Daily Report
-          </button>
-
-          {/* Run Detailed Report */}
-          <button
-            onClick={(e) => handleMenuItemClick("detailedReport", e)}
-            className="w-full text-left text-sm py-2 px-3 text-gray-800 hover:bg-gray-100 rounded font-medium"
-          >
-            Run Detailed Report
-          </button>
-
-          {/* Zoom To */}
+        {/* Menu Items */}
+        <div className="py-2">
           <button
             onClick={(e) => handleMenuItemClick("zoomTo", e)}
-            className="w-full text-left text-sm py-2 px-3 text-gray-800 hover:bg-gray-100 rounded font-medium"
+            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center"
+            type="button"
           >
+            <span className="mr-2">🎯</span>
             Zoom To
           </button>
 
-          {/* Create Geofence */}
           <button
-            onClick={(e) => handleMenuItemClick("createGeofence", e)}
-            className="w-full text-left text-sm py-2 px-3 text-gray-800 hover:bg-gray-100 rounded font-medium"
+            onClick={(e) => handleMenuItemClick("viewReplay", e)}
+            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center"
+            type="button"
           >
-            Create a Geofence Here
+            <span className="mr-2">▶️</span>
+            View Replay
           </button>
 
-          {/* Remove from Live Map */}
+          <button
+            onClick={(e) => handleMenuItemClick("dailyReport", e)}
+            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center"
+            type="button"
+          >
+            <span className="mr-2">📊</span>
+            Daily Report
+          </button>
+
+          <button
+            onClick={(e) => handleMenuItemClick("directionsTo", e)}
+            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center"
+            type="button"
+          >
+            <span className="mr-2">🧭</span>
+            Directions
+          </button>
+
+          <button
+            onClick={(e) => handleMenuItemClick("editVehicle", e)}
+            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center"
+            type="button"
+          >
+            <span className="mr-2">✏️</span>
+            Edit Vehicle
+          </button>
+
+          <div className="border-t border-gray-200 my-1"></div>
+
           <button
             onClick={(e) => handleMenuItemClick("removeFromMap", e)}
-            className="w-full text-left text-sm py-2 px-3 text-gray-800 hover:bg-gray-100 rounded font-medium"
+            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center"
+            type="button"
           >
-            Remove from Live Map
+            <span className="mr-2">❌</span>
+            Remove
           </button>
-
-          {/* Divider */}
-          <div className="border-t border-gray-200 my-2"></div>
-
-          {/* Directions - Expandable */}
-          <div>
-            <button
-              onClick={(e) => handleSubmenuToggle("directions", e)}
-              className="w-full text-left text-sm py-2 px-3 text-gray-800 hover:bg-gray-100 rounded font-medium flex items-center justify-between"
-            >
-              <span>Directions</span>
-              <ChevronRight
-                size={14}
-                className={`transform transition-transform duration-200 ${
-                  activeSubmenu === "directions" ? "rotate-90" : ""
-                }`}
-              />
-            </button>
-            <div
-              className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${
-                activeSubmenu === "directions"
-                  ? "max-h-20 opacity-100"
-                  : "max-h-0 opacity-0"
-              }`}
-            >
-              <button
-                onClick={(e) => handleMenuItemClick("directionsTo", e)}
-                className="w-full text-left text-sm py-1.5 px-3 text-gray-700 hover:bg-gray-100 rounded"
-              >
-                Get Directions To Here
-              </button>
-              <button
-                onClick={(e) => handleMenuItemClick("directionsFrom", e)}
-                className="w-full text-left text-sm py-1.5 px-3 text-gray-700 hover:bg-gray-100 rounded"
-              >
-                Get Directions From Here
-              </button>
-            </div>
-          </div>
-
-          {/* Vehicle Options - Expandable */}
-          <div>
-            <button
-              onClick={(e) => handleSubmenuToggle("vehicleOptions", e)}
-              className="w-full text-left text-sm py-2 px-3 text-gray-800 hover:bg-gray-100 rounded font-medium flex items-center justify-between"
-            >
-              <span>Vehicle Options</span>
-              <ChevronRight
-                size={14}
-                className={`transform transition-transform duration-200 ${
-                  activeSubmenu === "vehicleOptions" ? "rotate-90" : ""
-                }`}
-              />
-            </button>
-
-            <div
-              className={`ml-4 mt-1 space-y-1 overflow-hidden transition-all duration-300 ${
-                activeSubmenu === "vehicleOptions"
-                  ? "max-h-40 opacity-100"
-                  : "max-h-0 opacity-0"
-              }`}
-            >
-              <button
-                onClick={(e) => handleMenuItemClick("editVehicle", e)}
-                className="w-full text-left text-sm py-1.5 px-3 text-gray-700 hover:bg-gray-100 rounded"
-              >
-                Edit Vehicle
-              </button>
-              <button
-                onClick={(e) => handleMenuItemClick("editDriver", e)}
-                className="w-full text-left text-sm py-1.5 px-3 text-gray-700 hover:bg-gray-100 rounded"
-              >
-                Edit Driver
-              </button>
-              <button
-                onClick={(e) => handleMenuItemClick("sendMessage", e)}
-                className="w-full text-left text-sm py-1.5 px-3 text-gray-700 hover:bg-gray-100 rounded"
-              >
-                Send Message
-              </button>
-              <button
-                onClick={(e) => handleMenuItemClick("roadsideAssistance", e)}
-                className="w-full text-left text-sm py-1.5 px-3 text-gray-700 hover:bg-gray-100 rounded"
-              >
-                Roadside Assistance
-              </button>
-            </div>
-          </div>
         </div>
       </div>
-    </div>
+    );
+  }, [menuOpen, menuPosition, stableCarData, handleMenuItemClick]);
+
+  return (
+    <>
+      <div
+        className={`vehicle-card-container relative border rounded-lg cursor-pointer transition-all duration-300 hover:shadow-md
+          ${
+            isSelected
+              ? "border-blue-500 bg-blue-50 shadow-md"
+              : "border-gray-300 bg-white hover:border-blue-300"
+          }`}
+        onClick={handleCardClick}
+        style={{
+          marginBottom: "10px",
+        }}
+      >
+        <div className="p-4">
+          {/* Header with vehicle name and status */}
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center">
+              <div className="mr-3 flex-shrink-0">
+                <img
+                  src={getVehicleIcon(stableCarData.movingstatus)}
+                  alt="Vehicle"
+                  className="w-5 h-5 transition-transform duration-200"
+                  style={
+                    stableCarData.movingstatus?.toLowerCase() === "moving"
+                      ? {
+                          transform: `rotate(${(stableCarData.head || 0) - 140}deg)`,
+                        }
+                      : {}
+                  }
+                />
+              </div>
+              <div className="font-semibold text-gray-900 text-sm truncate max-w-[150px]">
+                {stableCarData.carname || `Vehicle ${stableCarData.car_id}`}
+              </div>
+            </div>
+
+            <div className="flex items-center">
+              <div
+                className={`px-2 py-0.4 rounded-full text-white text-xs mr-2 ${getStatusColor(
+                  stableCarData.movingstatus
+                )}`}
+              >
+                {stableCarData.movingstatus || "Unknown"}
+              </div>
+
+              {/* 3-dot menu button */}
+              <button
+                ref={menuButtonRef}
+                onClick={handleMenuToggle}
+                className="menu-button p-1.5 rounded-full hover:bg-gray-100 cursor-pointer transition-colors duration-200"
+                title="Vehicle Actions"
+                type="button"
+              >
+                <MoreVertical size={14} className="text-gray-600" />
+              </button>
+            </div>
+          </div>
+
+                {/* Location */}
+                <div className="flex mb-2.5 text-xs text-gray-800">
+            <MapPin size={14} className="mr-2 flex-shrink-0 mt-0.5" />
+            <div className="line-clamp-2 leading-tight">
+              {stableCarData.location || "Unknown location"}
+            </div>
+          </div>
+
+          {/* Speed and Time */}
+          <div className="flex items-center justify-between text-xs text-gray-800 mb-2">
+            <div className="flex items-center">
+              <Gauge size={14} className="mr-2 flex-shrink-0" />
+              <span>{stableCarData.speed || "0"} km/h</span>
+            </div>
+            <div className="flex items-center">
+              <Clock size={14} className="mr-2 flex-shrink-0" />
+              <span>{formatDateTime(stableCarData.gps_time)}</span>
+            </div>
+          </div>
+
+          {/* New fields: Signal Strength, Mileage, Voltage */}
+          <div className="grid grid-cols-3 gap-2 text-xs text-gray-800 border-t border-gray-100 pt-2">
+            {/* Signal Strength */}
+            <div className="flex items-center">
+              <Wifi size={14} className={`mr-1.5 flex-shrink-0 ${getSignalStrengthIcon(stableCarData.signalstrength)}`} />
+              <span title="Signal Strength">
+                {stableCarData.signalstrength || "0"}
+              </span>
+            </div>
+            
+            {/* Mileage */}
+            <div className="flex items-center">
+              <Activity size={14} className="mr-1.5 flex-shrink-0 text-blue-500" />
+              <span title="Mileage (km)">
+                {formatMileage(stableCarData.mileage)}
+              </span>
+            </div>
+            
+            {/* Voltage */}
+            <div className="flex items-center">
+              <Battery size={14} className="mr-1.5 flex-shrink-0 text-green-500" />
+              <span title="Battery Voltage">
+                {formatVoltage(stableCarData.voltage)}
+              </span>
+            </div>
+          </div>
+
+    
+        </div>
+      </div>
+
+      {/* ✅ STABLE PORTAL: Menu won't close on car data updates */}
+      {menuOpen && createPortal(MenuComponent, document.body)}
+    </>
   );
-};
+}, (prevProps, nextProps) => {
+  // ✅ CUSTOM COMPARISON: Only re-render if essential data changes
+  return (
+    prevProps.car.car_id === nextProps.car.car_id &&
+    prevProps.car.carname === nextProps.car.carname &&
+    prevProps.car.movingstatus === nextProps.car.movingstatus &&
+    prevProps.car.location === nextProps.car.location &&
+    prevProps.car.speed === nextProps.car.speed &&
+    prevProps.car.gps_time === nextProps.car.gps_time &&
+    prevProps.car.head === nextProps.car.head &&
+    prevProps.car.signalstrength === nextProps.car.signalstrength &&
+    prevProps.car.mileage === nextProps.car.mileage &&
+    prevProps.car.voltage === nextProps.car.voltage &&
+    prevProps.car.engine === nextProps.car.engine
+  );
+});
+
+VehicleCard.displayName = "VehicleCard";
 
 export default VehicleCard;
+

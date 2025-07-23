@@ -28,11 +28,11 @@ const initialState = {
   error: null,
   loading: false,
   dataThrottleTime: 1000, // Default throttle time in ms
-  
+
   // ✅ NEW: Cache system for tree data
   treeDataCache: {
     scope1: null, // Vehicle data
-    scope2: null, // Driver data  
+    scope2: null, // Driver data
     scope3: null, // Group data
   },
   currentScope: 3, // Track current scope
@@ -88,14 +88,14 @@ export const initializeConnection = createAsyncThunk(
     if (connection && connectionStatus === "connected") {
       return connection;
     }
-    
+
     const token = localStorage.getItem("token");
     if (!token) throw new Error("No authentication token found");
 
     // Save connection parameters globally
     const clientId = parseInt(localStorage.getItem("clientId"), 10) || 1;
     const userTypeID = parseInt(localStorage.getItem("userTypeId"), 10) || 1;
-    
+
     // Store values globally for reconnection
     savedUserId = clientId;
     savedUserTypeId = userTypeID;
@@ -117,21 +117,21 @@ export const initializeConnection = createAsyncThunk(
       )
       .withAutomaticReconnect({
         nextRetryDelayInMilliseconds: (retryContext) => {
-          console.warn(
-            `🔄 Reconnecting... Attempt: ${retryContext.previousRetryCount + 1}`
-          );
+          // console.warn(
+          //   `🔄 Reconnecting... Attempt: ${retryContext.previousRetryCount + 1}`
+          // );
           return Math.min(5000, (retryContext.previousRetryCount + 1) * 1000);
         },
       })
-      .withKeepAliveInterval(60 * 1000)   // 1 minute
-      .withServerTimeout(120 * 1000)      // 2 minutes
-      
+      .withKeepAliveInterval(60 * 1000) // 1 minute
+      .withServerTimeout(120 * 1000) // 2 minutes
+
       .configureLogging(signalR.LogLevel.Information)
       .build();
 
     try {
       await newConnection.start();
-      console.log("✅ Connected to SignalR");
+      // console.log("✅ Connected to SignalR");
 
       // Connection quality monitoring
       newConnection.onreconnecting((error) => {
@@ -141,21 +141,32 @@ export const initializeConnection = createAsyncThunk(
 
       // Optimized reconnection handler
       newConnection.onreconnected(async (newConnectionId) => {
-        console.log("🔁 Reconnected:", newConnectionId);
+        // console.log("🔁 Reconnected:", newConnectionId);
         dispatch(setConnectionStatus("connected"));
-        
+
         try {
           // ✅ Use saved values for resubscription
-          await newConnection.invoke("SubscribeToUpdates", window.savedUserId, window.savedUserTypeId);
-          
+          await newConnection.invoke(
+            "SubscribeToUpdates",
+            window.savedUserId,
+            window.savedUserTypeId
+          );
+
           // Re-request vehicle list with saved scope
           const onlyRoot = window.savedUserTypeId === 1 ? 1 : 0;
-          await newConnection.invoke("RequestVehicleList", savedScope, onlyRoot);
-          
+          await newConnection.invoke(
+            "RequestVehicleList",
+            savedScope,
+            onlyRoot
+          );
+
           // Restore vehicle filter if vehicles were selected
           if (window.savedVehicleIds && window.savedVehicleIds.length > 0) {
-            await newConnection.invoke("UpdateVehicleFilter", window.savedVehicleIds);
-            console.log("🔄 Restored vehicle filter:", window.savedVehicleIds.length, "vehicles");
+            await newConnection.invoke(
+              "UpdateVehicleFilter",
+              window.savedVehicleIds
+            );
+            // console.log("🔄 Restored vehicle filter:", window.savedVehicleIds.length, "vehicles");
           }
         } catch (error) {
           console.error("❌ Error during reconnection setup:", error);
@@ -166,13 +177,15 @@ export const initializeConnection = createAsyncThunk(
       newConnection.on("ReceiveVehicleList", (vehicles) => {
         if (Array.isArray(vehicles) && vehicles.length > 0) {
           const currentScope = getState().gpsTracking.currentScope;
-          
+
           // Cache the data based on current scope
-          dispatch(cacheTreeData({ 
-            scope: currentScope, 
-            data: vehicles 
-          }));
-          
+          dispatch(
+            cacheTreeData({
+              scope: currentScope,
+              data: vehicles,
+            })
+          );
+
           dispatch(setRawVehicleList(vehicles));
           dispatch(updateAvailableVehicles(vehicles));
         }
@@ -181,7 +194,6 @@ export const initializeConnection = createAsyncThunk(
       // Optimized ReceiveCarData handler with throttling
       newConnection.on("ReceiveCarData", (data) => {
         console.log("vehicle on map", data.length);
-
         // Skip processing if no vehicles are selected
         if (getState().gpsTracking.selectedVehicles.length === 0) {
           return;
@@ -223,9 +235,10 @@ export const initializeConnection = createAsyncThunk(
         // console.log("📩 Server Message:", message);
       });
 
-      newConnection.on("FilterUpdated", (vehicleIds) => {
+      newConnection.on("FilterUpdated", () => {
         console.log(
-          `✅ Server confirmed filter update: ${vehicleIds.join(", ")}`
+          // `✅ Server confirmed filter update: ${vehicleIds.join(", ")}`
+          `✅ Server confirmed filter update`
         );
       });
 
@@ -254,16 +267,16 @@ export const requestVehicleListWithScope = createAsyncThunk(
   async (scope, { getState, dispatch }) => {
     const state = getState().gpsTracking;
     const { connection, treeDataCache, cacheTimestamps, cacheExpiry } = state;
-    
+
     // ✅ Check if we have cached data for this scope
     const cacheKey = `scope${scope}`;
     const cachedData = treeDataCache[cacheKey];
     const cacheTime = cacheTimestamps[cacheKey];
     const now = Date.now();
-    
+
     // ✅ If cache exists and is not expired, use cached data
-    if (cachedData && cacheTime && (now - cacheTime) < cacheExpiry) {
-      console.log(`🎯 Using cached data for scope ${scope}`);
+    if (cachedData && cacheTime && now - cacheTime < cacheExpiry) {
+      // console.log(`🎯 Using cached data for scope ${scope}`);
       dispatch(setCurrentScope(scope));
       dispatch(setRawVehicleList(cachedData));
       dispatch(updateAvailableVehicles(cachedData));
@@ -271,8 +284,8 @@ export const requestVehicleListWithScope = createAsyncThunk(
     }
 
     // ✅ If no cache or expired, fetch fresh data
-    console.log(`🔄 Fetching fresh data for scope ${scope}`);
-    
+    // console.log(`🔄 Fetching fresh data for scope ${scope}`);
+
     const userTypeID = parseInt(localStorage.getItem("userTypeId"), 10) || 1;
     const onlyRoot = userTypeID === 1 ? 1 : 0;
 
@@ -282,7 +295,7 @@ export const requestVehicleListWithScope = createAsyncThunk(
     ) {
       // Set current scope before making request
       dispatch(setCurrentScope(scope));
-      
+
       await connection.invoke("RequestVehicleList", scope, onlyRoot);
       return scope;
     } else {
@@ -291,11 +304,11 @@ export const requestVehicleListWithScope = createAsyncThunk(
   }
 );
 
+// updateVehicleFilter thunk ko modify karen
 export const updateVehicleFilter = createAsyncThunk(
   "gpsTracking/updateVehicleFilter",
   async (vehicleIds, { getState }) => {
     const { connection } = getState().gpsTracking;
-
     // Update saved vehicle IDs for reconnection
     window.savedVehicleIds = vehicleIds || [];
 
@@ -303,7 +316,6 @@ export const updateVehicleFilter = createAsyncThunk(
       connection &&
       connection.state === signalR.HubConnectionState.Connected
     ) {
-      console.log("Updating vehicle filter:", vehicleIds.length);
       await connection.invoke("UpdateVehicleFilter", vehicleIds);
       return vehicleIds;
     } else {
@@ -321,11 +333,11 @@ const gpsTrackingSlice = createSlice({
     cacheTreeData: (state, action) => {
       const { scope, data } = action.payload;
       const cacheKey = `scope${scope}`;
-      
+
       state.treeDataCache[cacheKey] = data;
       state.cacheTimestamps[cacheKey] = Date.now();
-      
-      console.log(`💾 Cached tree data for scope ${scope}:`, data.length, "items");
+
+      // console.log(`💾 Cached tree data for scope ${scope}:`, data.length, "items");
     },
 
     // ✅ NEW: Set current scope
@@ -337,11 +349,11 @@ const gpsTrackingSlice = createSlice({
     clearScopeCache: (state, action) => {
       const scope = action.payload;
       const cacheKey = `scope${scope}`;
-      
+
       state.treeDataCache[cacheKey] = null;
       state.cacheTimestamps[cacheKey] = null;
-      
-      console.log(`🗑️ Cleared cache for scope ${scope}`);
+
+      // console.log(`🗑️ Cleared cache for scope ${scope}`);
     },
 
     // ✅ NEW: Clear all cache
@@ -356,18 +368,17 @@ const gpsTrackingSlice = createSlice({
         scope2: null,
         scope3: null,
       };
-      console.log("🗑️ Cleared all tree data cache");
     },
 
     // ✅ NEW: Force refresh cache
     forceRefreshCache: (state, action) => {
       const scope = action.payload;
       const cacheKey = `scope${scope}`;
-      
+
       // Mark cache as expired by setting old timestamp
       state.cacheTimestamps[cacheKey] = 0;
-      
-      console.log(`🔄 Forced refresh for scope ${scope}`);
+
+      // console.log(`🔄 Forced refresh for scope ${scope}`);
     },
 
     // Optimized updateCarData reducer
@@ -444,11 +455,68 @@ const gpsTrackingSlice = createSlice({
     },
 
     setSelectedVehicles: (state, action) => {
-      state.selectedVehicles = action.payload;
+      const newSelectedVehicles = action.payload;
+      const previousSelectedVehicles = state.selectedVehicles;
 
-      // If no vehicles selected, clear car data
-      if (!action.payload || action.payload.length === 0) {
+      // Set new selected vehicles
+      state.selectedVehicles = newSelectedVehicles;
+
+      // ✅ IMPROVED: Don't clear car data, just update it based on changes
+      if (!newSelectedVehicles || newSelectedVehicles.length === 0) {
+        // Only if all vehicles are removed, clear car data
         state.carData = [];
+      } else {
+        // Create sets for efficient lookup
+        const newSelectedSet = new Set(
+          newSelectedVehicles.map((id) => String(id))
+        );
+        const prevSelectedSet = new Set(
+          previousSelectedVehicles.map((id) => String(id))
+        );
+
+        // Find vehicles that were removed
+        const removedVehicles = previousSelectedVehicles.filter(
+          (id) => !newSelectedSet.has(String(id))
+        );
+
+        // Remove vehicles that are no longer selected
+        if (removedVehicles.length > 0) {
+          state.carData = state.carData.filter(
+            (car) => car && car.car_id && newSelectedSet.has(String(car.car_id))
+          );
+        }
+
+        // For newly added vehicles, we'll add them from rawVehicleList if available
+        const addedVehicles = newSelectedVehicles.filter(
+          (id) => !prevSelectedSet.has(String(id))
+        );
+
+        if (addedVehicles.length > 0 && state.rawVehicleList.length > 0) {
+          // Find the newly added vehicles in the raw list
+          const vehiclesToAdd = state.rawVehicleList.filter(
+            (car) => car && car.car_id && addedVehicles.includes(car.car_id)
+          );
+
+          // Apply moving status filter if needed
+          const filteredVehiclesToAdd =
+            state.movingStatusFilter === "all"
+              ? vehiclesToAdd
+              : vehiclesToAdd.filter(
+                  (car) => car.movingstatus === state.movingStatusFilter
+                );
+
+          // Add new vehicles to carData (avoid duplicates)
+          const existingCarIds = new Set(
+            state.carData.map((car) => String(car.car_id))
+          );
+          const uniqueVehiclesToAdd = filteredVehiclesToAdd.filter(
+            (car) => !existingCarIds.has(String(car.car_id))
+          );
+
+          if (uniqueVehiclesToAdd.length > 0) {
+            state.carData = [...state.carData, ...uniqueVehiclesToAdd];
+          }
+        }
       }
     },
 
@@ -548,33 +616,68 @@ const gpsTrackingSlice = createSlice({
         state.loading = false;
       })
       .addCase(updateVehicleFilter.fulfilled, (state, action) => {
-        state.selectedVehicles = action.payload;
+        const newSelectedVehicles = action.payload;
+        const previousSelectedVehicles = state.selectedVehicles;
 
-        // Clear car data if no vehicles selected
-        if (!action.payload || action.payload.length === 0) {
+        // Set new selected vehicles
+        state.selectedVehicles = newSelectedVehicles;
+
+        // ✅ IMPROVED: Don't clear car data, just update it based on changes
+        if (!newSelectedVehicles || newSelectedVehicles.length === 0) {
+          // Only if all vehicles are removed, clear car data
           state.carData = [];
         } else {
-          // If we have raw data, immediately filter it for the selected vehicles
-          if (state.rawVehicleList.length > 0) {
-            const selectedVehiclesSet = new Set(
-              action.payload.map((id) => String(id))
-            );
+          // Create sets for efficient lookup
+          const newSelectedSet = new Set(
+            newSelectedVehicles.map((id) => String(id))
+          );
+          const prevSelectedSet = new Set(
+            previousSelectedVehicles.map((id) => String(id))
+          );
 
-            // Filter raw data for immediate display
-            let filteredData = state.rawVehicleList.filter(
+          // Find vehicles that were removed
+          const removedVehicles = previousSelectedVehicles.filter(
+            (id) => !newSelectedSet.has(String(id))
+          );
+
+          // Remove vehicles that are no longer selected
+          if (removedVehicles.length > 0) {
+            state.carData = state.carData.filter(
               (car) =>
-                car && car.car_id && selectedVehiclesSet.has(String(car.car_id))
+                car && car.car_id && newSelectedSet.has(String(car.car_id))
+            );
+          }
+
+          // For newly added vehicles, we'll add them from rawVehicleList if available
+          const addedVehicles = newSelectedVehicles.filter(
+            (id) => !prevSelectedSet.has(String(id))
+          );
+
+          if (addedVehicles.length > 0 && state.rawVehicleList.length > 0) {
+            // Find the newly added vehicles in the raw list
+            const vehiclesToAdd = state.rawVehicleList.filter(
+              (car) => car && car.car_id && addedVehicles.includes(car.car_id)
             );
 
             // Apply moving status filter if needed
-            if (state.movingStatusFilter !== "all") {
-              filteredData = filteredData.filter(
-                (car) => car.movingstatus === state.movingStatusFilter
-              );
-            }
+            const filteredVehiclesToAdd =
+              state.movingStatusFilter === "all"
+                ? vehiclesToAdd
+                : vehiclesToAdd.filter(
+                    (car) => car.movingstatus === state.movingStatusFilter
+                  );
 
-            // Update car data with filtered results
-            state.carData = filteredData;
+            // Add new vehicles to carData (avoid duplicates)
+            const existingCarIds = new Set(
+              state.carData.map((car) => String(car.car_id))
+            );
+            const uniqueVehiclesToAdd = filteredVehiclesToAdd.filter(
+              (car) => !existingCarIds.has(String(car.car_id))
+            );
+
+            if (uniqueVehiclesToAdd.length > 0) {
+              state.carData = [...state.carData, ...uniqueVehiclesToAdd];
+            }
           }
         }
       })
@@ -586,7 +689,6 @@ const gpsTrackingSlice = createSlice({
       .addCase(requestVehicleListWithScope.fulfilled, (state, action) => {
         state.loading = false;
         state.currentScope = action.payload;
-        console.log(`✅ Successfully loaded scope ${action.payload}`);
       })
       .addCase(requestVehicleListWithScope.rejected, (state, action) => {
         state.loading = false;
@@ -631,7 +733,8 @@ export const selectMovingStatusFilter = (state) =>
 // ✅ NEW: Cache-related selectors
 export const selectTreeDataCache = (state) => state.gpsTracking.treeDataCache;
 export const selectCurrentScope = (state) => state.gpsTracking.currentScope;
-export const selectCacheTimestamps = (state) => state.gpsTracking.cacheTimestamps;
+export const selectCacheTimestamps = (state) =>
+  state.gpsTracking.cacheTimestamps;
 
 // ✅ NEW: Selector to get cached data for specific scope
 export const selectCachedDataForScope = (scope) => (state) => {
@@ -645,11 +748,11 @@ export const selectIsCacheValidForScope = (scope) => (state) => {
   const cachedData = state.gpsTracking.treeDataCache[cacheKey];
   const cacheTime = state.gpsTracking.cacheTimestamps[cacheKey];
   const cacheExpiry = state.gpsTracking.cacheExpiry;
-  
+
   if (!cachedData || !cacheTime) return false;
-  
+
   const now = Date.now();
-  return (now - cacheTime) < cacheExpiry;
+  return now - cacheTime < cacheExpiry;
 };
 
 // Add a memoized selector for filtered car data
@@ -681,4 +784,3 @@ export const selectFilteredCarData = createSelector(
 );
 
 export default gpsTrackingSlice.reducer;
-

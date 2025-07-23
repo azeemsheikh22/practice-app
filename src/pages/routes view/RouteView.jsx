@@ -66,7 +66,7 @@ const RoutesView = () => {
                   // onClick={() => handleNavigation(item)}
                   className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg cursor-pointer text-sm font-medium transition-all duration-200 ${
                     item.active
-                      ? "bg-[#D52B1E] text-white shadow-md"
+                      ? "bg-gradient-to-r from-[#25689f] to-[#1F557F] text-white shadow-md"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
@@ -87,7 +87,7 @@ const RoutesView = () => {
           <div className="md:hidden py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Route size={20} className="text-[#D52B1E]" />
+                <Route size={20} className="text-[#25689f]" />
                 <h2 className="text-lg font-semibold text-gray-900">
                   Routes
                 </h2>
@@ -103,7 +103,7 @@ const RoutesView = () => {
                     }
                   }}
                   value="routes"
-                  className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-[#D52B1E] focus:border-[#D52B1E]"
+                  className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f]"
                 >
                   {navigationItems.map((item) => (
                     <option key={item.id} value={item.id}>

@@ -3,10 +3,9 @@ import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import { ChevronDown, ChevronUp, MapPin, Loader, X } from "lucide-react";
 import TreeSelect from "./TreeSelect";
-import { fetchGeofenceCatList } from "../../../features/geofenceSlice";
+import { fetchGeofenceCatList, setSelectedCategoryForDrawing } from "../../../features/geofenceSlice";
 import {
   searchLocations,
-  setSearchQuery,
   clearSearchResults,
   setSelectedLocation,
 } from "../../../features/locationSearchSlice";
@@ -15,13 +14,14 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
   const dispatch = useDispatch();
 
   // Get geofence category list
-  const { geofenceCatList, geofenceCatListLoading, geofenceCatListError } =
+  const { geofenceCatList, geofenceCatListLoading, geofenceCatListError, selectedCategoryForDrawing } =
     useSelector((state) => state.geofence);
 
   // Get location search data
   const { searchResults, loading: locationLoading } = useSelector(
     (state) => state.locationSearch
   );
+
 
   // Custom dropdown states
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -36,6 +36,32 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
   useEffect(() => {
     dispatch(fetchGeofenceCatList());
   }, [dispatch]);
+
+  // ✅ NEW: Sync selectedCategoryForDrawing with detailForm.category
+  useEffect(() => {
+    if (selectedCategoryForDrawing && !detailForm.category) {
+      setDetailForm(prev => ({
+        ...prev,
+        category: selectedCategoryForDrawing.id.toString(),
+      }));
+    }
+  }, [selectedCategoryForDrawing, detailForm.category, setDetailForm]);
+
+  // ✅ NEW: Set default UnCategorized when categories load
+  useEffect(() => {
+    if (geofenceCatList && geofenceCatList.length > 0 && !detailForm.category && !selectedCategoryForDrawing) {
+      const unCategorized = geofenceCatList.find(
+        (cat) => cat.Categoryname === "UnCategorized"
+      );
+      if (unCategorized) {
+        setDetailForm(prev => ({
+          ...prev,
+          category: unCategorized.id.toString(),
+        }));
+        dispatch(setSelectedCategoryForDrawing(unCategorized));
+      }
+    }
+  }, [geofenceCatList, detailForm.category, selectedCategoryForDrawing, setDetailForm, dispatch]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -82,7 +108,7 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
     );
   };
 
-  // Handle address location selection mein change:
+  // Handle address location selection
   const handleAddressLocationSelect = (location) => {
     setDetailForm({
       ...detailForm,
@@ -93,7 +119,6 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
       },
     });
 
-    // ✅ CHANGED: Use same format as URL coordinates
     const coordinates = {
       lat: parseFloat(location.lat),
       lon: parseFloat(location.lon),
@@ -106,13 +131,13 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
     dispatch(clearSearchResults());
   };
 
-  // ✅ NEW: Function to check if input is coordinates
+  // Function to check if input is coordinates
   const isCoordinateFormat = (query) => {
     const coordPattern = /^-?\d+\.?\d*\s*,\s*-?\d+\.?\d*$/;
     return coordPattern.test(query.trim());
   };
 
-  // ✅ NEW: Parse coordinates from string
+  // Parse coordinates from string
   const parseCoordinates = (query) => {
     try {
       const coords = query.split(",").map((coord) => parseFloat(coord.trim()));
@@ -128,7 +153,7 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
     }
   };
 
-  // Handle address input change mein coordinate check:
+  // Handle address input change
   const handleAddressInputChange = (e) => {
     const value = e.target.value;
     setDetailForm({
@@ -136,14 +161,13 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
       address: value,
     });
 
-    // ✅ Check if input is coordinates
+    // Check if input is coordinates
     if (isCoordinateFormat(value)) {
       const coords = parseCoordinates(value);
       if (coords) {
-        // ✅ CHANGED: Use same format as URL coordinates
         const coordinates = {
           lat: coords.lat,
-          lon: coords.lng, // Convert lng to lon for consistency
+          lon: coords.lng,
           display_name: `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}`,
           type: "coordinates",
         };
@@ -166,6 +190,9 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
       category: category.id.toString(),
     });
     setIsDropdownOpen(false);
+
+    // ✅ Redux mein selected category update karo
+    dispatch(setSelectedCategoryForDrawing(category));
   };
 
   // Handle address input focus
@@ -193,7 +220,7 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
             value={detailForm.address}
             onChange={handleAddressInputChange}
             onFocus={handleAddressInputFocus}
-            className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D52B1E] focus:border-[#D52B1E]"
+            className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f]"
             placeholder="Enter address"
           />
 
@@ -295,7 +322,7 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
               geofenceName: e.target.value,
             })
           }
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D52B1E] focus:border-[#D52B1E]"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f]"
           placeholder="Enter geofence name"
         />
       </div>
@@ -314,7 +341,7 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
               city: e.target.value,
             })
           }
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D52B1E] focus:border-[#D52B1E]"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f]"
           placeholder="Enter city"
         />
       </div>
@@ -330,7 +357,7 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
             type="button"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             disabled={geofenceCatListLoading}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D52B1E] focus:border-[#D52B1E] bg-white text-left flex items-center justify-between hover:border-gray-400 transition-colors duration-200"
+            className="w-full px-3 py-2 cursor-pointer border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f] bg-white text-left flex items-center justify-between hover:border-gray-400 transition-colors duration-200"
           >
             <div className="flex items-center gap-3 flex-1">
               {geofenceCatListLoading ? (
@@ -392,6 +419,7 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
                         ...detailForm,
                         category: "",
                       });
+                      dispatch(setSelectedCategoryForDrawing(null));
                       setIsDropdownOpen(false);
                     }}
                     className="w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors duration-200 border-b border-gray-100"
@@ -407,11 +435,10 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
                       key={category.id}
                       type="button"
                       onClick={() => handleCategorySelect(category)}
-                      className={`w-full px-3 py-2 text-left hover:bg-gray-50 transition-colors duration-200 flex items-center gap-3 ${
-                        selectedCategory?.id === category.id
-                          ? "bg-blue-50 border-l-4 border-blue-500"
-                          : ""
-                      }`}
+                      className={`w-full px-3 py-2 text-left hover:bg-gray-50 cursor-pointer transition-colors duration-200 flex items-center gap-3 ${selectedCategory?.id === category.id
+                        ? "bg-blue-50 border-l-4 border-blue-500"
+                        : ""
+                        }`}
                     >
                       {/* Category Icon */}
                       <div className="flex-shrink-0">
@@ -476,7 +503,7 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
             })
           }
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D52B1E] focus:border-[#D52B1E] resize-none"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f] resize-none"
           placeholder="Enter description (optional)"
         />
       </div>
@@ -485,3 +512,4 @@ const DetailTab = ({ detailForm, setDetailForm }) => {
 };
 
 export default DetailTab;
+

@@ -201,7 +201,7 @@ const GeofenceFilter = ({ onApplyFilters, className = "" }) => {
           <span className="text-sm font-medium">Filters</span>
         </div>
 
-        {/* ✅ Search Input - Using working logic */}
+        {/* ✅ Search Input - Updated with blue theme */}
         <div className="relative min-w-[200px]">
           <div className="relative">
             <input
@@ -209,7 +209,7 @@ const GeofenceFilter = ({ onApplyFilters, className = "" }) => {
               value={searchQuery} // ✅ Direct Redux value
               onChange={handleSearchChange} // ✅ Direct Redux update
               placeholder="Search geofences..."
-              className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D52B1E] focus:border-[#D52B1E] transition-colors duration-200"
+              className="w-full pl-9 pr-8 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] transition-colors duration-200" // ✅ Changed to blue theme
             />
             <Search
               size={16}
@@ -260,7 +260,7 @@ const GeofenceFilter = ({ onApplyFilters, className = "" }) => {
                       onClick={() => handleTimeRangeSelect(option.value)}
                       className={`w-full flex items-center gap-3 px-4 py-2 text-left hover:bg-gray-50 transition-colors duration-200 cursor-pointer ${
                         selectedTimeRange === option.value
-                          ? "bg-blue-50 text-blue-700 border-r-2 border-blue-500"
+                          ? "bg-[#25689f]/10 text-[#25689f] border-r-2 border-[#25689f]" // ✅ Changed to blue theme
                           : "text-gray-700"
                       }`}
                     >
@@ -269,7 +269,7 @@ const GeofenceFilter = ({ onApplyFilters, className = "" }) => {
                         {option.label}
                       </span>
                       {selectedTimeRange === option.value && (
-                        <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <div className="ml-auto w-2 h-2 bg-[#25689f] rounded-full"></div> // ✅ Changed to blue
                       )}
                     </button>
                   ))}
@@ -298,7 +298,7 @@ const GeofenceFilter = ({ onApplyFilters, className = "" }) => {
                   onChange={(e) =>
                     handleCustomDateTimeChange("start", e.target.value)
                   }
-                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer transition-colors duration-200"
+                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] cursor-pointer transition-colors duration-200" // ✅ Changed to blue theme
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -311,18 +311,18 @@ const GeofenceFilter = ({ onApplyFilters, className = "" }) => {
                   onChange={(e) =>
                     handleCustomDateTimeChange("end", e.target.value)
                   }
-                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer transition-colors duration-200"
+                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] cursor-pointer transition-colors duration-200" // ✅ Changed to blue theme
                 />
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Apply Button */}
+        {/* Apply Button - ✅ Updated to blue theme */}
         <button
           onClick={handleApplyFilters}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-[#D52B1E] hover:bg-[#B91C1C] text-white rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2 bg-[#25689f] hover:bg-[#1F557F] text-white rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer" // ✅ Changed from red to blue
         >
           {loading ? (
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -364,19 +364,20 @@ const GeofenceFilter = ({ onApplyFilters, className = "" }) => {
           </div>
         )}
       </div>
-      {/* Loading Indicator */}
+      {/* Loading Indicator - ✅ Updated to blue theme */}
       {loading && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="mt-3 flex items-center gap-2 text-sm text-gray-500"
         >
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#D52B1E]"></div>
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#25689f]"></div> {/* ✅ Changed to blue */}
           <span>Applying filters...</span>
         </motion.div>
       )}
-    </motion.div>
-  );
-};
-
-export default GeofenceFilter;
+      </motion.div>
+    );
+  };
+  
+  export default GeofenceFilter;
+  

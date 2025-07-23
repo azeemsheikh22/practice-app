@@ -2,19 +2,22 @@ import React from "react";
 import ReplayTreeItem from "./ReplayTreeItem";
 
 const ReplayTreeView = ({
-  vehicles,
-  searchQuery,
+  vehicles = [], // Default to empty array to prevent undefined errors
+  searchQuery = "",
   selectedVehicle,
-  expandedGroups,
+  expandedGroups = {},
   onVehicleSelect,
   onToggleGroup,
 }) => {
-  // Organize data into tree structure (same logic as MapSidebar)
   const organizeDataIntoTree = (data) => {
+    // Check if data is undefined or not an array
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      return [];
+    }
+
     const map = {};
     const roots = [];
 
-    // First pass: create a map of all items
     data.forEach((item) => {
       map[item.id] = {
         ...item,
@@ -22,7 +25,6 @@ const ReplayTreeView = ({
       };
     });
 
-    // Second pass: build the tree
     data.forEach((item) => {
       if (item.parent === "#") {
         roots.push(map[item.id]);
@@ -31,13 +33,12 @@ const ReplayTreeView = ({
       }
     });
 
-    // Sort children by orderby property
     const sortChildren = (node) => {
       if (node.children && node.children.length > 0) {
         node.children.sort((a, b) => {
           if (a.Type === "Group" && b.Type !== "Group") return -1;
           if (a.Type !== "Group" && b.Type === "Group") return 1;
-          return a.orderby - b.orderby;
+          return (a.orderby || 0) - (b.orderby || 0);
         });
         node.children.forEach((child) => sortChildren(child));
       }
@@ -47,7 +48,6 @@ const ReplayTreeView = ({
     return roots;
   };
 
-  // Filter tree based on search query
   const filteredTree = React.useMemo(() => {
     const treeStructure = organizeDataIntoTree(vehicles);
     
@@ -92,9 +92,8 @@ const ReplayTreeView = ({
           onSelect={onVehicleSelect}
         />
 
-        {/* Render children if expanded */}
         {isGroup && isExpanded && item.children && item.children.length > 0 && (
-          <div className="ml-4 border-l border-gray-200 pl-2">
+          <div>
             {item.children.map((child) => renderTreeItem(child, level + 1))}
           </div>
         )}
@@ -102,7 +101,7 @@ const ReplayTreeView = ({
     );
   };
 
-  if (vehicles.length === 0) {
+  if (!vehicles || vehicles.length === 0) {
     return (
       <div className="text-center text-gray-500 py-8">
         <div className="text-sm">No vehicles available</div>
@@ -111,9 +110,11 @@ const ReplayTreeView = ({
   }
 
   return (
-    <div className="space-y-1">
+    <div className="p-1">
       {filteredTree.length > 0 ? (
-        filteredTree.map((item) => renderTreeItem(item))
+        <div>
+          {filteredTree.map((item) => renderTreeItem(item))}
+        </div>
       ) : (
         <div className="text-center text-gray-500 py-4">
           <div className="text-sm">No vehicles found</div>

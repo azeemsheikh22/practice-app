@@ -1,54 +1,44 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { Pencil, Trash2 } from "lucide-react";
+import { fetchRouteListForUser } from "../../features/routeSlice";
 
 const RouteTable = () => {
+  const dispatch = useDispatch();
   const [selectedRows, setSelectedRows] = useState({});
 
-  // Static route data (6-7 lines)
-  const routeData = [
-    {
-      id: 1,
-      routeName: "Karachi to Lahore Express Route",
-      origin: "Karachi Port Area, Sindh",
-      destination: "Lahore Industrial Area, Punjab",
-    },
-    {
-      id: 2,
-      routeName: "Islamabad City Tour",
-      origin: "Blue Area, Islamabad",
-      destination: "Faisal Mosque, Islamabad",
-    },
-    {
-      id: 3,
-      routeName: "Multan to Faisalabad Highway",
-      origin: "Multan Cantt Station",
-      destination: "Faisalabad Clock Tower Area",
-    },
-    {
-      id: 4,
-      routeName: "Peshawar to Swat Valley Route",
-      origin: "Peshawar University Road",
-      destination: "Mingora Swat Main Bazaar",
-    },
-    {
-      id: 5,
-      routeName: "Quetta to Gwadar Coastal Highway",
-      origin: "Quetta Railway Station",
-      destination: "Gwadar Port Authority",
-    },
-    {
-      id: 6,
-      routeName: "Sialkot to Gujranwala Industrial Route",
-      origin: "Sialkot International Airport",
-      destination: "Gujranwala Industrial Estate",
-    },
-    {
-      id: 7,
-      routeName: "Hyderabad to Sukkur National Highway",
-      origin: "Hyderabad Bypass Road",
-      destination: "Sukkur Barrage Area",
-    },
-  ];
+  // Get routes data from Redux store
+  const {
+    routes,
+    loading: routesLoading,
+  } = useSelector((state) => state.route);
+
+  // Fetch routes data on component mount
+  useEffect(() => {
+    if (!routes || routes.length === 0) {
+      dispatch(fetchRouteListForUser());
+    }
+  }, [dispatch, routes]);
+
+  // Transform Redux routes data to match table structure
+  const routeData = useMemo(() => {
+    if (!routes || routes.length === 0) return [];
+    
+    return routes.map((route, index) => ({
+      id: index + 1,
+      routeName: route.routeName || 'N/A',
+      origin: route.originLatLng ? 
+        `${route.originLatLng.split(' ')[0]}, ${route.originLatLng.split(' ')[1]}` : 
+        'N/A',
+      destination: route.destinationLatLng ? 
+        `${route.destinationLatLng.split(' ')[0]}, ${route.destinationLatLng.split(' ')[1]}` : 
+        'N/A',
+      originID: route.OriginID || 0,
+      destinationID: route.DestinationID || 0,
+      routeString: route.routeString || '',
+      originalData: route // Keep original data for reference
+    }));
+  }, [routes]);
 
   // Row selection handlers
   const handleRowSelect = useCallback((index) => {
@@ -74,8 +64,15 @@ const RouteTable = () => {
   const handleDeleteSelected = () => {
     const selectedCount = Object.keys(selectedRows).filter(key => selectedRows[key]).length;
     if (selectedCount > 0) {
-      alert(`Delete ${selectedCount} selected routes?`);
-      setSelectedRows({});
+      const selectedRoutes = Object.keys(selectedRows)
+        .filter(key => selectedRows[key])
+        .map(key => routeData[key].routeName);
+      
+      if (window.confirm(`Are you sure you want to delete ${selectedCount} selected routes?\n\nRoutes: ${selectedRoutes.join(', ')}`)) {
+        // TODO: Implement delete functionality
+        console.log('Deleting routes:', selectedRoutes);
+        setSelectedRows({});
+      }
     }
   };
 
@@ -83,19 +80,46 @@ const RouteTable = () => {
 
   // Function to truncate text with ellipsis
   const truncateText = (text, maxLength = 30) => {
-    if (text.length <= maxLength) return text;
+    if (!text || text.length <= maxLength) return text || 'N/A';
     return text.substring(0, maxLength) + "...";
   };
 
+  // Function to format coordinates for display
+  const formatCoordinates = (latLng) => {
+    if (!latLng) return 'N/A';
+    const [lat, lng] = latLng.split(' ');
+    return `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}`;
+  };
+
+  // Loading state
+  if (routesLoading) {
+    return (
+      <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-4 py-8 text-center">
+          <div className="text-gray-500">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#25689f] mx-auto mb-4"></div>
+            <div className="text-sm font-medium">Loading routes...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
-      {/* ✅ COMPACT Table Header - Similar to GeofenceTable */}
+      {/* ✅ COMPACT Table Header */}
       <div className="px-4 py-2.5 border-b border-gray-200 bg-gray-50">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-3">
             <h3 className="text-md font-semibold text-gray-900">
               Routes ({routeData.length})
             </h3>
+            {routesLoading && (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#25689f]"></div>
+                <span className="text-sm text-gray-500">Loading...</span>
+              </div>
+            )}
             {selectedCount > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">
@@ -111,6 +135,15 @@ const RouteTable = () => {
               </div>
             )}
           </div>
+          
+          {/* Refresh Button */}
+          <button
+            onClick={() => dispatch(fetchRouteListForUser())}
+            disabled={routesLoading}
+            className="px-3 py-1.5 text-sm bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {routesLoading ? 'Loading...' : 'Refresh'}
+          </button>
         </div>
       </div>
 
@@ -125,7 +158,8 @@ const RouteTable = () => {
                   type="checkbox"
                   checked={selectedCount === routeData.length && routeData.length > 0}
                   onChange={handleSelectAll}
-                  className="rounded border-gray-300 w-4 h-4"
+                  className="rounded border-gray-300 w-4 h-4 text-[#25689f] focus:ring-[#25689f]/30"
+                  disabled={routeData.length === 0}
                 />
               </th>
               <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
@@ -149,49 +183,66 @@ const RouteTable = () => {
               <tr>
                 <td colSpan="5" className="px-3 py-8 text-center">
                   <div className="text-gray-500">
-                    <div className="text-sm font-medium">No routes found</div>
-                    <div className="text-xs mt-1">No routes available</div>
+                    <div className="text-sm font-medium">
+                      {routesLoading ? 'Loading routes...' : 'No routes found'}
+                    </div>
+                    <div className="text-xs mt-1">
+                      {routesLoading ? 'Please wait...' : 'No routes available in the system'}
+                    </div>
                   </div>
                 </td>
               </tr>
             ) : (
               routeData.map((item, index) => (
                 <tr
-                  key={item.id}
+                  key={`route-${item.id}-${index}`}
                   className={`hover:bg-gray-50 transition-colors ${
-                    selectedRows[index] ? "bg-blue-50" : ""
+                    selectedRows[index] ? "bg-[#25689f]/10" : ""
                   }`}
                 >
-                      <td className="px-3 py-2">
+                  <td className="px-3 py-2">
                     <input
                       type="checkbox"
                       checked={selectedRows[index] || false}
                       onChange={() => handleRowSelect(index)}
-                      className="rounded border-gray-300 w-4 h-4"
+                      className="rounded border-gray-300 w-4 h-4 text-[#25689f] focus:ring-[#25689f]/30"
                     />
                   </td>
                   <td className="px-3 py-2">
-                    <div className="text-sm font-medium text-gray-900" title={item.routeName}>
+                    <div 
+                      className="text-sm font-medium text-gray-900" 
+                      title={item.routeName}
+                    >
                       {truncateText(item.routeName, 35)}
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <div className="text-sm text-gray-600" title={item.origin}>
-                      {truncateText(item.origin, 30)}
+                    <div 
+                      className="text-sm text-gray-600" 
+                      title={`Coordinates: ${item.originalData.originLatLng}`}
+                    >
+                      {formatCoordinates(item.originalData.originLatLng)}
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <div className="text-sm text-gray-600" title={item.destination}>
-                      {truncateText(item.destination, 30)}
+                    <div 
+                      className="text-sm text-gray-600" 
+                      title={`Coordinates: ${item.originalData.destinationLatLng}`}
+                    >
+                      {formatCoordinates(item.originalData.destinationLatLng)}
                     </div>
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-center gap-1">
                       <button 
-                        className="p-1.5 hover:bg-blue-50 rounded-lg transition-colors group"
-                        title="Edit Route"
+                        className="p-1.5 hover:bg-[#25689f]/10 rounded-lg transition-colors group"
+                        title={`Edit Route: ${item.routeName}`}
+                        onClick={() => {
+                          // TODO: Implement edit functionality
+                          console.log('Edit route:', item);
+                        }}
                       >
-                        <Pencil className="w-4 h-4 text-blue-500 group-hover:text-blue-600" />
+                        <Pencil className="w-4 h-4 text-[#25689f] group-hover:text-[#1F557F]" />
                       </button>
                     </div>
                   </td>
@@ -201,9 +252,20 @@ const RouteTable = () => {
           </tbody>
         </table>
       </div>
+
+      {/* ✅ Table Footer with Summary */}
+      {routeData.length > 0 && (
+        <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
+          <div className="flex justify-between items-center text-sm text-gray-600">
+            <span>Total Routes: {routeData.length}</span>
+            {selectedCount > 0 && (
+              <span>{selectedCount} route{selectedCount > 1 ? 's' : ''} selected</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default RouteTable;
-
