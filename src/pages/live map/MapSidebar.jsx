@@ -479,11 +479,11 @@ const MapSidebar = memo(({ onWidthChange }) => {
     ]
   );
 
-  const deselectAll = useCallback(() => {
+  const deselectAll = () => {
     setSelectedVehicleIds([]);
     dispatch(setVisuallySelectedItems([]));
     dispatch(updateVehicleFilter([]));
-  }, [dispatch]);
+  };
 
   const handleFilterChange = useCallback(
     (e) => {

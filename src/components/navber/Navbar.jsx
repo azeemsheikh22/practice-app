@@ -9,6 +9,7 @@ import menuIcon3 from "../../assets/menuICON3.png";
 import menuIcon5 from "../../assets/menuICON5.png";
 import menuIcon6 from "../../assets/menuICON6.png";
 import menuIcon7 from "../../assets/menuICON7.png";
+import menuIcon8 from "../../assets/menuICON8.png";
 import menuIcon9 from "../../assets/menuICON9.png";
 import { useDispatch } from "react-redux";
 import { clearConnection } from "../../features/gpsTrackingSlice";
@@ -171,19 +172,27 @@ const Navbar = () => {
                 />
 
                 <NavItem
+                  icon={<img src={menuIcon8} className="w-[18px] h-[18px]" />}
+                  label="Routes"
+                  to="/routesview"
+                  active={isActive("/routesview")}
+                  openInNewTab={true}
+                />
+
+                {/* <NavItem
                   icon={<img src={menuIcon6} className="w-[18px] h-[18px]" />}
                   label="Scheduler"
                   to="#"
                   active={isActive("/scheduler")}
                   openInNewTab={true}
-                />
+                /> */}
               </div>
             </div>
 
             <div className="flex items-center">
               {/* ✅ Fullscreen Toggle Button - Desktop Only */}
               <div className="hidden xl:block mr-3">
-                <button 
+                <button
                   onClick={toggleFullscreen}
                   className="p-2.5 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 cursor-pointer transition-colors"
                   title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
@@ -229,13 +238,13 @@ const Navbar = () => {
                           </div>
                         </div>
 
-                    
-                          <DropdownItem
-                            icon={<Shield size={18} />}
-                            label="Admin"
-                            to="/admin/menu"
-                          />
-                        
+
+                        <DropdownItem
+                          icon={<Shield size={18} />}
+                          label="Admin"
+                          to="/admin/menu"
+                        />
+
 
                         <DropdownItem
                           icon={<User size={18} />}
@@ -295,7 +304,7 @@ const Navbar = () => {
                 className="fixed inset-0 bg-black/50 z-[9998] xl:hidden"
                 onClick={() => setMobileMenuOpen(false)}
               />
-              
+
               {/* Mobile Menu Panel */}
               <motion.div
                 initial={{ x: "100%" }}
@@ -357,7 +366,7 @@ const Navbar = () => {
                     onClick={() => setMobileMenuOpen(false)}
                     openInNewTab={true}
                   />
-                             <MobileNavItem
+                  <MobileNavItem
                     icon={<img src={menuIcon5} className="w-5 h-5" />}
                     label="Alerts"
                     to="/alerts"
@@ -373,25 +382,34 @@ const Navbar = () => {
                     onClick={() => setMobileMenuOpen(false)}
                     openInNewTab={true}
                   />
+
                   <MobileNavItem
+                    icon={<img src={menuIcon8} className="w-5 h-5" />}
+                    label="Routes"
+                    to="/routesview"
+                    active={isActive("/routesview")}
+                    onClick={() => setMobileMenuOpen(false)}
+                    openInNewTab={true}
+                  />
+                  {/* <MobileNavItem
                     icon={<img src={menuIcon6} className="w-5 h-5" />}
                     label="Scheduler"
                     to="#"
                     active={isActive("/scheduler")}
                     onClick={() => setMobileMenuOpen(false)}
                     openInNewTab={true}
+                  /> */}
+
+
+                  <MobileNavItem
+                    icon={<Shield className="w-5 h-5" />}
+                    label="Admin"
+                    to="/admin/menu"
+                    active={isActive("/admin/menu")}
+                    onClick={() => setMobileMenuOpen(false)}
+                    openInNewTab={true}
                   />
 
-                
-                    <MobileNavItem
-                      icon={<Shield className="w-5 h-5" />}
-                      label="Admin"
-                      to="/admin/menu"
-                      active={isActive("/admin/menu")}
-                      onClick={() => setMobileMenuOpen(false)}
-                      openInNewTab={true}
-                    />
-                
                 </div>
 
                 {/* Mobile Menu Footer */}
@@ -407,7 +425,7 @@ const Navbar = () => {
                       <p className="text-xs text-gray-500">Logged in user</p>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-1">
                     <button
                       onClick={handleChangePasswordClick}
@@ -447,11 +465,10 @@ const NavItem = ({ icon, label, to, active = false, openInNewTab = false }) => (
     to={to}
     target={openInNewTab ? "_blank" : "_self"}
     rel={openInNewTab ? "noopener noreferrer" : undefined}
-    className={`flex flex-col items-center px-4 py-2 text-[13px] font-medium mx-0.5 text-dark ${
-      active
-        ? "border-b-3 border-primary"
-        : "border-b-3 border-transparent hover:bg-gray-50"
-    } transition-colors duration-200`}
+    className={`flex flex-col items-center px-4 py-2 text-[13px] font-medium mx-0.5 text-dark ${active
+      ? "border-b-3 border-primary"
+      : "border-b-3 border-transparent hover:bg-gray-50"
+      } transition-colors duration-200`}
   >
     <div className="mb-1">{icon}</div>
     <span>{label}</span>
@@ -473,7 +490,7 @@ const MobileNavItem = ({
       onClick();
       return;
     }
-    
+
     if (openInNewTab) {
       e.preventDefault();
       window.open(to, '_blank');
@@ -484,8 +501,8 @@ const MobileNavItem = ({
   };
 
   const baseClasses = "flex items-center px-4 py-3 text-sm font-medium transition-colors cursor-pointer border-l-4";
-  const activeClasses = active 
-    ? "bg-primary/10 text-primary border-primary" 
+  const activeClasses = active
+    ? "bg-primary/10 text-primary border-primary"
     : "text-gray-700 hover:bg-gray-50 hover:text-primary border-transparent hover:border-primary/30";
 
   if (openInNewTab || to === "#") {

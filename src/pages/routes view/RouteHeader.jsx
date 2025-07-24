@@ -72,7 +72,7 @@ export default function RouteHeader() {
         {/* ✅ COMPACT Title Row */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
           <div>
-            <h1 className="text-lg font-bold text-gray-800 mb-1">Route List</h1>
+            <h1 className="text-xl font-bold text-gray-800 mb-1">Route List</h1>
             <p className="text-sm text-gray-600">
               Search and edit your Route from the list below
             </p>

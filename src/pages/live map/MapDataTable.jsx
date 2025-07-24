@@ -615,7 +615,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
                             className={`cursor-pointer transition-colors duration-200 ${getRowBackgroundColor(
                               row.status,
                               row.id
-                            )} hover:bg-gray-50`}
+                            )} `}
                             style={{ height: ROW_HEIGHT }}
                             onClick={(e) => handleRowClick(row, e)}
                             title="Click to select and zoom to vehicle"

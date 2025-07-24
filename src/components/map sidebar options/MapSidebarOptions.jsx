@@ -53,33 +53,32 @@ const MapSidebarOptions = ({ isOpen, onClose }) => {
   });
 
   // ✅ Memoized callbacks
-  const toggleShowAllLabels = useCallback(() => {
+  const toggleShowAllLabels = () => {
     dispatch(setShowAllLabels(!showAllLabels));
-  }, [dispatch, showAllLabels]);
+  };
 
-  const handleVehicleFilterChange = useCallback((filter) => {
+  const handleVehicleFilterChange = (filter) => {
     dispatch(setMovingStatusFilter(filter));
-  }, [dispatch]);
+  };
 
-  const toggleIconClustering = useCallback(() => {
+  const toggleIconClustering = () => {
     dispatch(setIconClustering(!iconClustering));
-  }, [dispatch, iconClustering]);
-
-  const toggleGeofences = useCallback(() => {
+  }
+  const toggleGeofences = () => {
     const newValue = !showGeofences;
     dispatch(setShowGeofences(newValue));
     if (newValue && (!userGeofences || userGeofences.length === 0)) {
       dispatch(fetchGeofenceForUser());
     }
-  }, [dispatch, showGeofences, userGeofences]);
+  };
 
-  const toggleRoutes = useCallback(() => {
+  const toggleRoutes = () => {
     const newValue = !showRoutes;
     dispatch(setShowRoutes(newValue));
     if (newValue && (!userRoutes || userRoutes.length === 0)) {
       dispatch(fetchRouteListForUser());
     }
-  }, [dispatch, showRoutes, userRoutes]);
+  };
 
   // ✅ Simple CSS transition instead of Framer Motion
   if (!isOpen) return null;
@@ -289,14 +288,14 @@ const AdvancedOptionsSection = React.memo(({ onOpenAdvancedOptions }) => (
 
 // ✅ Optimized Toggle Switch
 const ToggleSwitch = React.memo(({ checked, onChange, label, icon }) => (
-  <div className="flex items-center justify-between py-2.5 px-3 hover:bg-gray-50 rounded-md transition-colors duration-150">
-    <label className="text-sm font-medium text-gray-700 flex items-center cursor-pointer">
+  <div className="flex items-center justify-between py-2.5 px-3 hover:bg-gray-50 rounded-md transition-colors duration-150 cursor-pointer">
+    <label className="text-sm font-medium text-gray-700 flex items-center">
       {icon && <span className="mr-2.5 w-4 h-4">{icon}</span>}
       {label}
     </label>
     <button
       onClick={onChange}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-150 ${checked ? "bg-primary" : "bg-gray-200"
+      className={`relative cursor-pointer inline-flex h-5 w-9 items-center rounded-full transition-colors duration-150 ${checked ? "bg-primary" : "bg-gray-200"
         }`}
     >
       <span

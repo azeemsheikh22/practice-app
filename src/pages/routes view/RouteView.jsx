@@ -12,7 +12,6 @@ import {
 import RouteTable from "./RouteTable";
 
 const RoutesView = () => {
-  const [activeTab, setActiveTab] = useState("routes");
 
   const navigationItems = [
     {
