@@ -6,6 +6,7 @@ import {
   RefreshCw,
   RotateCcw,
   Volume2,
+  Check,
 } from "lucide-react";
 
 export default function AlertLogHeader() {
@@ -56,6 +57,65 @@ export default function AlertLogHeader() {
     // Add auto refresh logic here
   };
 
+  // Custom Checkbox Component
+  const CustomCheckbox = ({ checked, onChange, children, id }) => {
+    return (
+      <motion.label
+        htmlFor={id}
+        className="flex items-center cursor-pointer group select-none"
+        whileTap={{ scale: 0.98 }}
+      >
+        <div className="relative flex items-center">
+          <input
+            id={id}
+            type="checkbox"
+            checked={checked}
+            onChange={onChange}
+            className="sr-only"
+          />
+          <motion.div
+            className={`
+              relative w-5 h-5 rounded-md border-2 transition-all duration-200 ease-in-out
+              ${checked 
+                ? 'bg-blue-600 border-blue-600 shadow-sm' 
+                : 'bg-white border-gray-300 group-hover:border-gray-400'
+              }
+              group-focus-within:ring-2 group-focus-within:ring-blue-500 group-focus-within:ring-opacity-20
+              group-hover:shadow-sm
+            `}
+            initial={false}
+            animate={{
+              scale: checked ? [1, 1.1, 1] : 1,
+            }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={false}
+              animate={{
+                opacity: checked ? 1 : 0,
+                scale: checked ? 1 : 0.5,
+              }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+            >
+              <Check size={12} className="text-white stroke-[3]" />
+            </motion.div>
+          </motion.div>
+        </div>
+        <motion.span
+          className="ml-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200 whitespace-nowrap"
+          initial={false}
+          animate={{
+            color: checked ? '#1f2937' : '#374151',
+          }}
+          transition={{ duration: 0.2 }}
+        >
+          {children}
+        </motion.span>
+      </motion.label>
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -10 }}
@@ -81,7 +141,7 @@ export default function AlertLogHeader() {
               <select
                 value={selectedTimeframe}
                 onChange={(e) => setSelectedTimeframe(e.target.value)}
-                className="block w-full h-9 px-3 pr-8 border border-gray-300 rounded-md appearance-none focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all duration-200 text-sm bg-white"
+                className="block w-full h-9 px-3 pr-8 border border-gray-300 rounded-md appearance-none focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 text-sm bg-white"
               >
                 <option>Today</option>
                 <option>Yesterday</option>
@@ -108,7 +168,7 @@ export default function AlertLogHeader() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search for Record..."
-                className="block w-full h-9 pl-9 pr-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all duration-200 text-sm placeholder-gray-400"
+                className="block w-full h-9 pl-9 pr-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 text-sm placeholder-gray-400"
               />
             </div>
           </div>
@@ -123,46 +183,36 @@ export default function AlertLogHeader() {
       {/* Bottom Row - Options and Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-3 border-t border-gray-100">
         {/* Checkboxes */}
-        <div className="flex flex-wrap items-center gap-4 lg:gap-6">
+        <div className="flex flex-wrap items-center gap-6 lg:gap-8">
           {/* Only Un-Confirmed Alerts */}
-          <label className="flex items-center cursor-pointer group">
-            <input
-              type="checkbox"
-              checked={onlyUnconfirmed}
-              onChange={(e) => setOnlyUnconfirmed(e.target.checked)}
-              className="rounded border-gray-300 text-amber-500 focus:ring-amber-500 focus:ring-1 w-4 h-4 transition-colors duration-200"
-            />
-            <span className="ml-2 text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-200 whitespace-nowrap">
-              Only Un-Confirmed Alerts
-            </span>
-          </label>
+          <CustomCheckbox
+            id="unconfirmed-alerts"
+            checked={onlyUnconfirmed}
+            onChange={(e) => setOnlyUnconfirmed(e.target.checked)}
+          >
+            Only Un-Confirmed Alerts
+          </CustomCheckbox>
 
           {/* Alarm Sound */}
-          <label className="flex items-center cursor-pointer group">
-            <input
-              type="checkbox"
-              checked={alarmSound}
-              onChange={(e) => setAlarmSound(e.target.checked)}
-              className="rounded border-gray-300 text-amber-500 focus:ring-amber-500 focus:ring-1 w-4 h-4 transition-colors duration-200"
-            />
-            <span className="ml-2 text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-200 flex items-center whitespace-nowrap">
-              <Volume2 size={14} className="mr-1" />
+          <CustomCheckbox
+            id="alarm-sound"
+            checked={alarmSound}
+            onChange={(e) => setAlarmSound(e.target.checked)}
+          >
+            <span className="flex items-center">
+              <Volume2 size={14} className="mr-1.5" />
               Alarm Sound
             </span>
-          </label>
+          </CustomCheckbox>
 
           {/* Auto Refresh */}
-          <label className="flex items-center cursor-pointer group">
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="rounded border-gray-300 text-amber-500 focus:ring-amber-500 focus:ring-1 w-4 h-4 transition-colors duration-200"
-            />
-            <span className="ml-2 text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-200 whitespace-nowrap">
-              Auto Refresh
-            </span>
-          </label>
+          <CustomCheckbox
+            id="auto-refresh-checkbox"
+            checked={autoRefresh}
+            onChange={(e) => setAutoRefresh(e.target.checked)}
+          >
+            Auto Refresh
+          </CustomCheckbox>
         </div>
 
         {/* Action Buttons */}
@@ -172,7 +222,7 @@ export default function AlertLogHeader() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleRefresh}
-            className="flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-md transition-all duration-200 border border-gray-300 focus:ring-2 focus:ring-gray-500 focus:ring-offset-1 outline-none"
+            className="flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-md transition-all duration-200 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 outline-none"
             title="Refresh"
           >
             <RefreshCw size={16} />
@@ -185,8 +235,8 @@ export default function AlertLogHeader() {
             onClick={handleAutoRefresh}
             className={`flex items-center justify-center w-9 h-9 rounded-md transition-all duration-200 border focus:ring-2 focus:ring-offset-1 outline-none ${
               autoRefresh
-                ? "bg-amber-100 hover:bg-amber-200 text-amber-600 border-amber-300 focus:ring-amber-500"
-                : "bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 border-gray-300 focus:ring-gray-500"
+                ? "bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-300 focus:ring-blue-500"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 border-gray-300 focus:ring-blue-500"
             }`}
             title="Auto Refresh"
           >

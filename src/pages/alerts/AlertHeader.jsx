@@ -49,18 +49,7 @@ export default function AlertHeader() {
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Create Policy Button */}
-
-          <motion.button
-            whileHover="hover"
-            whileTap="tap"
-            className="btn btn-primary  btn-sm bg-gradient-to-r from-[#25689f] to-[#1F557F] hover:from-[#1F557F] hover:to-[#184567] border-none text-white shadow-md hover:shadow-lg transition-all duration-200 flex items-center px-3 py-1.5 text-sm h-auto min-h-0"
-          >
-            <Plus size={14} className="mr-1.5" />
-            Create New Policy
-          </motion.button>
-        </div>
+       
       </div>
 
       {/* Filter Bar */}

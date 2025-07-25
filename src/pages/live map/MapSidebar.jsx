@@ -133,6 +133,8 @@ const MapSidebar = memo(({ onWidthChange }) => {
   );
   const selectedVehiclesFromSlice = useSelector(selectSelectedVehicles);
 
+  console.log(rawVehicles)
+
   // Memoized car data
   const carData = useMemo(() => {
     return rawCarData || [];

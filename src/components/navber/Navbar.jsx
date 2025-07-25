@@ -139,7 +139,7 @@ const Navbar = () => {
                   label="Dashboard"
                   to="/dashboard"
                   active={isActive("/dashboard")}
-                  openInNewTab={true}
+                  openInNewTab={false}
                 />
 
                 <NavItem
@@ -147,28 +147,28 @@ const Navbar = () => {
                   label="Geofence"
                   to="/geofence"
                   active={isActive("/geofence")}
-                  openInNewTab={true}
+                  openInNewTab={false}
                 />
                 <NavItem
                   icon={<img src={menuIcon3} className="w-[18px] h-[18px]" />}
                   label="Replay"
                   to="/replay"
                   active={isActive("/replay")}
-                  openInNewTab={true}
+                  openInNewTab={false}
                 />
                 <NavItem
                   icon={<img src={menuIcon5} className="w-[18px] h-[18px]" />}
                   label="Alerts"
                   to="/alerts"
                   active={isActive("/alerts")}
-                  openInNewTab={true}
+                  openInNewTab={false}
                 />
                 <NavItem
                   icon={<img src={menuIcon2} className="w-[18px] h-[18px]" />}
                   label="Reports"
                   to="#"
                   active={isActive("/reports")}
-                  openInNewTab={true}
+                  openInNewTab={false}
                 />
 
                 <NavItem
@@ -176,7 +176,7 @@ const Navbar = () => {
                   label="Routes"
                   to="/routesview"
                   active={isActive("/routesview")}
-                  openInNewTab={true}
+                  openInNewTab={false}
                 />
 
                 {/* <NavItem

@@ -13,6 +13,7 @@ import CreateRoute from "../pages/routes view/create route/CreateRoute";
 import ChartDashboard from "../pages/chart dashboard/ChartDashboard";
 import NotFound from "../pages/not found/NotFound";
 import AdminNavigation from "../admin/AdminRoot";
+import AddPolicy from "../pages/alerts/alert policy/AddPolicy";
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -49,6 +50,16 @@ function AllRoute() {
           </ProtectedRoute>
         }
       />
+
+      <Route
+        path="/add-policy"
+        element={
+          <ProtectedRoute>
+            <AddPolicy />
+          </ProtectedRoute>
+        }
+      />
+
       <Route
         path="/geofence"
         element={
@@ -113,15 +124,15 @@ function AllRoute() {
       />
 
       <Route path="/create-route" element={<CreateRoute />} />
-      
+
       {/* Admin Routes with nested sub-routes */}
-      <Route 
-        path="/admin/*" 
+      <Route
+        path="/admin/*"
         element={
           <ProtectedRoute>
             <AdminNavigation />
           </ProtectedRoute>
-        } 
+        }
       />
 
       <Route path="/login" element={<Login />} />
