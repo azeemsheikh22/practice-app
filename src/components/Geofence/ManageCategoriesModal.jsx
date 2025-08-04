@@ -120,7 +120,6 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
       icon: "1",
     });
     setShowIconPicker(false);
-    console.log("Category saved:", formData);
   };
 
   const handleEdit = (category) => {
