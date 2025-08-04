@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import Select from "react-select";
 import {
   Pencil,
   BarChart2,
@@ -11,6 +12,7 @@ import {
 import { useSelector, useDispatch } from "react-redux";
 import { fetchGeofences } from "../../features/geofenceSlice";
 import { saveAs } from "file-saver";
+
 
 function exportToCSV(data, filename = "geofences.csv") {
   if (!data || data.length === 0) return;
@@ -497,18 +499,47 @@ export default function GeofenceTable() {
           </div>
 
           {/* Category Filter - Compact */}
-          <div className="flex items-center gap-2">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="border border-gray-300 rounded px-2 py-1 text-xs bg-white min-w-[100px]"
-            >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-2 min-w-[180px]">
+            <div style={{ width: '220px', position: 'relative', zIndex: 1000 }}>
+              <Select
+                options={categories.map((cat) => ({ value: cat, label: cat }))}
+                value={{ value: categoryFilter, label: categoryFilter }}
+                onChange={(option) => setCategoryFilter(option.value)}
+                isSearchable
+                classNamePrefix="react-select"
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    minHeight: '36px',
+                    fontSize: '13px',
+                    borderColor: '#d1d5db',
+                    boxShadow: 'none',
+                    background: '#fff',
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    zIndex: 2000,
+                    fontSize: '13px',
+                  }),
+                  option: (base, state) => ({
+                    ...base,
+                    fontSize: '13px',
+                    backgroundColor: state.isFocused ? '#e0e7ff' : '#fff',
+                    color: '#222',
+                  }),
+                  singleValue: (base) => ({
+                    ...base,
+                    fontSize: '13px',
+                  }),
+                  menuPortal: (base) => ({
+                    ...base,
+                    zIndex: 2000,
+                  }),
+                }}
+                menuPortalTarget={document.body}
+                placeholder="Search category..."
+              />
+            </div>
           </div>
         </div>
       </div>

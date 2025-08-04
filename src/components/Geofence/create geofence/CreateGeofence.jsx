@@ -9,7 +9,10 @@ import { setSelectedLocation } from "../../../features/locationSearchSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedCategoryForDrawing } from "../../../features/geofenceSlice";
 import axios from "axios";
-import { initializeConnection, selectConnectionStatus } from "../../../features/gpsTrackingSlice";
+import {
+  initializeConnection,
+  selectConnectionStatus,
+} from "../../../features/gpsTrackingSlice";
 
 const CreateGeofence = () => {
   const [searchParams] = useSearchParams();
@@ -23,6 +26,10 @@ const CreateGeofence = () => {
   const { geofenceCatList } = useSelector((state) => state.geofence);
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const token = localStorage.getItem("token");
+
+  // Get URL parameters (move above all useEffects)
+  const isEditMode = searchParams.get("type") === "edit";
+  const geofenceId = searchParams.get("id");
 
   // Form states
   const [detailForm, setDetailForm] = useState({
@@ -42,7 +49,38 @@ const CreateGeofence = () => {
     showOn: [],
   });
 
-  // console.log(EditGeofenceData);
+  // Auto-fill advanceForm in edit mode
+  useEffect(() => {
+    if (
+      isEditMode &&
+      EditGeofenceData &&
+      Array.isArray(EditGeofenceData) &&
+      EditGeofenceData.length > 0
+    ) {
+      const data = EditGeofenceData[0];
+      // Marker color mapping
+      const markerColorMap = {
+        Red: "#D52B1E",
+        Purple: "#8B5CF6",
+        Blue: "#3B82F6",
+      };
+      let markerColor =
+        markerColorMap[data.MarkerColor] || data.MarkerColor || "#25689f";
+      // ShowOn array
+      let showOn = [];
+      if (data.chkShowOnMap === "true" || data.chkShowOnMap === true)
+        showOn.push("map");
+      if (data.chkAddress === "true" || data.chkAddress === true)
+        showOn.push("address");
+      setAdvanceForm({
+        contactName: data.contactName || "",
+        contactPhone: data.contactPhone || "",
+        placeId: data.placeID || data.placeId || "",
+        markerColor,
+        showOn,
+      });
+    }
+  }, [isEditMode, EditGeofenceData]);
 
   useEffect(() => {
     const lat = searchParams.get("lat");
@@ -71,9 +109,6 @@ const CreateGeofence = () => {
     }
   }, []);
 
-  // Get URL parameters
-  const isEditMode = searchParams.get("type") === "edit";
-  const geofenceId = searchParams.get("id");
   // const geofenceName = searchParams.get("geofenceName");
 
   // Fetch metrics data when selectedTimeFilter or geoid changes
@@ -146,8 +181,6 @@ const CreateGeofence = () => {
       geofenceData,
       timestamp: new Date().toISOString(),
     };
-
-    console.log("Save complete geofence data:", completeData);
     setIsSidebarOpen(false);
   };
 
@@ -185,11 +218,11 @@ const CreateGeofence = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="bg-white shadow-sm border-b border-gray-200 px-3 py-4 overflow-hidden relative z-40"
+        className="bg-white shadow-sm border-b border-gray-200 px-2 sm:px-3 py-2 sm:py-3 overflow-hidden relative z-40"
       >
-        {/* Header content */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+        {/* Responsive Header content */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 h-full w-full">
+          <div className="flex flex-row items-center gap-2 w-full">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -199,21 +232,31 @@ const CreateGeofence = () => {
               <Menu size={16} />
             </motion.button>
 
-            <div className="p-1.5 bg-[#25689f]/10 rounded-md">
+            <div className="p-1 bg-[#25689f]/10 rounded-md flex items-center justify-center">
               <MapPin size={18} className="text-[#25689f]" />
             </div>
-            <div>
-              <h1 className="text-base sm:text-lg font-semibold text-gray-900">
+            <div className="flex flex-col justify-center min-w-0">
+              <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
                 {isEditMode ? "Edit Geofence" : "Create Geofence"}
               </h1>
+              {/* Show geofence name in header if edit mode and data available */}
+              {isEditMode &&
+                EditGeofenceData &&
+                Array.isArray(EditGeofenceData) &&
+                EditGeofenceData.length > 0 && (
+                  <div className="text-xs sm:text-sm text-gray-600 truncate">
+                    <span className="font-medium">Name:</span>{" "}
+                    {EditGeofenceData[0].geofenceName || "-"}
+                  </div>
+                )}
             </div>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center justify-end w-full sm:w-auto">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleClose}
-              className="flex items-center px-3 py-2 cursor-pointer bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200"
+              className="flex items-center px-2 sm:px-3 py-2 cursor-pointer bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200"
             >
               <X size={14} />
             </motion.button>

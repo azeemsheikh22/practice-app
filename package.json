@@ -30,6 +30,7 @@
     "react-hot-toast": "^2.5.2",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.5.3",
+    "react-select": "^5.10.2",
     "react-window": "^1.8.11",
     "recharts": "^3.0.2",
     "redux-persist": "^6.0.0"

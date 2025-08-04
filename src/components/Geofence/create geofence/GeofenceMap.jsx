@@ -5,8 +5,8 @@ import {
   Globe,
   Satellite,
   Maximize,
-  MapPin,
-  ChevronDown,
+  // MapPin,
+  // ChevronDown,
 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -63,16 +63,16 @@ const GeofenceMap = ({
   setMapType,
   onGeofenceDrawn,
   editMode,
-  editGeofenceData
+  editGeofenceData,
 }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const drawnItemsRef = useRef(null);
   const drawControlRef = useRef(null);
   const [isAddToMapOpen, setIsAddToMapOpen] = useState(false);
-  const [suggestedGeofenceChecked, setSuggestedGeofenceChecked] =
-    useState(false);
-  const [geofencesChecked, setGeofencesChecked] = useState(false);
+  // const [suggestedGeofenceChecked, setSuggestedGeofenceChecked] =
+  //   useState(false);
+  // const [geofencesChecked, setGeofencesChecked] = useState(false);
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -298,27 +298,32 @@ const GeofenceMap = ({
     ) {
       const currentColor = getShapeColor();
 
-
       // Update existing shapes color (polygon, rectangle, polyline, circle)
       drawnItemsRef.current.eachLayer((layer) => {
         // For polygons, rectangles, polylines
-        if (layer instanceof L.Polygon || layer instanceof L.Polyline || layer instanceof L.Rectangle) {
-          layer.setStyle && layer.setStyle({
-            color: currentColor,
-            fillColor: currentColor,
-            fillOpacity: 0.2,
-            weight: 3,
-            opacity: 0.8,
-          });
+        if (
+          layer instanceof L.Polygon ||
+          layer instanceof L.Polyline ||
+          layer instanceof L.Rectangle
+        ) {
+          layer.setStyle &&
+            layer.setStyle({
+              color: currentColor,
+              fillColor: currentColor,
+              fillOpacity: 0.2,
+              weight: 3,
+              opacity: 0.8,
+            });
         } else if (layer instanceof L.Circle) {
           // For circles, set color and fillColor
-          layer.setStyle && layer.setStyle({
-            color: currentColor,
-            fillColor: currentColor,
-            fillOpacity: 0.2,
-            weight: 3,
-            opacity: 0.8,
-          });
+          layer.setStyle &&
+            layer.setStyle({
+              color: currentColor,
+              fillColor: currentColor,
+              fillOpacity: 0.2,
+              weight: 3,
+              opacity: 0.8,
+            });
         }
       });
 
@@ -652,22 +657,22 @@ const GeofenceMap = ({
     }
   };
 
-  const handleAddToMapClick = () => {
-    setIsAddToMapOpen(!isAddToMapOpen);
-  };
+  // const handleAddToMapClick = () => {
+  //   setIsAddToMapOpen(!isAddToMapOpen);
+  // };
 
-  const handleSuggestedGeofenceChange = (e) => {
-    setSuggestedGeofenceChecked(e.target.checked);
-  };
+  // const handleSuggestedGeofenceChange = (e) => {
+  //   setSuggestedGeofenceChecked(e.target.checked);
+  // };
 
-  const handleGeofencesChange = (e) => {
-    setGeofencesChecked(e.target.checked);
-  };
+  // const handleGeofencesChange = (e) => {
+  //   setGeofencesChecked(e.target.checked);
+  // };
 
-  const handleAdvanceOptions = () => {
-    setShowAdvanceModal(true);
-    setIsAddToMapOpen(false);
-  };
+  // const handleAdvanceOptions = () => {
+  //   setShowAdvanceModal(true);
+  //   setIsAddToMapOpen(false);
+  // };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -725,7 +730,12 @@ const GeofenceMap = ({
         if (data.zoomlevel) {
           mapInstanceRef.current.setZoom(data.zoomlevel);
         }
-      } else if (data.ShapeType === "circle" && data.latitude && data.longitude && data.radius) {
+      } else if (
+        data.ShapeType === "circle" &&
+        data.latitude &&
+        data.longitude &&
+        data.radius
+      ) {
         // Circle render karo
         const center = [data.latitude, data.longitude];
         drawnItemsRef.current.clearLayers();
@@ -738,6 +748,7 @@ const GeofenceMap = ({
           opacity: 0.8,
         });
         drawnItemsRef.current.addLayer(circle);
+
         mapInstanceRef.current.setView(center, data.zoomlevel || 13, {
           animate: true,
           duration: 1.0,
@@ -810,7 +821,7 @@ const GeofenceMap = ({
         </div>
       </div>
 
-      <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-[1000] add-to-map-container">
+      {/* <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-[1000] add-to-map-container">
         <div className="relative">
           <button
             onClick={handleAddToMapClick}
@@ -871,7 +882,7 @@ const GeofenceMap = ({
             </div>
           )}
         </div>
-      </div>
+      </div> */}
 
       <div className="absolute top-16 sm:top-120 right-2 z-[1000]">
         <div className="flex flex-col space-y-1 bg-white rounded-lg p-1 shadow-lg border border-gray-200">

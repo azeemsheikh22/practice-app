@@ -611,7 +611,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {visibleRows.visibleData.map((row, index) => (
                           <tr
-                            key={`${visibleRows.startIndex + index}-${row.id}`}
+                            key={index}
                             className={`cursor-pointer transition-colors duration-200 ${getRowBackgroundColor(
                               row.status,
                               row.id
@@ -623,7 +623,12 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
                             {columnDefinitions.map((column, colIndex) =>
                               renderTableCell(row, column.key, {
                                 width: column.width,
-                              })
+                              }) && React.cloneElement(
+                                renderTableCell(row, column.key, {
+                                  width: column.width,
+                                }),
+                                { key: `${row.id}-${column.key}` }
+                              )
                             )}
                           </tr>
                         ))}

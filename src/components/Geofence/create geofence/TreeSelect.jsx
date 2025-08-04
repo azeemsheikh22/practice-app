@@ -24,18 +24,55 @@ const TreeSelect = ({
   placeholder = "Select groups",
   multiple = true,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedGroups, setSelectedGroups] = useState([]);
-  const [expandedGroups, setExpandedGroups] = useState({});
-  const [searchQuery, setSearchQuery] = useState("");
-  const dropdownRef = useRef(null);
-
   const rawVehicles = useSelector(selectRawVehicleList);
 
   // Filter only groups (no vehicles) - Memoized to prevent re-calculation
   const groupsOnly = useMemo(() => {
     return rawVehicles.filter((item) => item.Type === "Group");
   }, [rawVehicles]);
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedGroups, setSelectedGroups] = useState([]);
+  // Initialize selectedGroups from value prop (for edit mode) and expand their parents
+  useEffect(() => {
+    if (Array.isArray(value) && value.length > 0 && rawVehicles.length > 0) {
+      // Find group objects by ID
+      const selected = value
+        .map((id) => {
+          // Find group in groupsOnly
+          return groupsOnly.find((g) => g.id?.toString() === id?.toString());
+        })
+        .filter(Boolean);
+      setSelectedGroups(selected);
+
+      // Expand all parent nodes of selected groups
+      const expandParents = (groupId, map) => {
+        let expanded = {};
+        let current = map[groupId];
+        while (current && current.parent && current.parent !== "#") {
+          expanded[current.parent] = true;
+          current = map[current.parent];
+        }
+        return expanded;
+      };
+      // Build a map for quick lookup
+      const groupMap = {};
+      groupsOnly.forEach((g) => {
+        groupMap[g.id] = g;
+      });
+      let expanded = {};
+      selected.forEach((g) => {
+        expanded[g.id] = true;
+        Object.assign(expanded, expandParents(g.id, groupMap));
+      });
+      setExpandedGroups(expanded);
+    } else if (!value || value.length === 0) {
+      setSelectedGroups([]);
+    }
+  }, [value, groupsOnly, rawVehicles]);
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const dropdownRef = useRef(null);
 
   // Organize data into tree structure - Memoized
   const treeStructure = useMemo(() => {
@@ -352,7 +389,6 @@ const TreeSelect = ({
           <div className="flex-1 flex flex-wrap gap-1">
             {selectedGroups.length === 0 ? (
               <div className="flex items-center">
-          
                 <span className="text-gray-500 text-sm">{placeholder}</span>
               </div>
             ) : selectedGroups.length <= 2 ? (
@@ -361,7 +397,6 @@ const TreeSelect = ({
                   key={group.id}
                   className="inline-flex items-center bg-[#1e4a6f]/10 text-[#1e4a6f] text-xs px-2.5 py-1 rounded-full max-w-[120px] border border-[#1e4a6f]/20"
                 >
-
                   <span className="truncate font-medium">{group.text}</span>
                   <button
                     onClick={(e) => removeSelectedGroup(group.id, e)}

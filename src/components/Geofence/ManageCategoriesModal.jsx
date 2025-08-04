@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useSelector } from "react-redux";
 import { X, Plus, Save, Trash2, Edit3 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -45,25 +46,15 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
     { id: "28", src: "/icons/28.png" },
   ];
 
-  // Sample existing categories - ✅ Updated with blue theme colors
-  const [existingCategories, setExistingCategories] = useState([
-    { id: 1, name: "CITY", type: "authorization", color: "#25689f", icon: "1" }, // ✅ Changed to blue
-    {
-      id: 2,
-      name: "Black Spot",
-      type: "unauthorization",
-      color: "#EF4444",
-      icon: "2",
-    },
-    { id: 3, name: "Rest Area", type: "neutral", color: "#10B981", icon: "3" },
-    {
-      id: 4,
-      name: "TPPL Sites Sindh",
-      type: "authorization",
-      color: "#1F557F", // ✅ Changed to dark blue
-      icon: "4",
-    },
-  ]);
+  // Use real category data from Redux
+  const {
+    geofenceCatList,
+    geofenceCatListLoading,
+    geofenceCatListError,
+    selectedCategoryForDrawing,
+  } = useSelector((state) => state.geofence);
+
+  // For local add/edit/delete, you may need to implement API or Redux actions. For now, only show real data.
 
   const [editingCategory, setEditingCategory] = useState(null);
 
@@ -166,7 +157,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-[802]">
+    <div className="fixed inset-0 flex items-center justify-center z-[1002]">
       <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
 
       <motion.div
@@ -184,7 +175,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
             </h3>
             <button
               onClick={onClose}
-              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+              className="p-1 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
             >
               <X size={20} className="text-gray-500" />
             </button>
@@ -194,7 +185,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
           <div className="flex mt-4 space-x-1 bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => setActiveTab("create")}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === "create"
                   ? "bg-white text-[#25689f] shadow-sm" // ✅ Changed to blue theme
                   : "text-gray-600 hover:text-gray-800"
@@ -215,7 +206,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                 });
                 setShowIconPicker(false);
               }}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors cursor-pointer ${
                 activeTab === "manage"
                   ? "bg-white text-[#25689f] shadow-sm" // ✅ Changed to blue theme
                   : "text-gray-600 hover:text-gray-800"
@@ -272,7 +263,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                   <button
                     type="button"
                     onClick={() => setShowIconPicker(!showIconPicker)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] transition-colors" // ✅ Added blue focus
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] transition-colors cursor-pointer" // ✅ Added blue focus
                   >
                     <div className="flex items-center space-x-2">
                       <img
@@ -297,7 +288,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                             key={icon.id}
                             type="button"
                             onClick={() => handleIconSelect(icon.id)}
-                            className={`p-2 rounded border-2 hover:bg-gray-50 transition-colors ${
+                            className={`p-2 rounded border-2 hover:bg-gray-50 transition-colors cursor-pointer ${
                               formData.icon === icon.id
                                 ? "border-[#25689f] bg-[#25689f]/10" // ✅ Changed to blue theme
                                 : "border-gray-300"
@@ -396,13 +387,13 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                     setEditingCategory(null);
                     setShowIconPicker(false);
                   }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
-                  className="px-4 py-2 text-sm font-medium text-white bg-[#25689f] border border-transparent rounded-lg hover:bg-[#1F557F] transition-colors flex items-center" // ✅ Changed to blue theme
+                  className="px-4 py-2 text-sm font-medium text-white bg-[#25689f] border border-transparent rounded-lg hover:bg-[#1F557F] transition-colors flex items-center cursor-pointer" // ✅ Changed to blue theme
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {editingCategory ? "Update Category" : "Save Category"}
@@ -414,22 +405,22 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h4 className="text-lg font-medium text-gray-900">
-                  Existing Categories ({existingCategories.length})
+                  Existing Categories (76)
                 </h4>
               </div>
 
-              {existingCategories.length === 0 ? (
+              {geofenceCatListLoading ? (
+                <div className="text-center py-8 text-gray-500">Loading categories...</div>
+              ) : geofenceCatListError ? (
+                <div className="text-center py-8 text-red-600">Error: {geofenceCatListError}</div>
+              ) : !geofenceCatList || geofenceCatList.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="text-gray-500 text-lg font-medium mb-2">
-                    No categories found
-                  </div>
-                  <div className="text-gray-400 text-sm">
-                    Create your first category to get started
-                  </div>
+                  <div className="text-gray-500 text-lg font-medium mb-2">No categories found</div>
+                  <div className="text-gray-400 text-sm">Create your first category to get started</div>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {existingCategories.map((category) => (
+                  {geofenceCatList.map((category) => (
                     <div
                       key={category.id}
                       className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
@@ -437,8 +428,7 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                       <div className="flex items-center space-x-3">
                         <img
                           src={
-                            iconsList.find((icon) => icon.id === category.icon)
-                              ?.src || "/icons/1.png"
+                            iconsList.find((icon) => icon.id === category.icon?.toString())?.src || "/icons/1.png"
                           }
                           alt={`Icon ${category.icon}`}
                           className="w-6 h-6"
@@ -447,34 +437,35 @@ const ManageCategoriesModal = ({ isOpen, onClose }) => {
                           }}
                         />
                         <div className="font-medium text-gray-900">
-                          {category.name}
+                          {category.Categoryname}
                         </div>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getTypeColor(
-                            category.type
-                          )}`}
-                        >
-                          {category.type}
-                        </span>
+                        {/* Remove 'authorization' from type display, only show if not 'authorization' */}
+                        {category.type && category.type !== "authorization" && (
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getTypeColor(category.type)}`}
+                          >
+                            {category.type}
+                          </span>
+                        )}
                         <div
                           className="w-4 h-4 rounded border border-gray-300"
-                          style={{ backgroundColor: category.color }}
-                          title={`Color: ${category.color}`}
+                          style={{ backgroundColor: `#${category.color}` }}
+                          title={`Color: #${category.color}`}
                         ></div>
                       </div>
-
+                      {/* Static Edit/Delete buttons (do not work) */}
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => handleEdit(category)}
-                          className="p-2 text-[#25689f] hover:bg-[#25689f]/10 rounded-lg transition-colors" // ✅ Changed to blue theme
+                          className="p-2 text-[#25689f] hover:bg-[#25689f]/10 rounded-lg transition-colors cursor-pointer"
                           title="Edit Category"
+                          disabled
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(category.id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                           title="Delete Category"
+                          disabled
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

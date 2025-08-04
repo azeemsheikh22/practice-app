@@ -3,15 +3,22 @@ import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
 import { ChevronDown, ChevronUp, MapPin, Loader, X } from "lucide-react";
 import TreeSelect from "./TreeSelect";
-import { fetchGeofenceCatList, setSelectedCategoryForDrawing } from "../../../features/geofenceSlice";
+import {
+  fetchGeofenceCatList,
+  setSelectedCategoryForDrawing,
+} from "../../../features/geofenceSlice";
 import {
   searchLocations,
   clearSearchResults,
   setSelectedLocation,
 } from "../../../features/locationSearchSlice";
 
-const DetailTab = ({ detailForm, setDetailForm, editMode, editGeofenceData }) => {
-
+const DetailTab = ({
+  detailForm,
+  setDetailForm,
+  editMode,
+  editGeofenceData,
+}) => {
   // Edit mode: agar editMode true hai aur editGeofenceData aaye to form autofill karo
   useEffect(() => {
     if (
@@ -25,7 +32,9 @@ const DetailTab = ({ detailForm, setDetailForm, editMode, editGeofenceData }) =>
         ...prev,
         geofenceName: data.geofenceName || "",
         address: data.address || "",
-        group: data.group_id || "",
+        group: data.group_id
+          ? data.group_id.split(",").map((id) => id.trim())
+          : [],
         city: data.city || "",
         category: data.CategoryValue ? data.CategoryValue.toString() : "",
         description: data.geofenceDescription || "",
@@ -35,14 +44,17 @@ const DetailTab = ({ detailForm, setDetailForm, editMode, editGeofenceData }) =>
   const dispatch = useDispatch();
 
   // Get geofence category list
-  const { geofenceCatList, geofenceCatListLoading, geofenceCatListError, selectedCategoryForDrawing } =
-    useSelector((state) => state.geofence);
+  const {
+    geofenceCatList,
+    geofenceCatListLoading,
+    geofenceCatListError,
+    selectedCategoryForDrawing,
+  } = useSelector((state) => state.geofence);
 
   // Get location search data
   const { searchResults, loading: locationLoading } = useSelector(
     (state) => state.locationSearch
   );
-
 
   // Custom dropdown states
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -61,7 +73,7 @@ const DetailTab = ({ detailForm, setDetailForm, editMode, editGeofenceData }) =>
   // ✅ NEW: Sync selectedCategoryForDrawing with detailForm.category
   useEffect(() => {
     if (selectedCategoryForDrawing && !detailForm.category) {
-      setDetailForm(prev => ({
+      setDetailForm((prev) => ({
         ...prev,
         category: selectedCategoryForDrawing.id.toString(),
       }));
@@ -70,19 +82,30 @@ const DetailTab = ({ detailForm, setDetailForm, editMode, editGeofenceData }) =>
 
   // ✅ NEW: Set default UnCategorized when categories load
   useEffect(() => {
-    if (geofenceCatList && geofenceCatList.length > 0 && !detailForm.category && !selectedCategoryForDrawing) {
+    if (
+      geofenceCatList &&
+      geofenceCatList.length > 0 &&
+      !detailForm.category &&
+      !selectedCategoryForDrawing
+    ) {
       const unCategorized = geofenceCatList.find(
         (cat) => cat.Categoryname === "UnCategorized"
       );
       if (unCategorized) {
-        setDetailForm(prev => ({
+        setDetailForm((prev) => ({
           ...prev,
           category: unCategorized.id.toString(),
         }));
         dispatch(setSelectedCategoryForDrawing(unCategorized));
       }
     }
-  }, [geofenceCatList, detailForm.category, selectedCategoryForDrawing, setDetailForm, dispatch]);
+  }, [
+    geofenceCatList,
+    detailForm.category,
+    selectedCategoryForDrawing,
+    setDetailForm,
+    dispatch,
+  ]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -456,10 +479,11 @@ const DetailTab = ({ detailForm, setDetailForm, editMode, editGeofenceData }) =>
                       key={category.id}
                       type="button"
                       onClick={() => handleCategorySelect(category)}
-                      className={`w-full px-3 py-2 text-left hover:bg-gray-50 cursor-pointer transition-colors duration-200 flex items-center gap-3 ${selectedCategory?.id === category.id
-                        ? "bg-blue-50 border-l-4 border-blue-500"
-                        : ""
-                        }`}
+                      className={`w-full px-3 py-2 text-left hover:bg-gray-50 cursor-pointer transition-colors duration-200 flex items-center gap-3 ${
+                        selectedCategory?.id === category.id
+                          ? "bg-blue-50 border-l-4 border-blue-500"
+                          : ""
+                      }`}
                     >
                       {/* Category Icon */}
                       <div className="flex-shrink-0">
@@ -533,4 +557,3 @@ const DetailTab = ({ detailForm, setDetailForm, editMode, editGeofenceData }) =>
 };
 
 export default DetailTab;
-
