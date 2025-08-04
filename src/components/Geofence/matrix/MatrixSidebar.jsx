@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Calendar, Car, Clock, MapPin, Route, Timer } from "lucide-react";
 
-const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, isMobile = false }) => {
+const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, metricsData, isMobile = false }) => {
   // Time filter options
   const timeFilterOptions = [
     { value: "today", label: "Today" },
@@ -22,13 +22,22 @@ const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, isMobile = f
     { value: "july_2024", label: "July 2024" },
   ];
 
-  // Analytics data
+  const data = metricsData && metricsData.length > 0 ? metricsData[0] : {};
+
+  // Helper to safely get string or number value or fallback
+  const safeValue = (val) => {
+    if (val === null || val === undefined) return "N/A";
+    if (typeof val === "object") return JSON.stringify(val);
+    return val;
+  };
+
+  // Analytics data derived from metricsData
   const analyticsData = [
     {
       id: 1,
       title: "Total Vehicles",
-      value: "24",
-      subtitle: "(Last Stops Removed)",
+      value: safeValue(data.TotVehicles),
+      subtitle: "",
       icon: <Car size={20} className="text-blue-600" />,
       bgColor: "bg-blue-50",
       borderColor: "border-blue-200"
@@ -36,7 +45,7 @@ const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, isMobile = f
     {
       id: 2,
       title: "Total Visits",
-      value: "156",
+      value: safeValue(data.TotVisits),
       subtitle: "",
       icon: <MapPin size={20} className="text-green-600" />,
       bgColor: "bg-green-50",
@@ -45,8 +54,8 @@ const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, isMobile = f
     {
       id: 3,
       title: "Average Stop Duration",
-      value: "2h 45m",
-      subtitle: "(Last Stops Removed)",
+      value: safeValue(data.AvgStopDuration),
+      subtitle: "",
       icon: <Timer size={20} className="text-purple-600" />,
       bgColor: "bg-purple-50",
       borderColor: "border-purple-200"
@@ -54,7 +63,7 @@ const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, isMobile = f
     {
       id: 4,
       title: "Average Travel Duration",
-      value: "4h 12m",
+      value: safeValue(data.AvgTravelDuration),
       subtitle: "",
       icon: <Clock size={20} className="text-orange-600" />,
       bgColor: "bg-orange-50",
@@ -63,7 +72,7 @@ const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, isMobile = f
     {
       id: 5,
       title: "Average Distance Traveled",
-      value: "125.5",
+      value: safeValue(data.AvgDistance),
       unit: "km",
       subtitle: "",
       icon: <Route size={20} className="text-red-600" />,
@@ -73,7 +82,7 @@ const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, isMobile = f
     {
       id: 6,
       title: "Average Arrival Time",
-      value: "09:30 AM",
+      value: safeValue(data.AvgTime),
       subtitle: "",
       icon: <Calendar size={20} className="text-indigo-600" />,
       bgColor: "bg-indigo-50",
@@ -91,7 +100,7 @@ const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, isMobile = f
         <select
           value={selectedTimeFilter}
           onChange={(e) => setSelectedTimeFilter(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#D52B1E] focus:border-[#D52B1E] transition-colors"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm  transition-colors"
         >
           {timeFilterOptions.map((option) => (
             <option key={option.value} value={option.value}>
@@ -102,7 +111,7 @@ const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, isMobile = f
       </div>
 
       {/* Analytics Cards */}
-      <div className="space-y-4">
+      <div className="space-y-4 overflow-auto max-h-[calc(100vh-200px)]">
         <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
           Analytics Overview
         </h3>
@@ -144,19 +153,7 @@ const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, isMobile = f
             </div>
           </motion.div>
         ))}
-      </div>
-
-      {/* Summary Info */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">
-          Data Summary
-        </h4>
-        <div className="space-y-1 text-xs text-gray-600">
-          <p>• Data filtered for: <span className="font-medium">{timeFilterOptions.find(opt => opt.value === selectedTimeFilter)?.label}</span></p>
-          <p>• Last updated: <span className="font-medium">2 minutes ago</span></p>
-          <p>• Active geofences: <span className="font-medium">12</span></p>
-        </div>
-      </div>
+      </div>  
     </div>
   );
 };

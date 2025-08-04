@@ -1,64 +1,79 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Wifi, WifiOff, Signal, Activity } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+
+const testEndpoints = [
+  '/api/ping',
+  'https://www.google.com/favicon.ico',
+  'https://jsonplaceholder.typicode.com/posts/1'
+];
 
 const NetworkStatus = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [connectionSpeed, setConnectionSpeed] = useState('checking');
-  const [lastUpdate, setLastUpdate] = useState(Date.now());
   const [pingTime, setPingTime] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
+  const [lastStatus, setLastStatus] = useState('');
 
-  // ✅ IMPROVED: Multiple endpoint testing for better accuracy
-  const testEndpoints = [
-    '/api/ping',
-    'https://www.google.com/favicon.ico',
-    'https://httpbin.org/get',
-    'https://jsonplaceholder.typicode.com/posts/1'
-  ];
+  const verifyActualConnectivity = useCallback(async () => {
+    for (const url of testEndpoints) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+        await fetch(url, { method: 'HEAD', cache: 'no-store', mode: 'no-cors', signal: controller.signal });
+        clearTimeout(timeout);
+        return true;
+      } catch {
+        continue;
+      }
+    }
+    return false;
+  }, []);
 
-  // ✅ IMPROVED: More accurate speed detection with multiple tests
   const checkConnectionSpeed = useCallback(async () => {
     if (!navigator.onLine) {
+      setIsOnline(false);
       setConnectionSpeed('offline');
+      setPingTime(null);
       return;
     }
 
     setIsChecking(true);
-    const results = [];
+    let pingDurations = [];
 
-    // Test multiple endpoints
     for (const endpoint of testEndpoints) {
       try {
         const start = performance.now();
-        
-        const response = await fetch(endpoint, {
+        await fetch(endpoint, {
           method: 'HEAD',
           cache: 'no-cache',
-          mode: 'no-cors', // For external URLs
-          signal: AbortSignal.timeout(10000) // 10 second timeout
+          mode: 'no-cors',
+          signal: AbortSignal.timeout(10000)
         });
-
         const end = performance.now();
         const duration = end - start;
-        
-        results.push(duration);
-        break; // Use first successful result
-      } catch (error) {
-        console.warn(`Failed to test ${endpoint}:`, error);
+        pingDurations.push(duration);
+        break;
+      } catch (e) {
         continue;
       }
     }
 
-    if (results.length === 0) {
+    if (pingDurations.length === 0) {
+      // fallback test using image
+      const imageDuration = await checkViaImage();
+      if (imageDuration) pingDurations.push(imageDuration);
+    }
+
+    if (pingDurations.length === 0) {
       setConnectionSpeed('poor');
       setIsChecking(false);
       return;
     }
 
-    const avgPing = results.reduce((a, b) => a + b, 0) / results.length;
+    const avgPing = pingDurations.reduce((a, b) => a + b, 0) / pingDurations.length;
     setPingTime(Math.round(avgPing));
 
-    // ✅ IMPROVED: More accurate thresholds based on real-world usage
     if (avgPing < 100) {
       setConnectionSpeed('excellent');
     } else if (avgPing < 300) {
@@ -71,48 +86,40 @@ const NetworkStatus = () => {
       setConnectionSpeed('very-slow');
     }
 
-    setLastUpdate(Date.now());
+    setIsOnline(true);
     setIsChecking(false);
   }, []);
 
-  // ✅ IMPROVED: Connection type detection (if available)
-  const getConnectionType = useCallback(() => {
-    if ('connection' in navigator) {
-      const connection = navigator.connection;
-      return {
-        type: connection.effectiveType || 'unknown',
-        downlink: connection.downlink || 0,
-        rtt: connection.rtt || 0
-      };
-    }
-    return null;
-  }, []);
+  const checkViaImage = () => {
+    return new Promise<number | null>((resolve) => {
+      const img = new Image();
+      const start = performance.now();
+      img.onload = () => resolve(performance.now() - start);
+      img.onerror = () => resolve(null);
+      img.src = `https://via.placeholder.com/50?cacheBust=${Date.now()}`;
+    });
+  };
 
-  // ✅ IMPROVED: Enhanced speed detection using Navigator API
-  const getEnhancedSpeed = useCallback(() => {
-    const connectionInfo = getConnectionType();
-    
-    if (connectionInfo) {
-      const { type, downlink, rtt } = connectionInfo;
-      
-      // Use browser's effective connection type
-      switch (type) {
-        case '4g':
-          return downlink > 10 ? 'excellent' : 'good';
-        case '3g':
-          return 'fair';
-        case '2g':
-          return 'slow';
-        case 'slow-2g':
-          return 'very-slow';
-        default:
-          return 'unknown';
+  // Toast alerts
+  useEffect(() => {
+    if (lastStatus !== '') {
+      if (!isOnline && lastStatus !== 'offline') {
+        toast.error("⚠️ You're offline!");
+      } else if (connectionSpeed === 'very-slow' && lastStatus !== 'very-slow') {
+        toast("🐌 Your internet is very slow");
+      } else if (connectionSpeed === 'excellent' && lastStatus !== 'excellent') {
+        toast.success("✅ Excellent connection");
       }
     }
-    
-    return null;
-  }, [getConnectionType]);
 
+    if (isOnline) {
+      setLastStatus(connectionSpeed);
+    } else {
+      setLastStatus('offline');
+    }
+  }, [isOnline, connectionSpeed]);
+
+  // Event setup
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
@@ -122,59 +129,28 @@ const NetworkStatus = () => {
     const handleOffline = () => {
       setIsOnline(false);
       setConnectionSpeed('offline');
-      setPingTime(null);
     };
 
-    // ✅ IMPROVED: Listen to connection changes
-    const handleConnectionChange = () => {
-      if (navigator.onLine) {
-        checkConnectionSpeed();
-      }
-    };
-
-    // Event listeners
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    
-    // ✅ NEW: Listen to connection changes (if supported)
-    if ('connection' in navigator) {
-      navigator.connection.addEventListener('change', handleConnectionChange);
-    }
 
-    // ✅ IMPROVED: Adaptive checking interval based on connection quality
-    const getCheckInterval = () => {
-      switch (connectionSpeed) {
-        case 'excellent':
-        case 'good':
-          return 60000; // 1 minute for good connections
-        case 'fair':
-          return 45000; // 45 seconds for fair connections
-        case 'slow':
-        case 'very-slow':
-          return 30000; // 30 seconds for slow connections
-        default:
-          return 30000;
-      }
+    let timeoutId
+
+    const loop = async () => {
+      const result = await verifyActualConnectivity();
+      setIsOnline(result);
+      await checkConnectionSpeed();
+      timeoutId = setTimeout(loop, 4000); // every 15s
     };
 
-    const speedInterval = setInterval(checkConnectionSpeed, getCheckInterval());
-    
-    // Initial check
-    if (isOnline) {
-      checkConnectionSpeed();
-    }
+    loop();
 
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      
-      if ('connection' in navigator) {
-        navigator.connection.removeEventListener('change', handleConnectionChange);
-      }
-      
-      clearInterval(speedInterval);
     };
-  }, [isOnline, connectionSpeed, checkConnectionSpeed]);
+  }, [checkConnectionSpeed, verifyActualConnectivity]);
 
   const getStatusConfig = () => {
     if (!isOnline) {
@@ -271,15 +247,11 @@ const NetworkStatus = () => {
 
   return (
     <div className="flex items-center space-x-2">
-      {/* Status indicator */}
       <div className={`flex items-center space-x-1.5 px-2 py-1 rounded-md ${config.bgColor}`}>
         <div className="relative">
-          <Icon 
-            size={12} 
-            className={`${config.color} ${config.pulse ? 'animate-pulse' : ''}`} 
-          />
+          <Icon size={12} className={`${config.color} ${config.pulse ? 'animate-pulse' : ''}`} />
           {config.pulse && (
-            <div className={`absolute -top-0.5 -right-0.5 w-2 h-2 ${config.color.replace('text-', 'bg-')} rounded-full animate-ping opacity-75`}></div>
+            <div className={`absolute -top-0.5 -right-0.5 w-2 h-2 ${config.color.replace('text-', 'bg-')} rounded-full animate-ping opacity-75`} />
           )}
         </div>
         <span className={`text-xs font-medium ${config.color} hidden sm:inline-block`}>

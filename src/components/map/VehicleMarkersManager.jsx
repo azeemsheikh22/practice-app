@@ -80,7 +80,7 @@ const VehicleMarkersManager = ({
   const [hasZoomedToPakistan, setHasZoomedToPakistan] = useState(false);
   const geofenceMarkersRef = useRef({});
   const currentOpenTooltip = useRef(null);
-  
+
   // ✅ Label performance optimization
   const labelRafIdRef = useRef(null);
   const labelQueueRef = useRef([]);
@@ -91,8 +91,30 @@ const VehicleMarkersManager = ({
   const LABEL_BATCH_SIZE = 10; // Process 10 labels per frame
   const LABEL_UPDATE_THROTTLE = 2000; // Only update labels every 2 seconds
 
+  // Add this ref at the top (component body)
+  const prevGpsTimeRef = useRef({});
+
+  // For enhanced logging of carData update intervals
+  // const lastCarDataUpdateTimeRef = useRef(null);
+
   // ✅ SELECTORS
   const carData = useSelector(selectCarData) || [];
+
+  // Enhanced log carData updates with timestamp and interval for performance monitoring
+  // useEffect(() => {
+  //   const now = new Date();
+  //   const lastUpdate = lastCarDataUpdateTimeRef.current;
+  //   if (lastUpdate) {
+  //     const diffMs = now.getTime() - lastUpdate.getTime();
+  //     const diffSec = (diffMs / 1000).toFixed(2);
+  //     console.log(`[VehicleMarkersManager] carData updated at ${now.toISOString()} with ${carData.length} vehicles, interval since last update: ${diffSec} seconds`);
+  //     console.log(`Bus ya vehicle data real-time delay: ${diffSec} seconds`);
+  //   } else {
+  //     console.log(`[VehicleMarkersManager] carData updated at ${now.toISOString()} with ${carData.length} vehicles`);
+  //   }
+  //   lastCarDataUpdateTimeRef.current = now;
+  // }, [carData]);
+
   const selectedVehicles = useSelector(selectSelectedVehicles) || []; // ✅ MAIN ARRAY
   const selectedVehicleId = useSelector(selectSelectedVehicleId);
   const zoomToVehicle = useSelector(selectZoomToVehicle);
@@ -109,135 +131,151 @@ const VehicleMarkersManager = ({
     lat !== 0 && lng !== 0
     , []);
 
-  // ✅ INSTANT CLEAR/SHOW LOGIC - Single Function
+  // Debounce syncMarkersWithSelection to limit update frequency
+  const debounceTimeoutRef = useRef(null);
+  const DEBOUNCE_DELAY = 200; // 200 ms debounce delay
+
   const syncMarkersWithSelection = useCallback(() => {
     if (!mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
-    // ✅ STEP 1: If no vehicles selected, clear everything instantly
-    if (selectedVehicles.length === 0) {
-      Object.values(markersRef.current).forEach(marker => {
-        if (map.hasLayer(marker)) {
-          map.removeLayer(marker);
+
+    // Clear any existing debounce timer
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    debounceTimeoutRef.current = setTimeout(() => {
+      // ✅ STEP 1: If no vehicles selected, clear everything instantly
+      if (selectedVehicles.length === 0) {
+        Object.values(markersRef.current).forEach(marker => {
+          if (map.hasLayer(marker)) {
+            map.removeLayer(marker);
+          }
+        });
+
+        if (markerClusterRef.current) {
+          markerClusterRef.current.clearLayers();
+          if (map.hasLayer(markerClusterRef.current)) {
+            map.removeLayer(markerClusterRef.current);
+          }
+        }
+
+        markersRef.current = {};
+        return;
+      }
+
+      // ✅ STEP 2: Create Set for O(1) lookup
+      const selectedSet = new Set(selectedVehicles);
+
+      // ✅ STEP 3: Remove unselected markers with filter check
+      Object.keys(markersRef.current).forEach(carIdStr => {
+        const carId = parseInt(carIdStr);
+        const marker = markersRef.current[carIdStr];
+
+        // ✅ NEW: Check filter first before removing
+        const car = carData.find(c => c.car_id === carId);
+        const matchesFilter = !movingStatusFilter ||
+          movingStatusFilter === 'all' ||
+          (car && car.movingstatus?.toLowerCase() === movingStatusFilter.toLowerCase());
+
+        if (!selectedSet.has(carId)) {
+          // Vehicle not selected - remove completely
+          if (iconClustering && markerClusterRef.current) {
+            markerClusterRef.current.removeLayer(marker);
+          } else if (map.hasLayer(marker)) {
+            map.removeLayer(marker);
+          }
+          delete markersRef.current[carIdStr]; // Remove reference
+        } else if (!matchesFilter) {
+          // Vehicle selected but doesn't match filter - hide only
+          if (iconClustering && markerClusterRef.current) {
+            if (markerClusterRef.current.hasLayer(marker)) {
+              markerClusterRef.current.removeLayer(marker);
+            }
+          } else if (map.hasLayer(marker)) {
+            map.removeLayer(marker);
+          }
+          // ✅ DON'T delete from markersRef - keep reference for later
         }
       });
 
-      if (markerClusterRef.current) {
-        markerClusterRef.current.clearLayers();
-        if (map.hasLayer(markerClusterRef.current)) {
-          map.removeLayer(markerClusterRef.current);
-        }
-      }
+      // ✅ STEP 4: Add/Update selected vehicles with filter
+      const selectedVehicleData = carData.filter(car =>
+        car &&
+        car.car_id &&
+        selectedSet.has(car.car_id) &&
+        isValidCoordinate(car.latitude, car.longitude)
+      );
 
-      markersRef.current = {};
-      return;
-    }
+      selectedVehicleData.forEach(car => {
+        const existingMarker = markersRef.current[car.car_id];
 
-    // ✅ STEP 2: Create Set for O(1) lookup
-    const selectedSet = new Set(selectedVehicles);
-
-    // ✅ STEP 3: Remove unselected markers with filter check
-    Object.keys(markersRef.current).forEach(carIdStr => {
-      const carId = parseInt(carIdStr);
-      const marker = markersRef.current[carIdStr];
-
-      // ✅ NEW: Check filter first before removing
-      const car = carData.find(c => c.car_id === carId);
-      const matchesFilter = !movingStatusFilter ||
-        movingStatusFilter === 'all' ||
-        (car && car.movingstatus?.toLowerCase() === movingStatusFilter.toLowerCase());
-
-      if (!selectedSet.has(carId)) {
-        // Vehicle not selected - remove completely
-        if (iconClustering && markerClusterRef.current) {
-          markerClusterRef.current.removeLayer(marker);
-        } else if (map.hasLayer(marker)) {
-          map.removeLayer(marker);
-        }
-        delete markersRef.current[carIdStr]; // Remove reference
-      } else if (!matchesFilter) {
-        // Vehicle selected but doesn't match filter - hide only
-        if (iconClustering && markerClusterRef.current) {
-          if (markerClusterRef.current.hasLayer(marker)) {
-            markerClusterRef.current.removeLayer(marker);
+        // ✅ Only update if gps_time changed
+        const prevGpsTime = prevGpsTimeRef.current[car.car_id];
+        if (existingMarker) {
+          if (prevGpsTime !== car.gps_time) {
+            updateExistingMarker(existingMarker, car);
+            prevGpsTimeRef.current[car.car_id] = car.gps_time;
           }
-        } else if (map.hasLayer(marker)) {
-          map.removeLayer(marker);
-        }
-        // ✅ DON'T delete from markersRef - keep reference for later
-      }
-    });
+          // ✅ NEW: Check if vehicle matches current filter
+          const shouldShowVehicle = !movingStatusFilter ||
+            movingStatusFilter === 'all' ||
+            car.movingstatus?.toLowerCase() === movingStatusFilter.toLowerCase();
 
-
-    // ✅ STEP 4: Add/Update selected vehicles with filter
-    const selectedVehicleData = carData.filter(car =>
-      car &&
-      car.car_id &&
-      selectedSet.has(car.car_id) && // Only selected vehicles
-      isValidCoordinate(car.latitude, car.longitude)
-    );
-
-    selectedVehicleData.forEach(car => {
-      const existingMarker = markersRef.current[car.car_id];
-
-      // ✅ NEW: Check if vehicle matches current filter
-      const shouldShowVehicle = !movingStatusFilter ||
-        movingStatusFilter === 'all' ||
-        car.movingstatus?.toLowerCase() === movingStatusFilter.toLowerCase();
-
-      if (existingMarker) {
-        // Update existing marker
-        updateExistingMarker(existingMarker, car);
-
-        // ✅ NEW: Show/Hide based on filter
-        if (shouldShowVehicle) {
-          // Show marker
-          if (iconClustering && markerClusterRef.current) {
-            if (!markerClusterRef.current.hasLayer(existingMarker)) {
-              markerClusterRef.current.addLayer(existingMarker);
+          // ✅ NEW: Show/Hide based on filter
+          if (shouldShowVehicle) {
+            // Show marker
+            if (iconClustering && markerClusterRef.current) {
+              if (!markerClusterRef.current.hasLayer(existingMarker)) {
+                markerClusterRef.current.addLayer(existingMarker);
+              }
+            } else {
+              if (!map.hasLayer(existingMarker)) {
+                existingMarker.addTo(map);
+              }
             }
           } else {
-            if (!map.hasLayer(existingMarker)) {
-              existingMarker.addTo(map);
+            // Hide marker (don't remove from markersRef)
+            if (iconClustering && markerClusterRef.current) {
+              if (markerClusterRef.current.hasLayer(existingMarker)) {
+                markerClusterRef.current.removeLayer(existingMarker);
+              }
+            } else {
+              if (map.hasLayer(existingMarker)) {
+                map.removeLayer(existingMarker);
+              }
             }
           }
         } else {
-          // Hide marker (don't remove from markersRef)
-          if (iconClustering && markerClusterRef.current) {
-            if (markerClusterRef.current.hasLayer(existingMarker)) {
-              markerClusterRef.current.removeLayer(existingMarker);
-            }
-          } else {
-            if (map.hasLayer(existingMarker)) {
-              map.removeLayer(existingMarker);
-            }
-          }
-        }
-      } else {
-        // Create new marker
-        createNewMarker(car, map);
+          // Create new marker
+          createNewMarker(car, map);
+          prevGpsTimeRef.current[car.car_id] = car.gps_time;
 
-        // ✅ NEW: Hide immediately if doesn't match filter
-        if (!shouldShowVehicle) {
-          const newMarker = markersRef.current[car.car_id];
-          if (newMarker) {
-            if (iconClustering && markerClusterRef.current) {
-              markerClusterRef.current.removeLayer(newMarker);
-            } else {
-              map.removeLayer(newMarker);
+          // ✅ NEW: Hide immediately if doesn't match filter
+          const shouldShowVehicle = !movingStatusFilter ||
+            movingStatusFilter === 'all' ||
+            car.movingstatus?.toLowerCase() === movingStatusFilter.toLowerCase();
+
+          if (!shouldShowVehicle) {
+            const newMarker = markersRef.current[car.car_id];
+            if (newMarker) {
+              if (iconClustering && markerClusterRef.current) {
+                markerClusterRef.current.removeLayer(newMarker);
+              } else {
+                map.removeLayer(newMarker);
+              }
             }
           }
         }
-      }
-    });
+      });
 
+      // ✅ STEP 5: Handle clustering
+      handleClustering(map);
 
-    // ✅ STEP 5: Handle clustering
-    handleClustering(map);
-
-    // ✅ STEP 6: Map click handler
-    map.off("click", closeAllNonPermanentTooltips);
-    map.on("click", closeAllNonPermanentTooltips);
-
+      // ✅ STEP 6: Map click handler
+      map.off("click", closeAllNonPermanentTooltips);
+      map.on("click", closeAllNonPermanentTooltips);
+    }, DEBOUNCE_DELAY);
   }, [carData, selectedVehicles, iconClustering, showAllLabels, isValidCoordinate, movingStatusFilter]);
 
   // ✅ LABELS: Close tooltips
@@ -253,22 +291,22 @@ const VehicleMarkersManager = ({
   // ✅ LABELS: Smart tooltip update (throttled for performance)
   const updateMarkerTooltip = useCallback((marker, tooltipText, forceUpdate = false) => {
     if (!marker) return;
-    
+
     const markerId = marker._leaflet_id;
     const now = Date.now();
     const lastUpdate = labelUpdateThrottleRef.current.get(markerId) || 0;
-    
+
     // ✅ Skip update if too recent (unless forced or labels just toggled)
     if (!forceUpdate && (now - lastUpdate) < LABEL_UPDATE_THROTTLE && marker.getTooltip()) {
       return;
     }
-    
+
     // ✅ Check if tooltip text actually changed
     const currentTooltip = marker.getTooltip();
     if (currentTooltip && currentTooltip._content === tooltipText && !forceUpdate) {
       return;
     }
-    
+
     if (marker.getTooltip()) {
       if (marker._tooltip && (marker._tooltip.options.permanent !== showAllLabels || forceUpdate)) {
         marker.unbindTooltip();
@@ -305,7 +343,7 @@ const VehicleMarkersManager = ({
         visibleLabelsRef.current.add(markerId);
       }
     }
-    
+
     // ✅ Update throttle tracker
     labelUpdateThrottleRef.current.set(markerId, now);
   }, [showAllLabels]);
@@ -367,11 +405,11 @@ const VehicleMarkersManager = ({
 
     // Process batch of labels
     const batch = queue.splice(0, LABEL_BATCH_SIZE);
-    
+
     batch.forEach(({ action, marker, tooltipText }) => {
       try {
         if (!marker) return;
-        
+
         switch (action) {
           case 'show':
             if (visibleLabelsRef.current.size < MAX_VISIBLE_LABELS) {
@@ -393,7 +431,7 @@ const VehicleMarkersManager = ({
             }
             updateMarkerTooltip(marker, tooltipText, true); // Force update
             setupMarkerEvents(marker, tooltipText);
-            
+
             if (showAllLabels && visibleLabelsRef.current.size < MAX_VISIBLE_LABELS) {
               marker.openTooltip();
               visibleLabelsRef.current.add(marker._leaflet_id);
@@ -416,7 +454,7 @@ const VehicleMarkersManager = ({
   // ✅ Queue label operation
   const queueLabelOperation = useCallback((action, marker, tooltipText = null) => {
     labelQueueRef.current.push({ action, marker, tooltipText });
-    
+
     if (!labelRafIdRef.current) {
       labelRafIdRef.current = requestAnimationFrame(processLabelQueue);
     }
@@ -559,35 +597,35 @@ const VehicleMarkersManager = ({
       setTimeout(zoomToPakistan, 1000);
     }
 
-  }, [selectedVehicles, carData, syncMarkersWithSelection, zoomToPakistan, movingStatusFilter]);
+  }, [selectedVehicles, carData, syncMarkersWithSelection, zoomToPakistan]);
 
   // ✅ OPTIMIZED LABELS EFFECT - Only run when labels toggle (not on data updates)
   useEffect(() => {
     if (selectedVehicles.length === 0) return;
-    
+
     const now = Date.now();
-    
+
     // ✅ Throttle label effect to prevent excessive updates
     if (now - lastLabelUpdateRef.current < 1000) {
       return; // Skip if updated less than 1 second ago
     }
-    
+
     lastLabelUpdateRef.current = now;
-    
+
     // ✅ Clear existing label queue and visible labels tracking
     labelQueueRef.current = [];
     visibleLabelsRef.current.clear();
-    
+
     // ✅ Cancel any pending label operations
     if (labelRafIdRef.current) {
       cancelAnimationFrame(labelRafIdRef.current);
       labelRafIdRef.current = null;
     }
-    
+
     // ✅ Queue label operations in batches to prevent lag
     const selectedSet = new Set(selectedVehicles);
     const markersToProcess = [];
-    
+
     Object.entries(markersRef.current).forEach(([carIdStr, marker]) => {
       const carId = parseInt(carIdStr);
       const car = carData.find(v => v.car_id === carId && selectedSet.has(v.car_id));
@@ -597,15 +635,15 @@ const VehicleMarkersManager = ({
         markersToProcess.push({ marker, tooltipText });
       }
     });
-    
+
     // ✅ Prioritize markers in viewport for labels
     markersToProcess.sort((a, b) => {
       if (!mapInstanceRef.current) return 0;
-      
+
       try {
         const boundsA = mapInstanceRef.current.getBounds().contains(a.marker.getLatLng());
         const boundsB = mapInstanceRef.current.getBounds().contains(b.marker.getLatLng());
-        
+
         if (boundsA && !boundsB) return -1;
         if (!boundsA && boundsB) return 1;
         return 0;
@@ -613,7 +651,7 @@ const VehicleMarkersManager = ({
         return 0;
       }
     });
-    
+
     // ✅ Queue label operations
     markersToProcess.forEach(({ marker, tooltipText }) => {
       if (showAllLabels) {
@@ -622,7 +660,7 @@ const VehicleMarkersManager = ({
         queueLabelOperation('hide', marker);
       }
     });
-    
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAllLabels]); // ✅ Only depend on showAllLabels, not data changes
 
@@ -652,12 +690,12 @@ const VehicleMarkersManager = ({
       if (labelRafIdRef.current) {
         cancelAnimationFrame(labelRafIdRef.current);
       }
-      
+
       // ✅ Clear label queues
       labelQueueRef.current = [];
       visibleLabelsRef.current.clear();
       labelUpdateThrottleRef.current.clear();
-      
+
       // Clear all markers on unmount
       if (mapInstanceRef.current) {
         Object.values(markersRef.current).forEach(marker => {

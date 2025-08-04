@@ -1,27 +1,16 @@
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import "./App.css";
 import AllRoute from "./router";
-import {
-  initializeConnection,
-  selectConnectionStatus,
-} from "./features/gpsTrackingSlice";
 import { useEffect } from "react";
 import SessionManager from "./auth/SessionManager";
 import { fetchGeofenceCatList } from "./features/geofenceSlice";
 
 function App() {
   const dispatch = useDispatch();
-  const connectionStatus = useSelector(selectConnectionStatus);
 
   useEffect(() => {
     dispatch(fetchGeofenceCatList());
-    // Only initialize if not already connected
-    if (connectionStatus === "disconnected") {
-      dispatch(initializeConnection(3));
-    }
-  }, [connectionStatus, dispatch]);
-
-
+  }, [dispatch]);
 
   return (
     <>

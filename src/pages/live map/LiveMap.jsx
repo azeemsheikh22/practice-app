@@ -14,9 +14,10 @@ import MapSidebar from "./MapSidebar";
 import MapSidebarOptions from "../../components/map sidebar options/MapSidebarOptions";
 import LocationSearch from "../../components/map/LocationSearch";
 import { MapPin, Table, ChevronUp, Settings } from "lucide-react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setGlobalSearchQuery } from "../../features/locationSearchSlice";
 import NetworkStatus from "../../components/map/NetworkStatus";
+import { initializeConnection, selectConnectionStatus } from "../../features/gpsTrackingSlice";
 
 
 // ✅ PERFORMANCE: Lazy load heavy components
@@ -44,10 +45,20 @@ const LiveMap = () => {
     isMapOptionsOpen: false,
   });
 
+
   const [searchQuery, setSearchQuery] = useState("");
   const dispatch = useDispatch();
   const searchInputRef = useRef(null);
   const mapContainerRef = useRef(null);
+  const connectionStatus = useSelector(selectConnectionStatus);
+
+  useEffect(() => {
+    // Only initialize if not already connected
+    if (connectionStatus === "disconnected") {
+      dispatch(initializeConnection(3));
+    }
+  }, []);
+
 
   // ✅ PERFORMANCE: Memoized state updaters
   const updateUiState = useCallback((updates) => {
@@ -60,13 +71,13 @@ const LiveMap = () => {
   // ✅ ADD: Callback to handle width changes
   const handleSidebarWidthChange = useCallback((width) => {
     setSidebarWidth(width);
-    
+
     // ✅ NEW: Trigger map resize after sidebar width changes
     setTimeout(() => {
       if (mapContainerRef.current) {
         // Trigger resize event to update map
         window.dispatchEvent(new Event('resize'));
-        
+
         // Force map invalidation and redraw
         if (mapContainerRef.current.invalidateSize) {
           mapContainerRef.current.invalidateSize();
@@ -107,7 +118,7 @@ const LiveMap = () => {
         if (isMobile) {
           setMobileTreeHeight(calculateMobileHeight());
         }
-        
+
         // ✅ NEW: Force map resize on window resize
         if (mapContainerRef.current) {
           if (mapContainerRef.current.invalidateSize) {
@@ -330,8 +341,8 @@ const LiveMap = () => {
 
           <div className="h-full w-[100%]">
             <Suspense fallback={<LoadingSpinner message="Loading map..." />}>
-              <MapContainer 
-                ref={mapContainerRef} 
+              <MapContainer
+                ref={mapContainerRef}
                 searchQuery={searchQuery}
                 sidebarWidth={sidebarWidth} // ✅ NEW: Pass sidebar width to MapContainer
               />
@@ -397,76 +408,76 @@ const LiveMap = () => {
       <AnimatePresence mode="wait">
         {uiState.isMobile && uiState.isSearchOpen && (
           <motion.div
-          className="fixed inset-0 bg-white bg-opacity-90 backdrop-blur-sm z-50 flex flex-col"
-          variants={overlayVariants}
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          transition={{ duration: 0.2 }}
-        >
-          <div className="flex items-center justify-between p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold">Search Location</h2>
-            <button
-              onClick={toggleSearch}
-              className="p-2 rounded-full hover:bg-gray-100"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <div className="p-4">
-            <LocationSearch
-              ref={searchInputRef}
-              onLocationSelect={(location) => {
-                handleLocationSelect(location);
-                toggleSearch();
-              }}
-              searchQuery={searchQuery}
-              setSearchQuery={handleSearchQueryChange}
-              onClear={clearSearch}
-            />
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-
-    {/* Mobile Sidebar - Optimized */}
-    <AnimatePresence mode="wait">
-      {uiState.isMobile && uiState.isMobileSidebarOpen && (
-        <>
-     
-          <motion.div
-            className="fixed inset-y-0 right-0 w-[100%] bg-white z-[800] shadow-xl"
-            variants={slideVariants}
+            className="fixed inset-0 bg-white bg-opacity-90 backdrop-blur-sm z-50 flex flex-col"
+            variants={overlayVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            transition={{ duration: 0.2 }}
           >
-            <Suspense fallback={<LoadingSpinner message="Loading sidebar..." />}>
-              <MobileSidebar 
-                onClose={closeMobileSidebar} 
-                mobileHeight={mobileTreeHeight} 
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold">Search Location</h2>
+              <button
+                onClick={toggleSearch}
+                className="p-2 rounded-full hover:bg-gray-100"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-6 w-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4">
+              <LocationSearch
+                ref={searchInputRef}
+                onLocationSelect={(location) => {
+                  handleLocationSelect(location);
+                  toggleSearch();
+                }}
+                searchQuery={searchQuery}
+                setSearchQuery={handleSearchQueryChange}
+                onClear={clearSearch}
               />
-            </Suspense>
+            </div>
           </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  </div>
-);
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Sidebar - Optimized */}
+      <AnimatePresence mode="wait">
+        {uiState.isMobile && uiState.isMobileSidebarOpen && (
+          <>
+
+            <motion.div
+              className="fixed inset-y-0 right-0 w-[100%] bg-white z-[800] shadow-xl"
+              variants={slideVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              <Suspense fallback={<LoadingSpinner message="Loading sidebar..." />}>
+                <MobileSidebar
+                  onClose={closeMobileSidebar}
+                  mobileHeight={mobileTreeHeight}
+                />
+              </Suspense>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 };
 
 export default LiveMap;

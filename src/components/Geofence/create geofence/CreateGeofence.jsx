@@ -6,7 +6,9 @@ import DetailTab from "./DetailTab";
 import AdvanceTab from "./AdvanceTab";
 import { useSearchParams } from "react-router-dom";
 import { setSelectedLocation } from "../../../features/locationSearchSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { setSelectedCategoryForDrawing } from "../../../features/geofenceSlice";
+import axios from "axios";
 
 const CreateGeofence = () => {
   const [searchParams] = useSearchParams();
@@ -15,7 +17,11 @@ const CreateGeofence = () => {
   const [activeTool, setActiveTool] = useState(null);
   const [geofenceData, setGeofenceData] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [EditGeofenceData, setEditGeofenceData] = useState(null);
   const dispatch = useDispatch();
+  const { geofenceCatList } = useSelector((state) => state.geofence);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const token = localStorage.getItem("token");
 
   // Form states
   const [detailForm, setDetailForm] = useState({
@@ -34,6 +40,8 @@ const CreateGeofence = () => {
     markerColor: "#25689f", // ✅ Changed default color to blue theme
     showOn: [],
   });
+
+  console.log(EditGeofenceData);
 
   useEffect(() => {
     const lat = searchParams.get("lat");
@@ -56,7 +64,60 @@ const CreateGeofence = () => {
   // Get URL parameters
   const isEditMode = searchParams.get("type") === "edit";
   const geofenceId = searchParams.get("id");
-  // const matrixMode = searchParams.get("matrix");
+  const geofenceName = searchParams.get("geofenceName");
+
+  // Fetch metrics data when selectedTimeFilter or geoid changes
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        const response = await axios.get(
+          `${API_BASE_URL}api/Geofence/Geofence`,
+          {
+            params: {
+              geoid: geofenceId,
+            },
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        setEditGeofenceData(response.data);
+      } catch (error) {
+        console.error("Error fetching geofence metrics:", error);
+        setEditGeofenceData(null);
+      }
+    };
+
+    fetchMetrics();
+  }, [geofenceId]);
+
+  // Set selected category for drawing when edit data loads
+  useEffect(() => {
+    if (
+      EditGeofenceData &&
+      Array.isArray(EditGeofenceData) &&
+      EditGeofenceData.length > 0 &&
+      geofenceCatList &&
+      geofenceCatList.length > 0
+    ) {
+      const data = EditGeofenceData[0];
+      // Find the category object matching the edit data's category
+      let catId =
+        data.CategoryValue ||
+        data.category ||
+        data.category_id ||
+        data.categoryId ||
+        data.category_id_fk;
+      if (catId) {
+        const foundCat = geofenceCatList.find(
+          (cat) => cat.id?.toString() === catId.toString()
+        );
+        if (foundCat) {
+          dispatch(setSelectedCategoryForDrawing(foundCat));
+        }
+      }
+    }
+  }, [EditGeofenceData, geofenceCatList, dispatch]);
 
   // Rest of your existing functions remain same...
   const handleGeofenceDrawn = (data) => {
@@ -135,11 +196,6 @@ const CreateGeofence = () => {
               <h1 className="text-base sm:text-lg font-semibold text-gray-900">
                 {isEditMode ? "Edit Geofence" : "Create Geofence"}
               </h1>
-              {isEditMode && geofenceId && (
-                <p className="text-xs text-gray-500">
-                  ID: {geofenceId}
-                </p>
-              )}
             </div>
           </div>
           <div className="flex items-center">
@@ -162,7 +218,7 @@ const CreateGeofence = () => {
         transition={{ duration: 0.4, delay: 0.1 }}
         className="relative"
       >
-        <div className="grid grid-cols-1 lg:grid-cols-12 h-[91vh]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 h-[90vh]">
           {/* Desktop Sidebar - Reduced padding */}
           <div className="hidden lg:block lg:col-span-4 xl:col-span-3 bg-white overflow-auto shadow-sm border-r border-gray-200">
             <SidebarContent
@@ -175,6 +231,8 @@ const CreateGeofence = () => {
               geofenceData={geofenceData}
               handleSave={handleSave}
               handleCancel={handleCancel}
+              isEditMode={isEditMode}
+              EditGeofenceData={EditGeofenceData}
             />
           </div>
 
@@ -222,6 +280,8 @@ const CreateGeofence = () => {
                     handleSave={handleSave}
                     handleCancel={handleCancel}
                     isMobile={true}
+                    isEditMode={isEditMode}
+                    EditGeofenceData={EditGeofenceData}
                   />
                 </motion.div>
               </>
@@ -236,6 +296,8 @@ const CreateGeofence = () => {
               activeTool={activeTool}
               setActiveTool={setActiveTool}
               onGeofenceDrawn={handleGeofenceDrawn}
+              editMode={isEditMode}
+              editGeofenceData={EditGeofenceData}
             />
           </div>
         </div>
@@ -281,6 +343,8 @@ const SidebarContent = ({
   handleSave,
   handleCancel,
   isMobile = false,
+  isEditMode = false,
+  EditGeofenceData = null,
 }) => {
   return (
     <div className="h-full flex flex-col">
@@ -288,19 +352,21 @@ const SidebarContent = ({
       <div className="flex border-b border-gray-200 bg-gray-50 p-1 m-4 rounded-lg">
         <button
           onClick={() => setActiveTab("detail")}
-          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 ${activeTab === "detail"
-            ? "bg-white text-[#25689f] shadow-sm"
-            : "text-gray-600 hover:text-gray-800"
-            }`}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium cursor-pointer transition-all duration-200 ${
+            activeTab === "detail"
+              ? "bg-white text-[#25689f] shadow-sm"
+              : "text-gray-600 hover:text-gray-800"
+          }`}
         >
           Detail
         </button>
         <button
           onClick={() => setActiveTab("advance")}
-          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all cursor-pointer duration-200 ${activeTab === "advance"
-            ? "bg-white text-[#25689f] shadow-sm"
-            : "text-gray-600 hover:text-gray-800"
-            }`}
+          className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-all cursor-pointer duration-200 ${
+            activeTab === "advance"
+              ? "bg-white text-[#25689f] shadow-sm"
+              : "text-gray-600 hover:text-gray-800"
+          }`}
         >
           Advance Options
         </button>
@@ -317,7 +383,12 @@ const SidebarContent = ({
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
             >
-              <DetailTab detailForm={detailForm} setDetailForm={setDetailForm} />
+              <DetailTab
+                detailForm={detailForm}
+                setDetailForm={setDetailForm}
+                editMode={isEditMode}
+                editGeofenceData={EditGeofenceData}
+              />
             </motion.div>
           )}
 
@@ -329,7 +400,10 @@ const SidebarContent = ({
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
             >
-              <AdvanceTab advanceForm={advanceForm} setAdvanceForm={setAdvanceForm} />
+              <AdvanceTab
+                advanceForm={advanceForm}
+                setAdvanceForm={setAdvanceForm}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -357,13 +431,18 @@ const SidebarContent = ({
       )}
 
       {/* Action Buttons - Enhanced and compact */}
-      <div className={`flex ${isMobile ? "flex-col space-y-3" : "flex-col space-y-3"} p-4 pt-0`}>
+      <div
+        className={`flex ${
+          isMobile ? "flex-col space-y-3" : "flex-col space-y-3"
+        } p-4 pt-0`}
+      >
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleSave}
-          className={`${isMobile ? "w-full" : ""
-            } flex items-center justify-center cursor-pointer px-4 py-3 text-sm font-semibold bg-gradient-to-r from-[#25689f] to-[#1F557F] text-white rounded-xl hover:from-[#1F557F] hover:to-[#184567] transition-all duration-200 shadow-md hover:shadow-lg`}
+          className={`${
+            isMobile ? "w-full" : ""
+          } flex items-center justify-center cursor-pointer px-4 py-3 text-sm font-semibold bg-gradient-to-r from-[#25689f] to-[#1F557F] text-white rounded-xl hover:from-[#1F557F] hover:to-[#184567] transition-all duration-200 shadow-md hover:shadow-lg`}
         >
           <Save size={16} className="mr-2" />
           Save Geofence
@@ -373,8 +452,9 @@ const SidebarContent = ({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleCancel}
-          className={`${isMobile ? "w-full" : ""
-            } px-4 py-3 text-sm font-semibold cursor-pointer border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 bg-white shadow-sm hover:shadow-md`}
+          className={`${
+            isMobile ? "w-full" : ""
+          } px-4 py-3 text-sm font-semibold cursor-pointer border-2 border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 bg-white shadow-sm hover:shadow-md`}
         >
           Cancel
         </motion.button>
@@ -384,4 +464,3 @@ const SidebarContent = ({
 };
 
 export default CreateGeofence;
-

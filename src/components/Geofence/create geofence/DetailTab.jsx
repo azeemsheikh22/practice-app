@@ -10,7 +10,28 @@ import {
   setSelectedLocation,
 } from "../../../features/locationSearchSlice";
 
-const DetailTab = ({ detailForm, setDetailForm }) => {
+const DetailTab = ({ detailForm, setDetailForm, editMode, editGeofenceData }) => {
+
+  // Edit mode: agar editMode true hai aur editGeofenceData aaye to form autofill karo
+  useEffect(() => {
+    if (
+      editMode &&
+      editGeofenceData &&
+      Array.isArray(editGeofenceData) &&
+      editGeofenceData.length > 0
+    ) {
+      const data = editGeofenceData[0];
+      setDetailForm((prev) => ({
+        ...prev,
+        geofenceName: data.geofenceName || "",
+        address: data.address || "",
+        group: data.group_id || "",
+        city: data.city || "",
+        category: data.CategoryValue ? data.CategoryValue.toString() : "",
+        description: data.geofenceDescription || "",
+      }));
+    }
+  }, [editMode, editGeofenceData, setDetailForm]);
   const dispatch = useDispatch();
 
   // Get geofence category list

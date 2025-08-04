@@ -58,7 +58,13 @@ L.Edit.Circle = L.Edit.CircleMarker.extend({
   },
 });
 
-const GeofenceMap = ({ mapType, setMapType, onGeofenceDrawn }) => {
+const GeofenceMap = ({
+  mapType,
+  setMapType,
+  onGeofenceDrawn,
+  editMode,
+  editGeofenceData
+}) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const drawnItemsRef = useRef(null);
@@ -292,10 +298,21 @@ const GeofenceMap = ({ mapType, setMapType, onGeofenceDrawn }) => {
     ) {
       const currentColor = getShapeColor();
 
-      // Update existing shapes color
+
+      // Update existing shapes color (polygon, rectangle, polyline, circle)
       drawnItemsRef.current.eachLayer((layer) => {
-        if (layer.setStyle) {
-          layer.setStyle({
+        // For polygons, rectangles, polylines
+        if (layer instanceof L.Polygon || layer instanceof L.Polyline || layer instanceof L.Rectangle) {
+          layer.setStyle && layer.setStyle({
+            color: currentColor,
+            fillColor: currentColor,
+            fillOpacity: 0.2,
+            weight: 3,
+            opacity: 0.8,
+          });
+        } else if (layer instanceof L.Circle) {
+          // For circles, set color and fillColor
+          layer.setStyle && layer.setStyle({
             color: currentColor,
             fillColor: currentColor,
             fillOpacity: 0.2,
@@ -672,6 +689,62 @@ const GeofenceMap = ({ mapType, setMapType, onGeofenceDrawn }) => {
       return () => clearTimeout(timer);
     }
   }, [error]);
+  // Edit mode: agar editMode true hai aur editGeofenceData milay to shape render karo
+  useEffect(() => {
+    if (
+      editMode &&
+      editGeofenceData &&
+      Array.isArray(editGeofenceData) &&
+      editGeofenceData.length > 0 &&
+      mapInstanceRef.current &&
+      drawnItemsRef.current
+    ) {
+      const data = editGeofenceData[0];
+      if (data.ShapeType === "polygon" && data.Polygonlatlng) {
+        // Polygonlatlng ko array of [lat, lng] me convert karo
+        const latlngs = data.Polygonlatlng.split(",").map((pair) => {
+          const [lat, lng] = pair.trim().split(" ").map(Number);
+          return [lat, lng];
+        });
+        drawnItemsRef.current.clearLayers();
+        const polygon = L.polygon(latlngs, {
+          color: getShapeColor(),
+          fillColor: getShapeColor(),
+          fillOpacity: 0.2,
+          weight: 3,
+          opacity: 0.8,
+        });
+        drawnItemsRef.current.addLayer(polygon);
+        if (latlngs.length > 0) {
+          mapInstanceRef.current.fitBounds(polygon.getBounds(), {
+            padding: [20, 20],
+            animate: true,
+            duration: 1.0,
+          });
+        }
+        if (data.zoomlevel) {
+          mapInstanceRef.current.setZoom(data.zoomlevel);
+        }
+      } else if (data.ShapeType === "circle" && data.latitude && data.longitude && data.radius) {
+        // Circle render karo
+        const center = [data.latitude, data.longitude];
+        drawnItemsRef.current.clearLayers();
+        const circle = L.circle(center, {
+          radius: data.radius,
+          color: getShapeColor(),
+          fillColor: getShapeColor(),
+          fillOpacity: 0.2,
+          weight: 3,
+          opacity: 0.8,
+        });
+        drawnItemsRef.current.addLayer(circle);
+        mapInstanceRef.current.setView(center, data.zoomlevel || 13, {
+          animate: true,
+          duration: 1.0,
+        });
+      }
+    }
+  }, [editMode, editGeofenceData]);
 
   return (
     <div className="relative h-full">

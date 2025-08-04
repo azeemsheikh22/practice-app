@@ -11,6 +11,7 @@ import {
   requestVehicleListWithScope,
   selectSelectedVehicles,
   clearRawVehicleList,
+  clearCarDataAndSelectedVehicles,
 } from "../../features/gpsTrackingSlice";
 import {
   selectVisuallySelectedItems,
@@ -427,6 +428,7 @@ const MobileSidebar = memo(({ onClose, mobileHeight }) => {
     setSelectedVehicleIds([]);
     dispatch(setVisuallySelectedItems([]));
     dispatch(updateVehicleFilter([]));
+    dispatch(clearCarDataAndSelectedVehicles());
   }, [dispatch]);
 
   const handleFilterChange = useCallback(

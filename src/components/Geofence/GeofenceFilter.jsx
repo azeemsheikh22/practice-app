@@ -192,7 +192,7 @@ const GeofenceFilter = ({ onApplyFilters, className = "" }) => {
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 ${className}`}
+      className={`bg-white rounded-tl-lg rounded-tr-lg shadow-sm border border-gray-200 p-4 ${className}`}
     >
       <div className="flex flex-wrap items-center gap-3">
         {/* Filter Icon */}

@@ -44,8 +44,6 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
     showShapes,
   } = useSelector((state) => state.geofence);
 
-  console.log(userGeofences)
-
   // Route selectors
   const {
     routes,

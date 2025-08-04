@@ -254,8 +254,6 @@ const TreeView = memo(({
 
   // ✅ Performance: Virtual scrolling for large datasets
   const ITEM_HEIGHT = 48; // Approximate height of each tree item
-  const [virtualScrollStart, setVirtualScrollStart] = useState(0);
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 50 });
   const scrollContainerRef = useRef(null);
 
   const handleScroll = useCallback((e) => {
@@ -266,9 +264,6 @@ const TreeView = memo(({
       startIndex + Math.ceil(containerHeight / ITEM_HEIGHT) + 5,
       Math.max(0, filteredTree?.length || 0)
     );
-    
-    setVisibleRange({ start: startIndex, end: endIndex });
-    setVirtualScrollStart(scrollTop);
   }, [filteredTree?.length]);
 
   // Memoize vehicle items rendering with virtual scrolling
@@ -289,12 +284,6 @@ const TreeView = memo(({
         !searchQuery.trim() ||
         item.text.toLowerCase().includes(searchQuery.toLowerCase())
     );
-
-    // ✅ Performance: Only render visible items for large datasets
-    const shouldUseVirtualScrolling = filteredVehicles.length > 100;
-    const visibleVehicles = shouldUseVirtualScrolling 
-      ? filteredVehicles.slice(visibleRange.start, visibleRange.end)
-      : filteredVehicles;
 
     return (
       <>
@@ -349,52 +338,33 @@ const TreeView = memo(({
             </div>
           </label>
         </div>
-        
-        {shouldUseVirtualScrolling ? (
-          // Virtual scrolling container
-          <div style={{ height: `${filteredVehicles.length * ITEM_HEIGHT}px`, position: 'relative' }}>
-            <div style={{ 
-              transform: `translateY(${visibleRange.start * ITEM_HEIGHT}px)`,
-              position: 'absolute',
-              width: '100%'
-            }}>
-              {visibleVehicles.map((item, index) => (
-                <div
-                  key={item.id}
-                  style={{ height: `${ITEM_HEIGHT}px` }}
-                >
-                  <MemoizedTreeItem
-                    item={item}
-                    isSelected={selectedItems.includes(item.id)}
-                    isIndeterminate={false}
-                    onToggleExpand={onToggleGroup}
-                    onSelect={handleItemSelectWithLimit}
-                  />
-                </div>
-              ))}
-            </div>
+        {filteredVehicles.map((item, index) => (
+          <div
+            key={item.id}
+            className="transition-all duration-200 ease-in-out transform translate-y-0 opacity-100"
+            style={{ transitionDelay: `${Math.min(index * 30, 300)}ms` }}
+          >
+            <MemoizedTreeItem
+              item={item}
+              isSelected={selectedItems.includes(item.id)}
+              isIndeterminate={false}
+              onToggleExpand={onToggleGroup}
+              onSelect={handleItemSelectWithLimit}
+            />
           </div>
-        ) : (
-          // Regular rendering for smaller datasets
-          visibleVehicles.map((item, index) => (
-            <div
-              key={item.id}
-              className="transition-all duration-200 ease-in-out transform translate-y-0 opacity-100"
-              style={{ transitionDelay: `${Math.min(index * 30, 300)}ms` }}
-            >
-              <MemoizedTreeItem
-                item={item}
-                isSelected={selectedItems.includes(item.id)}
-                isIndeterminate={false}
-                onToggleExpand={onToggleGroup}
-                onSelect={handleItemSelectWithLimit}
-              />
-            </div>
-          ))
-        )}
+        ))}
       </>
     );
-  }, [treeData, isLoading, searchQuery, areAllVehiclesSelected, handleSelectAllVehicles, selectedItems, onToggleGroup, handleItemSelectWithLimit, visibleRange]);
+  }, [
+    treeData,
+    isLoading,
+    searchQuery,
+    areAllVehiclesSelected,
+    handleSelectAllVehicles,
+    selectedItems,
+    onToggleGroup,
+    handleItemSelectWithLimit,
+  ]);
 
   // Memoize driver items rendering
   const renderDriverItems = useCallback(() => {
@@ -530,7 +500,7 @@ const TreeView = memo(({
       <div className="mt-3 transition-all duration-200 ease-in-out flex-shrink-0">
         <button
           onClick={onDeselectAll}
-          className="w-full p-2 cursor-pointer bg-dark text-white rounded-md hover:bg-dark transition-colors duration-200 font-medium text-sm border border-dark"
+          className="w-full p-2 cursor-pointer bg-dark text-white rounded-md hover:bg-dark transition-colors duration-200 font-medium text-sm"
         >
           Deselect All ({selectedCount})
           {/* Show limit indicator */}

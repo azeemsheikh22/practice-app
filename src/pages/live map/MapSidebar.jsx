@@ -4,6 +4,7 @@ import sideIcon1 from "../../assets/sideicon.PNG";
 import sideIcon2 from "../../assets/sideicon2.PNG";
 import { useDispatch, useSelector } from "react-redux";
 import {
+  clearCarDataAndSelectedVehicles,
   clearRawVehicleList,
   selectCarData,
   selectSelectedVehicles,
@@ -132,8 +133,6 @@ const MapSidebar = memo(({ onWidthChange }) => {
     (state) => state.locationSearch.globalSearchQuery
   );
   const selectedVehiclesFromSlice = useSelector(selectSelectedVehicles);
-
-  console.log(rawVehicles)
 
   // Memoized car data
   const carData = useMemo(() => {
@@ -485,6 +484,7 @@ const MapSidebar = memo(({ onWidthChange }) => {
     setSelectedVehicleIds([]);
     dispatch(setVisuallySelectedItems([]));
     dispatch(updateVehicleFilter([]));
+    dispatch(clearCarDataAndSelectedVehicles());
   };
 
   const handleFilterChange = useCallback(
@@ -526,16 +526,22 @@ const MapSidebar = memo(({ onWidthChange }) => {
 
   // Tab handlers with transitions for smoother UI
   const handleViewTab = useCallback(() => {
-    startTransition(() => {
+    // startTransition(() => {
       setActiveTab("view");
-    });
+    // });
   }, []);
   
   const handleVehiclesTab = useCallback(() => {
-    startTransition(() => {
+    // startTransition(() => {
       setActiveTab("vehicles");
-    });
-  }, []);
+
+    //   // Dispatch vehicle list request on vehicles tab switch
+    //   dispatch(setGlobalSearchQuery(""));
+    //   setSearchQuery("");
+    //   setSelectedFilter("group");
+    //   dispatch(requestVehicleListWithScope(1)); // scope 1 for vehicles
+    // });
+  }, [dispatch]);
   
   const handleToggleExpand = useCallback(() => {
     setIsExpanded((prev) => !prev);

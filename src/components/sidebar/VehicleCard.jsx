@@ -448,20 +448,8 @@ const VehicleCard = React.memo(({ car }) => {
     </>
   );
 }, (prevProps, nextProps) => {
-  // ✅ CUSTOM COMPARISON: Only re-render if essential data changes
-  return (
-    prevProps.car.car_id === nextProps.car.car_id &&
-    prevProps.car.carname === nextProps.car.carname &&
-    prevProps.car.movingstatus === nextProps.car.movingstatus &&
-    prevProps.car.location === nextProps.car.location &&
-    prevProps.car.speed === nextProps.car.speed &&
-    prevProps.car.gps_time === nextProps.car.gps_time &&
-    prevProps.car.head === nextProps.car.head &&
-    prevProps.car.signalstrength === nextProps.car.signalstrength &&
-    prevProps.car.mileage === nextProps.car.mileage &&
-    prevProps.car.voltage === nextProps.car.voltage &&
-    prevProps.car.engine === nextProps.car.engine
-  );
+  // Simplify comparison: only re-render if car_id or selectedVehicleId changes
+  return prevProps.car.car_id === nextProps.car.car_id;
 });
 
 VehicleCard.displayName = "VehicleCard";

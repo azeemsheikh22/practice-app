@@ -18,6 +18,8 @@ import iconShadow from "leaflet/dist/images/marker-shadow.png";
 import movingIcon from "../../assets/moving-vehicle.png";
 import stoppedIcon from "../../assets/stopped-vehicle.png";
 import idleIcon from "../../assets/idle-vehicle.png";
+import "../../styles/mapTooltips.css";
+
 
 const MapCore = forwardRef(
   ({ onContextMenu, onMapReady, sidebarWidth }, ref) => {
@@ -52,8 +54,10 @@ const MapCore = forwardRef(
       const map = L.map(mapRef.current, {
         zoomControl: false,
         attributionControl: false,
-        preferCanvas: true,
-        renderer: L.canvas({ padding: 0.5 }),
+        preferCanvas: false
+        
+        ,
+        renderer: L.canvas({ padding: 0 }),
         minZoom: 3,
         maxZoom: 20,
       }).setView([30.3753, 69.3451], 5.5);
@@ -360,7 +364,7 @@ const MapCore = forwardRef(
 
         tileLayerRef.current.setUrl(tileUrl);
       }
-    }, [mapType, isMapInitialized]);
+    }, [mapType]);
 
     // Update traffic layer when showTraffic changes
     useEffect(() => {
@@ -383,7 +387,7 @@ const MapCore = forwardRef(
           }
         }
       }
-    }, [showTraffic, isMapInitialized]);
+    }, [showTraffic]);
 
     // ✅ NEW: Effect to handle sidebar width changes
     useEffect(() => {

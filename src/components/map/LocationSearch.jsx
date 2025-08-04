@@ -373,7 +373,7 @@ const LocationSearch = forwardRef(
     return (
       <div className="relative" ref={containerRef}>
         {/* Desktop Optimized Search Input */}
-        <div className="flex items-center bg-white/95 backdrop-blur-sm rounded-sm overflow-hidden border border-white/30 transition-all duration-200 hover:bg-white hover:shadow-xl focus-within:bg-white focus-within:shadow-xl focus-within:border-blue-200 h-[28px] min-w-[380px]">
+        <div className="flex items-center bg-white backdrop-blur-sm rounded-sm overflow-hidden border border-white/30 transition-all duration-200 hover:bg-white hover:shadow-xl focus-within:bg-white focus-within:shadow-xl focus-within:border-blue-200 h-[28px] min-w-[380px]">
           <div className="flex items-center px-3 text-gray-500">
             <Search size={16} className="text-gray-600" />
           </div>

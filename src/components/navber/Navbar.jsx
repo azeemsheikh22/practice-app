@@ -27,7 +27,7 @@ import {
   Minimize,
   Shield,
 } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import ChangePasswordModal from "../change password/ChangePasswordModal";
 
 const Navbar = () => {
@@ -38,11 +38,12 @@ const Navbar = () => {
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   // const userName = localStorage.getItem("userName");
   const firstName = localStorage.getItem("firstName");
   const lastName = localStorage.getItem("lastName");
-  const userRole = localStorage.getItem("userRole"); // ✅ Added for role-based access
+  // const userRole = localStorage.getItem("userRole"); // ✅ Added for role-based access
   // const groupLogo = localStorage.getItem("groupLogo");
 
   // const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
@@ -115,14 +116,15 @@ const Navbar = () => {
                   // src={logoUrl}
                   src={logo3}
                   alt="Telogix"
-                  className="h-10 w-auto rounded"
+                  className="h-10 w-auto rounded cursor-pointer"
+                  onClick={() => navigate("/")}
                 />
 
                 <div className="hidden xl:flex flex-col ml-2">
-                  <span className="text-md font-semibold text-gray-800">
+                  <span className="text-base lg:text-sm font-semibold text-gray-800">
                     {firstName} {lastName}
                   </span>
-                  <span className="text-sm text-gray-500">Welcome back</span>
+                  <span className="text-sm lg:text-xs text-gray-500">Welcome back</span>
                 </div>
               </div>
 
@@ -132,14 +134,14 @@ const Navbar = () => {
                   label="Live Map"
                   to="/live-map"
                   active={isActive("/live-map")}
-                  openInNewTab={false}
+                  openInNewTab={true}
                 />
                 <NavItem
                   icon={<img src={menuIcon9} className="w-[18px] h-[18px]" />}
                   label="Dashboard"
                   to="/dashboard"
                   active={isActive("/dashboard")}
-                  openInNewTab={false}
+                  openInNewTab={true}
                 />
 
                 <NavItem
@@ -147,28 +149,28 @@ const Navbar = () => {
                   label="Geofence"
                   to="/geofence"
                   active={isActive("/geofence")}
-                  openInNewTab={false}
+                  openInNewTab={true}
                 />
                 <NavItem
                   icon={<img src={menuIcon3} className="w-[18px] h-[18px]" />}
                   label="Replay"
                   to="/replay"
                   active={isActive("/replay")}
-                  openInNewTab={false}
+                  openInNewTab={true}
                 />
                 <NavItem
                   icon={<img src={menuIcon5} className="w-[18px] h-[18px]" />}
                   label="Alerts"
                   to="/alerts"
                   active={isActive("/alerts")}
-                  openInNewTab={false}
+                  openInNewTab={true}
                 />
                 <NavItem
                   icon={<img src={menuIcon2} className="w-[18px] h-[18px]" />}
                   label="Reports"
                   to="#"
                   active={isActive("/reports")}
-                  openInNewTab={false}
+                  openInNewTab={true}
                 />
 
                 <NavItem
@@ -176,7 +178,7 @@ const Navbar = () => {
                   label="Routes"
                   to="/routesview"
                   active={isActive("/routesview")}
-                  openInNewTab={false}
+                  openInNewTab={true}
                 />
 
                 {/* <NavItem
@@ -340,7 +342,7 @@ const Navbar = () => {
                     to="/live-map"
                     active={isActive("/live-map")}
                     onClick={() => setMobileMenuOpen(false)}
-                    openInNewTab={false}
+                    openInNewTab={true}
                   />
                   <MobileNavItem
                     icon={<img src={menuIcon9} className="w-5 h-5" />}
@@ -414,29 +416,29 @@ const Navbar = () => {
 
                 {/* Mobile Menu Footer */}
                 <div className="border-t border-gray-200 p-4 mt-auto">
-                  <div className="flex items-center space-x-3 mb-4">
+                <div className="flex items-center space-x-3 mb-4">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
                       {(firstName?.[0] || "") + (lastName?.[0] || "")}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm lg:text-xs font-medium text-gray-900">
                         {firstName} {lastName}
                       </p>
-                      <p className="text-xs text-gray-500">Logged in user</p>
+                      <p className="text-xs lg:text-[10px] text-gray-500">Logged in user</p>
                     </div>
                   </div>
 
                   <div className="space-y-1">
                     <button
                       onClick={handleChangePasswordClick}
-                      className="flex items-center w-full px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                    className="flex items-center w-full px-3 py-2 text-sm lg:text-xs text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                     >
                       <Lock size={16} className="mr-3" />
                       Change Password
                     </button>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    className="flex items-center w-full px-3 py-2 text-sm lg:text-xs text-red-600 hover:bg-red-50 rounded-md transition-colors"
                     >
                       <LogOut size={16} className="mr-3" />
                       Logout
@@ -465,7 +467,7 @@ const NavItem = ({ icon, label, to, active = false, openInNewTab = false }) => (
     to={to}
     target={openInNewTab ? "_blank" : "_self"}
     rel={openInNewTab ? "noopener noreferrer" : undefined}
-    className={`flex flex-col items-center px-4 py-2 text-[13px] font-medium mx-0.5 text-dark ${active
+    className={`flex flex-col items-center px-4 py-2 text-[13px] lg:text-[11px] font-medium mx-0.5 text-dark ${active
       ? "border-b-3 border-primary"
       : "border-b-3 border-transparent hover:bg-gray-50"
       } transition-colors duration-200`}

@@ -10,6 +10,43 @@ import {
 } from "lucide-react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchGeofences } from "../../features/geofenceSlice";
+import { saveAs } from "file-saver";
+
+function exportToCSV(data, filename = "geofences.csv") {
+  if (!data || data.length === 0) return;
+  // Custom header labels for better CSV format
+  const header = [
+    { key: "geofenceName", label: "Geofence Name" },
+    { key: "Categoryname", label: "Category" },
+    { key: "address", label: "Address" },
+    { key: "city", label: "City" },
+    { key: "totalvisits", label: "Total Visits" },
+    { key: "chkShowOnMap", label: "Status" },
+  ];
+  // CSV header row
+  const csvRows = [header.map((h) => `"${h.label}"`).join(",")];
+  // CSV data rows
+  data.forEach((row) => {
+    csvRows.push(
+      header
+        .map((h) => {
+          let value = row[h.key];
+          if (h.key === "chkShowOnMap") {
+            value = value ? "Active" : "Inactive";
+          }
+          // Escape quotes and commas
+          if (typeof value === "string") {
+            value = value.replace(/"/g, '""');
+          }
+          return `"${value !== undefined && value !== null ? value : ""}"`;
+        })
+        .join(",")
+    );
+  });
+  const csv = csvRows.join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  saveAs(blob, filename);
+}
 
 // Categories ko dynamic banaya
 const getAllCategories = (geofences) => {
@@ -145,7 +182,7 @@ const AddressDisplay = ({ address }) => {
 
 // Edit button handler
 const handleEditGeofence = (item) => {
-  const url = `/#/create-geofence?type=edit&matrix=false&id=${item.id}`;
+  const url = `/#/create-geofence?type=edit&id=${item?.id}&geofenceName=${encodeURIComponent(item.geofenceName)}`;
 
   const newWindow = window.open(
     url,
@@ -161,9 +198,9 @@ const handleEditGeofence = (item) => {
 };
 
 const handleViewMatrix = (item) => {
-  const url = `/#/geofence-matrix?geofenceId=${
-    item.id
-  }&geofenceName=${encodeURIComponent(item.geofenceName)}`;
+  const url = `/#/geofence-matrix?geofenceId=${item?.id}&geofenceName=${encodeURIComponent(
+    item.geofenceName
+  )}`;
 
   const newWindow = window.open(
     url,
@@ -404,7 +441,7 @@ export default function GeofenceTable() {
   }
 
   return (
-    <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden relative">
+    <div className="bg-white border-gray-200 overflow-hidden relative">
       {/* Table Header with Actions - Compact */}
       <div className="px-4 py-2.5 border-b border-gray-200 bg-gray-50">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
@@ -412,6 +449,14 @@ export default function GeofenceTable() {
             <h3 className="text-md font-semibold text-gray-900">
               Geofences ({filteredData.length})
             </h3>
+            {/* Export CSV Button */}
+            <button
+              onClick={() => exportToCSV(filteredData)}
+              className="ml-2 px-2 py-1 cursor-pointer bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium shadow-sm border border-blue-700"
+              title="Export table to CSV"
+            >
+              Export CSV
+            </button>
             {selectedCount > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">
@@ -597,17 +642,17 @@ export default function GeofenceTable() {
                     <div className="flex items-center justify-center gap-1">
                       <button
                         onClick={() => handleEditGeofence(item)}
-                        className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
                         title="Edit Geofence"
                       >
-                        <Pencil size={12} />
+                        <Pencil size={16} />
                       </button>
                       <button
                         onClick={() => handleViewMatrix(item)}
-                        className="p-1 text-green-600 hover:bg-green-50 rounded transition-colors"
+                        className="p-2 text-green-600 hover:bg-green-50 rounded transition-colors cursor-pointer"
                         title="View Matrix"
                       >
-                        <BarChart2 size={12} />
+                        <BarChart2 size={16} />
                       </button>
                     </div>
                   </td>

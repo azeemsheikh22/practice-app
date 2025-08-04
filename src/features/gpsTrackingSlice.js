@@ -5,10 +5,6 @@ import {
 } from "@reduxjs/toolkit";
 import * as signalR from "@microsoft/signalr";
 
-// Variables for throttling and connection state
-let lastCarDataUpdateTime = 0;
-let pendingCarDataUpdates = [];
-let carDataUpdateTimer = null;
 
 // Add these variables for saving connection state
 let savedUserId = null;
@@ -44,40 +40,6 @@ const initialState = {
   cacheExpiry: 5 * 60 * 1000, // 5 minutes cache expiry
 };
 
-// Function to process pending car data updates
-function processPendingCarData(dispatch, getState) {
-  if (pendingCarDataUpdates.length > 0) {
-    // Skip processing if no vehicles are selected
-    if (getState().gpsTracking.selectedVehicles.length === 0) {
-      pendingCarDataUpdates = [];
-      carDataUpdateTimer = null;
-      return;
-    }
-
-    // Get the latest state of each vehicle by car_id
-    const latestCarData = {};
-    pendingCarDataUpdates.forEach((car) => {
-      if (car && car.car_id) {
-        latestCarData[car.car_id] = car;
-      }
-    });
-
-    // Convert back to array with only the latest data for each vehicle
-    const uniqueCarData = Object.values(latestCarData);
-
-    // Dispatch the update with deduplicated data
-    if (uniqueCarData.length > 0) {
-      dispatch(updateCarData(uniqueCarData));
-    }
-
-    // Clear pending updates
-    pendingCarDataUpdates = [];
-    lastCarDataUpdateTime = Date.now();
-  }
-
-  // Clear the timer
-  carDataUpdateTimer = null;
-}
 
 export const initializeConnection = createAsyncThunk(
   "gpsTracking/initializeConnection",
@@ -106,8 +68,7 @@ export const initializeConnection = createAsyncThunk(
 
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(
-        `${
-          import.meta.env.VITE_API_BASE_URL
+        `${import.meta.env.VITE_API_BASE_URL
         }gpstracking?access_token=${encodeURIComponent(token)}`,
         {
           transport:
@@ -193,42 +154,17 @@ export const initializeConnection = createAsyncThunk(
 
       // Optimized ReceiveCarData handler with throttling
       newConnection.on("ReceiveCarData", (data) => {
-        console.log("vehicle on map", data.length);
-        // Skip processing if no vehicles are selected
-        if (getState().gpsTracking.selectedVehicles.length === 0) {
-          return;
+        const now = new Date();
+        if (!window.lastReceiveCarDataTime) {
+          window.lastReceiveCarDataTime = now;
+          console.log(`${data.length} vehicles`);
+        } else {
+          const diffMs = now.getTime() - window.lastReceiveCarDataTime.getTime();
+          const diffSec = (diffMs / 1000).toFixed(2);
+          console.log(`${data.length} vehicles, ${diffSec} seconds`);
+          window.lastReceiveCarDataTime = now;
         }
-
-        const now = Date.now();
-        const throttleTime = getState().gpsTracking.dataThrottleTime || 1000;
-
-        // Process data to ensure it's in array format
-        const carDataArray = Array.isArray(data)
-          ? data
-          : data && data.car_id
-          ? [data]
-          : [];
-
-        if (carDataArray.length === 0) {
-          return;
-        }
-
-        // Queue the data for processing
-        pendingCarDataUpdates = [...pendingCarDataUpdates, ...carDataArray];
-
-        // If we've recently processed data, don't process again immediately
-        if (now - lastCarDataUpdateTime < throttleTime) {
-          // If no timer is set, schedule one
-          if (!carDataUpdateTimer) {
-            carDataUpdateTimer = setTimeout(() => {
-              processPendingCarData(dispatch, getState);
-            }, throttleTime - (now - lastCarDataUpdateTime));
-          }
-          return;
-        }
-
-        // Process immediately if no recent update
-        processPendingCarData(dispatch, getState);
+        dispatch(updateCarData(data)); // Direct update, koi throttling nahi
       });
 
       newConnection.on("ReceiveMessage", (message) => {
@@ -381,34 +317,34 @@ const gpsTrackingSlice = createSlice({
       // console.log(`🔄 Forced refresh for scope ${scope}`);
     },
 
-    // Optimized updateCarData reducer
     updateCarData: (state, action) => {
       // Skip processing if no vehicles are selected
-      if (state.selectedVehicles.length === 0) {
-        state.carData = [];
-        return;
-      }
+      // if (state.selectedVehicles.length === 0) {
+      //   state.carData = [];
+      //   return;
+      // }
 
       // Convert all IDs to strings for consistent comparison
-      const selectedVehiclesSet = new Set(
-        state.selectedVehicles.map((id) => String(id))
-      );
+      // const selectedVehiclesSet = new Set(
+      //   state.selectedVehicles.map((id) => String(id))
+      // );
 
       // Filter using string comparison for consistency
-      let filteredData = action.payload.filter(
-        (car) =>
-          car && car.car_id && selectedVehiclesSet.has(String(car.car_id))
-      );
+      // let filteredData = action.payload.filter(
+      //   (car) =>
+      //     car && car.car_id && selectedVehiclesSet.has(String(car.car_id))
+      // );
 
       // Then apply moving status filter if needed
       if (state.movingStatusFilter !== "all") {
-        filteredData = filteredData.filter(
+        const statusData = action.payload.filter(
           (car) => car.movingstatus === state.movingStatusFilter
         );
-      }
+        state.carData = statusData;
 
-      // Update state with filtered data
-      state.carData = filteredData;
+      } else {
+        state.carData = action.payload;
+      }
     },
 
     updateAvailableVehicles: (state, action) => {
@@ -424,8 +360,8 @@ const gpsTrackingSlice = createSlice({
         state.movingStatusFilter === "all"
           ? newVehicles
           : newVehicles.filter(
-              (v) => v.movingstatus === state.movingStatusFilter
-            );
+            (v) => v.movingstatus === state.movingStatusFilter
+          );
 
       // Use Map for efficient deduplication
       const vehicleMap = new Map();
@@ -502,8 +438,8 @@ const gpsTrackingSlice = createSlice({
             state.movingStatusFilter === "all"
               ? vehiclesToAdd
               : vehiclesToAdd.filter(
-                  (car) => car.movingstatus === state.movingStatusFilter
-                );
+                (car) => car.movingstatus === state.movingStatusFilter
+              );
 
           // Add new vehicles to carData (avoid duplicates)
           const existingCarIds = new Set(
@@ -596,6 +532,12 @@ const gpsTrackingSlice = createSlice({
     setConnectionStatus: (state, action) => {
       state.connectionStatus = action.payload;
     },
+
+    // ✅ NEW: Clear car data and selected vehicles
+    clearCarDataAndSelectedVehicles: (state) => {
+      state.carData = [];
+      state.selectedVehicles = [];
+    },
   },
 
   extraReducers: (builder) => {
@@ -664,8 +606,8 @@ const gpsTrackingSlice = createSlice({
               state.movingStatusFilter === "all"
                 ? vehiclesToAdd
                 : vehiclesToAdd.filter(
-                    (car) => car.movingstatus === state.movingStatusFilter
-                  );
+                  (car) => car.movingstatus === state.movingStatusFilter
+                );
 
             // Add new vehicles to carData (avoid duplicates)
             const existingCarIds = new Set(
@@ -716,6 +658,7 @@ export const {
   clearScopeCache,
   clearAllCache,
   forceRefreshCache,
+  clearCarDataAndSelectedVehicles,
 } = gpsTrackingSlice.actions;
 
 // Export selectors
