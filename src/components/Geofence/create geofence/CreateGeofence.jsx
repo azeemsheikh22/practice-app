@@ -9,6 +9,7 @@ import { setSelectedLocation } from "../../../features/locationSearchSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedCategoryForDrawing } from "../../../features/geofenceSlice";
 import axios from "axios";
+import { initializeConnection, selectConnectionStatus } from "../../../features/gpsTrackingSlice";
 
 const CreateGeofence = () => {
   const [searchParams] = useSearchParams();
@@ -41,7 +42,7 @@ const CreateGeofence = () => {
     showOn: [],
   });
 
-  console.log(EditGeofenceData);
+  // console.log(EditGeofenceData);
 
   useEffect(() => {
     const lat = searchParams.get("lat");
@@ -61,10 +62,19 @@ const CreateGeofence = () => {
     }
   }, [searchParams, dispatch]);
 
+  const connectionStatus = useSelector(selectConnectionStatus);
+
+  useEffect(() => {
+    // Only initialize if not already connected
+    if (connectionStatus === "disconnected") {
+      dispatch(initializeConnection(3));
+    }
+  }, []);
+
   // Get URL parameters
   const isEditMode = searchParams.get("type") === "edit";
   const geofenceId = searchParams.get("id");
-  const geofenceName = searchParams.get("geofenceName");
+  // const geofenceName = searchParams.get("geofenceName");
 
   // Fetch metrics data when selectedTimeFilter or geoid changes
   useEffect(() => {
