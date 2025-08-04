@@ -13,107 +13,56 @@ import {
   File
 } from "lucide-react";
 
-export default function PoliciesTable() {
+// Policy Name Display with See More functionality
+const PolicyNameDisplay = ({ name }) => {
+  const [showFull, setShowFull] = useState(false);
+  const maxLength = 25;
+
+  if (!name || name.length <= maxLength) {
+    return (
+      <div className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer text-sm" title={name}>
+        {name || "N/A"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center space-x-1">
+      <div
+        className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer text-sm"
+        title={name}
+        onClick={() => setShowFull(!showFull)}
+      >
+        {showFull ? name : `${name.substring(0, maxLength)}...`}
+      </div>
+      <button
+        onClick={() => setShowFull(!showFull)}
+        className="text-xs text-[#D52B1E] hover:text-[#B8241A] font-medium flex-shrink-0"
+      >
+        {showFull ? "Less" : "More"}
+      </button>
+    </div>
+  );
+};
+
+export default function PoliciesTable({ 
+  policyData = [], 
+  searchQuery = "", 
+  loading = false, 
+  error = null 
+}) {
   const [selectedRows, setSelectedRows] = useState({});
-  const [searchQuery, setSearchQuery] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showUserPoliciesOnly, setShowUserPoliciesOnly] = useState(false);
-
-  // Sample policy data matching the screenshot
-  const policyData = [
-    {
-      id: 1,
-      policyName: "VTS-Harsh Acceleration-all Area-Alarm",
-      alertType: "Quick Start",
-      status: "Disabled",
-      lastTriggered: "-"
-    },
-    {
-      id: 2,
-      policyName: "VTS-Long Stop",
-      alertType: "Excess Idling",
-      status: "Enabled",
-      lastTriggered: "-"
-    },
-    {
-      id: 3,
-      policyName: "VTS-Long Stop",
-      alertType: "Long Stop",
-      status: "Enabled",
-      lastTriggered: "-"
-    },
-    {
-      id: 4,
-      policyName: "VTS-Inactivity Reporting",
-      alertType: "Inactivity",
-      status: "Enabled",
-      lastTriggered: "-"
-    },
-    {
-      id: 5,
-      policyName: "VTS-INACTIVITY REPORTING IN ALL AREA",
-      alertType: "Interruption of Transmission",
-      status: "Disabled",
-      lastTriggered: "-"
-    },
-    {
-      id: 6,
-      policyName: "VTS-Harsh Braking-all Area-Alarm",
-      alertType: "Hard braking Alert",
-      status: "Enabled",
-      lastTriggered: "04/06/2025 08:04 PM"
-    },
-    {
-      id: 7,
-      policyName: "VTS-Harsh Acceleration-all Area-Alarm",
-      alertType: "Quick Start",
-      status: "Enabled",
-      lastTriggered: "06/06/2025 02:29 PM"
-    },
-    {
-      id: 8,
-      policyName: "DEVIATIONS ALERTS (TPPL)",
-      alertType: "Geofence",
-      status: "Enabled",
-      lastTriggered: "-"
-    },
-    {
-      id: 9,
-      policyName: "Humayun Panic Alert",
-      alertType: "Panic Alert",
-      status: "Enabled",
-      lastTriggered: "14/07/2025 04:50 PM"
-    },
-    {
-      id: 10,
-      policyName: "KE Rule",
-      alertType: "Activity",
-      status: "Disabled",
-      lastTriggered: "-"
-    },
-    {
-      id: 11,
-      policyName: "Kiamari / Gatti BS alert",
-      alertType: "Long Stop",
-      status: "Disabled",
-      lastTriggered: "-"
-    },
-    {
-      id: 12,
-      policyName: "MDVR Driver Smoking Alert",
-      alertType: "MDVR Driver Smoking Alert",
-      status: "Enabled",
-      lastTriggered: "07/06/2024 04:35 PM"
-    }
-  ];
 
   // Filter data based on search query
   const filteredData = useMemo(() => {
     let filtered = policyData.filter(policy => {
       const matchesSearch = !searchQuery || 
-        policy.policyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        policy.alertType.toLowerCase().includes(searchQuery.toLowerCase());
+        policy.policyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        policy.alertName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        policy.userName?.toLowerCase().includes(searchQuery.toLowerCase());
       
       return matchesSearch;
     });
@@ -121,8 +70,30 @@ export default function PoliciesTable() {
     // Apply sorting
     if (sortConfig.key) {
       filtered.sort((a, b) => {
-        let aValue = a[sortConfig.key];
-        let bValue = b[sortConfig.key];
+        let aValue, bValue;
+        
+        // Handle different field mappings
+        switch (sortConfig.key) {
+          case 'policyName':
+            aValue = a.policyName || '';
+            bValue = b.policyName || '';
+            break;
+          case 'alertType':
+            aValue = a.alertName || '';
+            bValue = b.alertName || '';
+            break;
+          case 'status':
+            aValue = a.STATUS || '';
+            bValue = b.STATUS || '';
+            break;
+          case 'lastTriggered':
+            aValue = a.lastTrigered || '';
+            bValue = b.lastTrigered || '';
+            break;
+          default:
+            aValue = a[sortConfig.key] || '';
+            bValue = b[sortConfig.key] || '';
+        }
         
         if (aValue < bValue) {
           return sortConfig.direction === 'asc' ? -1 : 1;
@@ -135,7 +106,7 @@ export default function PoliciesTable() {
     }
 
     return filtered;
-  }, [searchQuery, sortConfig]);
+  }, [policyData, searchQuery, sortConfig]);
 
   // Sorting handler
   const handleSort = (key) => {
@@ -195,16 +166,14 @@ export default function PoliciesTable() {
   };
 
   return (
-    <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
- 
-
+    <div className="bg-white border-gray-200 overflow-hidden relative">
       {/* Table Container */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          {/* Table Header */}
-          <thead className="bg-gray-100">
+          {/* Table Header - Compact */}
+          <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-4 text-left w-12">
+              <th className="px-3 py-2 text-left w-12">
                 <input
                   type="checkbox"
                   checked={selectedCount === filteredData.length && filteredData.length > 0}
@@ -213,65 +182,83 @@ export default function PoliciesTable() {
                   disabled={filteredData.length === 0}
                 />
               </th>
-              <th className="px-6 py-4 text-left">
+              <th className="px-3 py-2 text-left">
                 <button
                   onClick={() => handleSort('policyName')}
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                  className="flex items-center gap-2 text-xs font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
                 >
                   Policy Name
                   {getSortIcon('policyName')}
                 </button>
               </th>
-              <th className="px-6 py-4 text-left">
+              <th className="px-3 py-2 text-left">
                 <button
                   onClick={() => handleSort('alertType')}
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                  className="flex items-center gap-2 text-xs font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
                 >
                   Alert Type
                   {getSortIcon('alertType')}
                 </button>
               </th>
-              <th className="px-6 py-4 text-left">
+              <th className="px-3 py-2 text-left">
                 <button
                   onClick={() => handleSort('status')}
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                  className="flex items-center gap-2 text-xs font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
                 >
                   Status
                   {getSortIcon('status')}
                 </button>
               </th>
-              <th className="px-6 py-4 text-left">
+              <th className="px-3 py-2 text-left">
                 <button
                   onClick={() => handleSort('lastTriggered')}
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
+                  className="flex items-center gap-2 text-xs font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
                 >
-                  Last Triggered Date & Time
+                  Last Triggered
                   {getSortIcon('lastTriggered')}
                 </button>
               </th>
-              <th className="px-6 py-4 text-center">
-                <div className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+              <th className="px-3 py-2 text-center">
+                <div className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
                   Actions
                 </div>
               </th>
             </tr>
           </thead>
 
-          {/* Table Body */}
+          {/* Table Body - Compact */}
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredData.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan="6" className="px-6 py-12 text-center">
+                <td colSpan="6" className="px-3 py-8 text-center">
                   <div className="text-gray-500">
-                    <div className="text-lg font-medium">No policies found</div>
-                    <div className="text-sm mt-1">No policies match the current search criteria</div>
+                    <div className="text-sm font-medium">Loading policies...</div>
+                    <div className="text-xs mt-1">Please wait while we fetch the data</div>
+                  </div>
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td colSpan="6" className="px-3 py-8 text-center">
+                  <div className="text-red-500">
+                    <div className="text-sm font-medium">Error loading policies</div>
+                    <div className="text-xs mt-1">{error}</div>
+                  </div>
+                </td>
+              </tr>
+            ) : filteredData.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="px-3 py-8 text-center">
+                  <div className="text-gray-500">
+                    <div className="text-sm font-medium">No policies found</div>
+                    <div className="text-xs mt-1">No policies match the current search criteria</div>
                   </div>
                 </td>
               </tr>
             ) : (
               filteredData.map((policy, index) => (
                 <motion.tr
-                  key={policy.id}
+                  key={policy.idx || index}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: index * 0.02 }}
@@ -279,7 +266,7 @@ export default function PoliciesTable() {
                     selectedRows[index] ? "bg-blue-50" : ""
                   }`}
                 >
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-2">
                     <input
                       type="checkbox"
                       checked={selectedRows[index] || false}
@@ -287,32 +274,30 @@ export default function PoliciesTable() {
                       className="rounded border-gray-300 w-4 h-4 text-blue-500 focus:ring-blue-500/30"
                     />
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-blue-600 hover:text-blue-800 cursor-pointer">
-                      {policy.policyName}
+                  <td className="px-3 py-2">
+                    <PolicyNameDisplay name={policy.policyName} />
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="text-xs text-gray-900">
+                      {policy.alertName || '-'}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      {policy.alertType}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                      policy.status === "Enabled" 
+                  <td className="px-3 py-2">
+                    <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                      policy.STATUS === "Enabled" 
                         ? "bg-green-100 text-green-800" 
                         : "bg-red-100 text-red-800"
                     }`}>
-                      {policy.status}
+                      {policy.STATUS || 'Unknown'}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      {policy.lastTriggered}
+                  <td className="px-3 py-2">
+                    <div className="text-xs text-gray-900">
+                      {policy.lastTrigered || '-'}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="px-3 py-2">
+                    <div className="flex items-center justify-center gap-1">
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
@@ -340,10 +325,10 @@ export default function PoliciesTable() {
         </table>
       </div>
 
-      {/* Table Footer */}
+      {/* Table Footer - Compact */}
       {filteredData.length > 0 && (
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <div className="flex justify-between items-center text-sm text-gray-600">
+        <div className="px-3 py-2 border-t border-gray-200 bg-gray-50">
+          <div className="flex justify-between items-center text-xs text-gray-600">
             <span>Total Policies: {filteredData.length}</span>
             {selectedCount > 0 && (
               <span>{selectedCount} polic{selectedCount > 1 ? 'ies' : 'y'} selected</span>

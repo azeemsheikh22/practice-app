@@ -6,6 +6,7 @@ import geofenceReducer from '../features/geofenceSlice';
 import liveDashboardReducer from '../features/liveDashboardSlice';
 import locationSearchReducer from '../features/locationSearchSlice';
 import routeReducer from '../features/routeSlice'; // ✅ NEW IMPORT
+import alertReducer from '../features/alertSlice'; // ✅ ALERT IMPORT
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     liveDashboard: liveDashboardReducer,
     locationSearch: locationSearchReducer,
     route: routeReducer, // ✅ NEW REDUCER
+    alert: alertReducer, // ✅ ALERT REDUCER
     // other reducers...
   },
   middleware: (getDefaultMiddleware) =>
@@ -31,6 +33,7 @@ export const store = configureStore({
           "gpsTracking/requestVehicleListWithScope/fulfilled",
           "gpsTracking/updateVehicleFilter/fulfilled",
           "route/fetchRouteListForUser/fulfilled", // ✅ NEW ACTION
+          "alert/fetchAlertsPolicyList/fulfilled", // ✅ ALERT ACTION
         ],
         // Ignore these field paths in all actions
         ignoredActionPaths: [
@@ -39,6 +42,7 @@ export const store = configureStore({
           "payload.rawVehicleList",
           "payload.availableVehicles",
           "payload.routes", // ✅ NEW PAYLOAD PATH
+          "payload.policyList", // ✅ ALERT PAYLOAD PATH
         ],
         // Ignore these paths in the state
         ignoredPaths: [
@@ -47,6 +51,7 @@ export const store = configureStore({
           "gpsTracking.rawVehicleList",
           "gpsTracking.availableVehicles",
           "route.routes", // ✅ NEW STATE PATH
+          "alert.policyList", // ✅ ALERT STATE PATH
         ],
       },
       // Reduce immutability check time for large datasets

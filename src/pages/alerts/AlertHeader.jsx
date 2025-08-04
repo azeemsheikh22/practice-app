@@ -1,38 +1,12 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import {
-  Download,
-  Search,
-  Plus,
-  FileText,
-  FileSpreadsheet,
-  FileDown,
-  AlertTriangle,
-  Calendar,
-  Filter,
-  ChevronDown,
-} from "lucide-react";
+import { AlertTriangle, Calendar, Filter, ChevronDown } from "lucide-react";
 
-export default function AlertHeader() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTimeframe, setSelectedTimeframe] = useState("Today");
+export default function AlertHeader({
+  selectedTimeframe,
+  setSelectedTimeframe,
+}) {
   const [selectedSort, setSelectedSort] = useState("Most Triggered");
-  const [isDownloadOpen, setIsDownloadOpen] = useState(false);
-  const downloadRef = useRef(null);
-
-  // Outside click handler for download dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (downloadRef.current && !downloadRef.current.contains(event.target)) {
-        setIsDownloadOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   return (
     <motion.div
@@ -48,26 +22,10 @@ export default function AlertHeader() {
             Alert Overview
           </h1>
         </div>
-
-       
       </div>
 
       {/* Filter Bar */}
-      <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Search */}
-        <div className="relative flex flex-row items-center justify-center">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={18} className="text-gray-400" />
-          </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search alerts..."
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg  transition-all duration-200"
-          />
-        </div>
-
+      <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Time Filter */}
         <div className="relative flex flex-row items-center justify-center">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -82,6 +40,18 @@ export default function AlertHeader() {
             <option>Yesterday</option>
             <option>This Week</option>
             <option>This Month</option>
+            <option>August 2025</option>
+            <option>July 2025</option>
+            <option>June 2025</option>
+            <option>May 2025</option>
+            <option>April 2025</option>
+            <option>March 2025</option>
+            <option>February 2025</option>
+            <option>January 2025</option>
+            <option>December 2024</option>
+            <option>November 2024</option>
+            <option>October 2024</option>
+            <option>September 2024</option>
           </select>
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             <ChevronDown size={15} className="text-gray-400" />

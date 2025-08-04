@@ -15,9 +15,12 @@ import {
   AlertTriangle
 } from "lucide-react";
 
-export default function PolicyManagementHeader() {
+export default function PolicyManagementHeader({ 
+  searchQuery, 
+  setSearchQuery, 
+  totalRecords 
+}) {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showUserPoliciesOnly, setShowUserPoliciesOnly] = useState(false);
   const [showCreatePolicyModal, setShowCreatePolicyModal] = useState(false);
@@ -30,7 +33,7 @@ export default function PolicyManagementHeader() {
   });
 
   // Sample data - you can replace with actual data
-  const totalRecords = 83;
+  const displayTotalRecords = totalRecords || 0;
 
   // Export handlers
   const handleExport = (type) => {
@@ -84,7 +87,7 @@ export default function PolicyManagementHeader() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           {/* Record Count */}
           <h2 className="text-lg sm:text-xl font-bold" style={{ color: 'var(--text-color)' }}>
-            Showing {totalRecords} Policy Management Records
+            Showing {displayTotalRecords} Policy Management Records
           </h2>
           
           <motion.button
