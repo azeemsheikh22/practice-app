@@ -5,8 +5,9 @@ import { AlertTriangle, Calendar, Filter, ChevronDown } from "lucide-react";
 export default function AlertHeader({
   selectedTimeframe,
   setSelectedTimeframe,
+  selectedSort,
+  setSelectedSort,
 }) {
-  const [selectedSort, setSelectedSort] = useState("Most Triggered");
 
   return (
     <motion.div
@@ -69,9 +70,7 @@ export default function AlertHeader({
             className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg appearance-none  transition-all duration-200"
           >
             <option>Most Triggered</option>
-            <option>Least Triggered</option>
-            <option>Newest</option>
-            <option>Oldest</option>
+            <option>Ascending (A-Z)</option>
           </select>
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             <ChevronDown size={18} className="text-gray-400" />

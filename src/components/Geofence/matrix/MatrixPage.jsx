@@ -47,42 +47,79 @@ const MatrixPage = () => {
     let fromDate, toDate;
 
     switch (filter) {
-      case "today":
-        fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        toDate = new Date(fromDate);
-        toDate.setHours(23, 59, 59, 999);
+      case "today": {
+        // Always use today's date for both from and to
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${day} 00:00:00`;
+        toDate = `${year}/${month}/${day} 23:59:59`;
         break;
-      case "this_week":
+      }
+      case "this_week": {
         const day = now.getDay();
-        fromDate = new Date(now);
-        fromDate.setDate(now.getDate() - day);
-        fromDate.setHours(0, 0, 0, 0);
-        toDate = new Date(fromDate);
-        toDate.setDate(fromDate.getDate() + 6);
-        toDate.setHours(23, 59, 59, 999);
+        const start = new Date(now);
+        start.setDate(now.getDate() - day);
+        const year = start.getFullYear();
+        const month = String(start.getMonth() + 1).padStart(2, "0");
+        const dayStr = String(start.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${dayStr} 00:00:00`;
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        const endYear = end.getFullYear();
+        const endMonth = String(end.getMonth() + 1).padStart(2, "0");
+        const endDay = String(end.getDate()).padStart(2, "0");
+        toDate = `${endYear}/${endMonth}/${endDay} 23:59:59`;
         break;
-      case "last_week":
+      }
+      case "last_week": {
         const lastWeekDay = now.getDay();
-        fromDate = new Date(now);
-        fromDate.setDate(now.getDate() - lastWeekDay - 7);
-        fromDate.setHours(0, 0, 0, 0);
-        toDate = new Date(fromDate);
-        toDate.setDate(fromDate.getDate() + 6);
-        toDate.setHours(23, 59, 59, 999);
+        const start = new Date(now);
+        start.setDate(now.getDate() - lastWeekDay - 7);
+        const year = start.getFullYear();
+        const month = String(start.getMonth() + 1).padStart(2, "0");
+        const dayStr = String(start.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${dayStr} 00:00:00`;
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        const endYear = end.getFullYear();
+        const endMonth = String(end.getMonth() + 1).padStart(2, "0");
+        const endDay = String(end.getDate()).padStart(2, "0");
+        toDate = `${endYear}/${endMonth}/${endDay} 23:59:59`;
         break;
-      default:
+      }
+      case "yesterday": {
+        // Use yesterday's date for both from and to
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const year = yesterday.getFullYear();
+        const month = String(yesterday.getMonth() + 1).padStart(2, "0");
+        const day = String(yesterday.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${day} 00:00:00`;
+        toDate = `${year}/${month}/${day} 23:59:59`;
+        break;
+      }
+      default: {
         // For custom month filters like "june_2025"
         const [monthName, year] = filter.split("_");
         const monthIndex = new Date(`${monthName} 1, ${year}`).getMonth();
-        fromDate = new Date(year, monthIndex, 1);
-        toDate = new Date(year, monthIndex + 1, 0);
-        toDate.setHours(23, 59, 59, 999);
+        const start = new Date(year, monthIndex, 1);
+        const end = new Date(year, monthIndex + 1, 0);
+        const startYear = start.getFullYear();
+        const startMonth = String(start.getMonth() + 1).padStart(2, "0");
+        const startDay = String(start.getDate()).padStart(2, "0");
+        const endYear = end.getFullYear();
+        const endMonth = String(end.getMonth() + 1).padStart(2, "0");
+        const endDay = String(end.getDate()).padStart(2, "0");
+        fromDate = `${startYear}/${startMonth}/${startDay} 00:00:00`;
+        toDate = `${endYear}/${endMonth}/${endDay} 23:59:59`;
         break;
+      }
     }
 
     return {
-      from: fromDate.toISOString().split("T")[0] + " 00:00:00",
-      to: toDate.toISOString().split("T")[0] + " 23:59:59",
+      from: fromDate,
+      to: toDate,
     };
   };
 

@@ -159,11 +159,11 @@ export default function PolicyManagementHeader({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                    className="absolute cursor-pointer top-full left-0 mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
                   >
                     <div className="py-1">
                       {[
-                        { icon: Copy, label: 'Copy', type: 'copy' },
+                   
                         { icon: FileSpreadsheet, label: 'Excel', type: 'excel' },
                         { icon: FileText, label: 'CSV', type: 'csv' },
                         { icon: File, label: 'PDF', type: 'pdf' }

@@ -20,6 +20,8 @@ const RouteTable = () => {
     }
   }, [dispatch, routes]);
 
+  console.log("RouteTable rendered with routes:", routes);
+
   // Transform Redux routes data to match table structure
   const routeData = useMemo(() => {
     if (!routes || routes.length === 0) return [];
@@ -235,11 +237,15 @@ const RouteTable = () => {
                   <td className="px-3 py-2">
                     <div className="flex items-center justify-center gap-1">
                       <button 
-                        className="p-1.5 hover:bg-[#25689f]/10 rounded-lg transition-colors group"
+                        className="p-1.5 cursor-pointer hover:bg-[#25689f]/10 rounded-lg transition-colors group"
                         title={`Edit Route: ${item.routeName}`}
                         onClick={() => {
-                          // TODO: Implement edit functionality
-                          console.log('Edit route:', item);
+                          // Navigate to edit route page with id and edit=true
+                          window.open(
+                            `/#/create-route?id=${item.originalData.id || item.id}&edit=true`,
+                            "EditRoute",
+                            "width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no"
+                          );
                         }}
                       >
                         <Pencil className="w-4 h-4 text-[#25689f] group-hover:text-[#1F557F]" />

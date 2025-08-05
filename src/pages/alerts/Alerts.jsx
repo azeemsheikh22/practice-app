@@ -9,21 +9,105 @@ import { LayoutDashboard, FileText, Shield } from "lucide-react";
 import PoliciesHeader from "./PoliciesHeader";
 import PoliciesTable from "./PoliciesTable";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchAlertsPolicyList, fetchAlertSummary, setSelectedDateRange } from "../../features/alertSlice";
+import {
+  fetchAlertLogs,
+  fetchAlertsPolicyList,
+  fetchAlertSummary,
+  setSelectedDateRange,
+} from "../../features/alertSlice";
 
 export default function Alerts() {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSort, setSelectedSort] = useState("Most Triggered");
+  const [selectedLogDateRange, setSelectedLogDateRange] = useState("Today");
   const dispatch = useDispatch();
-  const { 
-    policyList, 
-    loading, 
-    error, 
-    alertSummary, 
-    summaryLoading, 
-    summaryError, 
-    selectedDateRange 
+  const {
+    policyList,
+    loading,
+    error,
+    alertSummary,
+    summaryLoading,
+    summaryError,
+    selectedDateRange,
+    alertLogs,
+    logLoading,
+    logError,
   } = useSelector((state) => state.alert);
+  // Helper function to get date range for alert logs
+  const getLogDateRange = (timeRange) => {
+    const today = new Date();
+    let fromDate, toDate;
+    switch (timeRange) {
+      case "Today": {
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${day} 00:00:00`;
+        toDate = `${year}/${month}/${day} 23:59:59`;
+        break;
+      }
+      case "Yesterday": {
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+        const year = yesterday.getFullYear();
+        const month = String(yesterday.getMonth() + 1).padStart(2, "0");
+        const day = String(yesterday.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${day} 00:00:00`;
+        toDate = `${year}/${month}/${day} 23:59:59`;
+        break;
+      }
+      case "This Week": {
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay());
+        const year = startOfWeek.getFullYear();
+        const month = String(startOfWeek.getMonth() + 1).padStart(2, "0");
+        const day = String(startOfWeek.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${day} 00:00:00`;
+        const endYear = today.getFullYear();
+        const endMonth = String(today.getMonth() + 1).padStart(2, "0");
+        const endDay = String(today.getDate()).padStart(2, "0");
+        toDate = `${endYear}/${endMonth}/${endDay} 23:59:59`;
+        break;
+      }
+      case "Last Week": {
+        const lastWeekEnd = new Date(today);
+        lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
+        const lastWeekStart = new Date(lastWeekEnd);
+        lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
+        const startYear = lastWeekStart.getFullYear();
+        const startMonth = String(lastWeekStart.getMonth() + 1).padStart(
+          2,
+          "0"
+        );
+        const startDay = String(lastWeekStart.getDate()).padStart(2, "0");
+        const endYear = lastWeekEnd.getFullYear();
+        const endMonth = String(lastWeekEnd.getMonth() + 1).padStart(2, "0");
+        const endDay = String(lastWeekEnd.getDate()).padStart(2, "0");
+        fromDate = `${startYear}/${startMonth}/${startDay} 00:00:00`;
+        toDate = `${endYear}/${endMonth}/${endDay} 23:59:59`;
+        break;
+      }
+      default: {
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${day} 00:00:00`;
+        toDate = `${year}/${month}/${day} 23:59:59`;
+      }
+    }
+    return { datefrom: fromDate, dateto: toDate };
+  };
+  // Fetch alert logs when date range or tab changes
+  useEffect(() => {
+    if (activeTab === "alert-log") {
+      const dateRange = getLogDateRange(selectedLogDateRange);
+      dispatch(fetchAlertLogs(dateRange));
+    }
+  }, [dispatch, selectedLogDateRange, activeTab]);
+  const handleLogDateRangeChange = (newTimeframe) => {
+    setSelectedLogDateRange(newTimeframe);
+  };
 
   // Helper function to get date range based on selection
   const getDateRange = (timeRange) => {
@@ -31,51 +115,79 @@ export default function Alerts() {
     let fromDate, toDate;
 
     switch (timeRange) {
-      case "Today":
-        fromDate = new Date(today);
-        toDate = new Date(today);
+      case "Today": {
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, "0");
+        const day = String(today.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${day} 00:00:00`;
+        toDate = `${year}/${month}/${day} 23:59:59`;
         break;
-      case "Yesterday":
+      }
+      case "Yesterday": {
         const yesterday = new Date(today);
         yesterday.setDate(today.getDate() - 1);
-        fromDate = new Date(yesterday);
-        toDate = new Date(yesterday);
+        const year = yesterday.getFullYear();
+        const month = String(yesterday.getMonth() + 1).padStart(2, "0");
+        const day = String(yesterday.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${day} 00:00:00`;
+        toDate = `${year}/${month}/${day} 23:59:59`;
         break;
-      case "This Week":
+      }
+      case "This Week": {
         const startOfWeek = new Date(today);
         startOfWeek.setDate(today.getDate() - today.getDay());
-        fromDate = new Date(startOfWeek);
-        toDate = new Date(today);
+        const year = startOfWeek.getFullYear();
+        const month = String(startOfWeek.getMonth() + 1).padStart(2, "0");
+        const day = String(startOfWeek.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${day} 00:00:00`;
+        const endYear = today.getFullYear();
+        const endMonth = String(today.getMonth() + 1).padStart(2, "0");
+        const endDay = String(today.getDate()).padStart(2, "0");
+        toDate = `${endYear}/${endMonth}/${endDay} 23:59:59`;
         break;
-      case "This Month":
-        fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        toDate = new Date(today);
+      }
+      case "This Month": {
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const year = startOfMonth.getFullYear();
+        const month = String(startOfMonth.getMonth() + 1).padStart(2, "0");
+        const day = String(startOfMonth.getDate()).padStart(2, "0");
+        fromDate = `${year}/${month}/${day} 00:00:00`;
+        const endYear = today.getFullYear();
+        const endMonth = String(today.getMonth() + 1).padStart(2, "0");
+        const endDay = String(today.getDate()).padStart(2, "0");
+        toDate = `${endYear}/${endMonth}/${endDay} 23:59:59`;
         break;
-      default:
+      }
+      default: {
         // Handle month/year selections like "August 2025"
         if (timeRange.includes("2024") || timeRange.includes("2025")) {
-          const [month, year] = timeRange.split(" ");
-          const monthIndex = new Date(Date.parse(month + " 1, 2020")).getMonth();
-          fromDate = new Date(parseInt(year), monthIndex, 1);
-          toDate = new Date(parseInt(year), monthIndex + 1, 0);
+          const [monthName, year] = timeRange.split(" ");
+          const monthIndex = new Date(
+            Date.parse(monthName + " 1, 2020")
+          ).getMonth();
+          const start = new Date(parseInt(year), monthIndex, 1);
+          const end = new Date(parseInt(year), monthIndex + 1, 0);
+          const startYear = start.getFullYear();
+          const startMonth = String(start.getMonth() + 1).padStart(2, "0");
+          const startDay = String(start.getDate()).padStart(2, "0");
+          const endYear = end.getFullYear();
+          const endMonth = String(end.getMonth() + 1).padStart(2, "0");
+          const endDay = String(end.getDate()).padStart(2, "0");
+          fromDate = `${startYear}/${startMonth}/${startDay} 00:00:00`;
+          toDate = `${endYear}/${endMonth}/${endDay} 23:59:59`;
         } else {
-          fromDate = new Date(today);
-          toDate = new Date(today);
+          const year = today.getFullYear();
+          const month = String(today.getMonth() + 1).padStart(2, "0");
+          const day = String(today.getDate()).padStart(2, "0");
+          fromDate = `${year}/${month}/${day} 00:00:00`;
+          toDate = `${year}/${month}/${day} 23:59:59`;
         }
+      }
     }
 
-    // Format dates to match API format: YYYY/MM/DD HH:MM:SS
-    const formatDate = (date, isEndOfDay = false) => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const time = isEndOfDay ? '23:59:59' : '00:00:00';
-      return `${year}/${month}/${day} ${time}`;
-    };
-
     return {
-      datefrom: formatDate(fromDate, false),
-      dateto: formatDate(toDate, true)
+      datefrom: fromDate,
+      dateto: toDate,
     };
   };
 
@@ -116,23 +228,38 @@ export default function Alerts() {
   const renderTabContent = () => {
     switch (activeTab) {
       case "overview":
-        return <AlertOverview alertSummary={alertSummary} summaryLoading={summaryLoading} summaryError={summaryError} />;
+        return (
+          <AlertOverview
+            alertSummary={alertSummary}
+            summaryLoading={summaryLoading}
+            summaryError={summaryError}
+            selectedSort={selectedSort}
+          />
+        );
       case "alert-log":
         return (
           <div>
-            <AlertLogHeader />
-            <AlertLogTable />
+            <AlertLogHeader
+              selectedTimeframe={selectedLogDateRange}
+              setSelectedTimeframe={handleLogDateRangeChange}
+              dateRange={getLogDateRange(selectedLogDateRange)}
+            />
+            <AlertLogTable
+              alertLogs={alertLogs}
+              logLoading={logLoading}
+              logError={logError}
+            />
           </div>
         );
       case "policies":
         return (
           <div>
-            <PoliciesHeader 
+            <PoliciesHeader
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               totalRecords={policyList?.length || 0}
             />
-            <PoliciesTable 
+            <PoliciesTable
               policyData={policyList || []}
               searchQuery={searchQuery}
               loading={loading}
@@ -141,7 +268,14 @@ export default function Alerts() {
           </div>
         );
       default:
-        return <AlertOverview alertSummary={alertSummary} summaryLoading={summaryLoading} summaryError={summaryError} />;
+        return (
+          <AlertOverview
+            alertSummary={alertSummary}
+            summaryLoading={summaryLoading}
+            summaryError={summaryError}
+            selectedSort={selectedSort}
+          />
+        );
     }
   };
 
@@ -179,9 +313,11 @@ export default function Alerts() {
       {/* Main Content */}
       <div className="w-full max-w-[1800px] mx-auto px-2 sm:px-4 lg:px-6 pt-3">
         {activeTab === "overview" && (
-          <AlertHeader 
+          <AlertHeader
             selectedTimeframe={selectedDateRange}
             setSelectedTimeframe={handleDateRangeChange}
+            selectedSort={selectedSort}
+            setSelectedSort={setSelectedSort}
           />
         )}
         {renderTabContent()}

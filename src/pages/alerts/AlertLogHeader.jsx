@@ -1,60 +1,32 @@
-import React, { useState } from "react";
+import React from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchAlertLogs, setOnlyUnconfirmed, setSearchQuery } from "../../features/alertSlice";
 import { motion } from "framer-motion";
 import {
   Search,
   ChevronDown,
   RefreshCw,
-  RotateCcw,
   Volume2,
   Check,
 } from "lucide-react";
 
-export default function AlertLogHeader() {
-  const [selectedTimeframe, setSelectedTimeframe] = useState("This Week");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [onlyUnconfirmed, setOnlyUnconfirmed] = useState(false);
-  const [alarmSound, setAlarmSound] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(false);
+export default function AlertLogHeader({
+  selectedTimeframe,
+  setSelectedTimeframe,
+  dateRange
+}) {
+  const dispatch = useDispatch();
+  const onlyUnconfirmed = useSelector((state) => state.alert.onlyUnconfirmed);
+  const searchQuery = useSelector((state) => state.alert.searchQuery);
+  const [alarmSound, setAlarmSound] = React.useState(false);
+  const [autoRefresh, setAutoRefresh] = React.useState(false);
 
-  // Sample data - you can replace with actual data
-  const totalAlerts = 820;
-  const filteredAlerts = 820;
-
-  // Get date range based on selected timeframe
-  const getDateRange = () => {
-    const today = new Date();
-    const endDate = today.toLocaleDateString('en-GB');
-    
-    switch (selectedTimeframe) {
-      case "Today":
-        return `${endDate} - ${endDate}`;
-      case "Yesterday":
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        return `${yesterday.toLocaleDateString('en-GB')} - ${yesterday.toLocaleDateString('en-GB')}`;
-      case "This Week":
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay());
-        return `${weekStart.toLocaleDateString('en-GB')} - ${endDate}`;
-      case "Last Week":
-        const lastWeekEnd = new Date(today);
-        lastWeekEnd.setDate(today.getDate() - today.getDay() - 1);
-        const lastWeekStart = new Date(lastWeekEnd);
-        lastWeekStart.setDate(lastWeekEnd.getDate() - 6);
-        return `${lastWeekStart.toLocaleDateString('en-GB')} - ${lastWeekEnd.toLocaleDateString('en-GB')}`;
-      default:
-        return `${endDate} - ${endDate}`;
-    }
-  };
+  // Dynamic counts from slice
+  const totalAlerts = useSelector((state) => state.alert.alertLogs.length);
+  const filteredAlerts = useSelector((state) => state.alert.filteredCount);
 
   const handleRefresh = () => {
-    console.log("Refreshing alert logs...");
-    // Add refresh logic here
-  };
-
-  const handleAutoRefresh = () => {
-    console.log("Auto refresh toggled");
-    // Add auto refresh logic here
+    dispatch(fetchAlertLogs(dateRange));
   };
 
   // Custom Checkbox Component
@@ -76,9 +48,10 @@ export default function AlertLogHeader() {
           <motion.div
             className={`
               relative w-5 h-5 rounded-md border-2 transition-all duration-200 ease-in-out
-              ${checked 
-                ? 'bg-blue-600 border-blue-600 shadow-sm' 
-                : 'bg-white border-gray-300 group-hover:border-gray-400'
+              ${
+                checked
+                  ? "bg-blue-600 border-blue-600 shadow-sm"
+                  : "bg-white border-gray-300 group-hover:border-gray-400"
               }
               group-focus-within:ring-2 group-focus-within:ring-blue-500 group-focus-within:ring-opacity-20
               group-hover:shadow-sm
@@ -106,7 +79,7 @@ export default function AlertLogHeader() {
           className="ml-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200 whitespace-nowrap"
           initial={false}
           animate={{
-            color: checked ? '#1f2937' : '#374151',
+            color: checked ? "#1f2937" : "#374151",
           }}
           transition={{ duration: 0.2 }}
         >
@@ -127,9 +100,10 @@ export default function AlertLogHeader() {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-3">
         {/* Title */}
         <h2 className="text-lg font-bold text-gray-800 flex-shrink-0">
-          Showing {filteredAlerts.toLocaleString()} of {totalAlerts.toLocaleString()} Alert Logs
+          Showing {filteredAlerts.toLocaleString()} of{" "}
+          {totalAlerts.toLocaleString()} Alert Logs
         </h2>
-        
+
         {/* Main Controls Row */}
         <div className="flex flex-col sm:flex-row gap-3 lg:flex-shrink-0">
           {/* Timeframe Dropdown */}
@@ -166,7 +140,7 @@ export default function AlertLogHeader() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => dispatch(setSearchQuery(e.target.value))}
                 placeholder="Search for Record..."
                 className="block w-full h-9 pl-9 pr-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all duration-200 text-sm placeholder-gray-400"
               />
@@ -188,7 +162,7 @@ export default function AlertLogHeader() {
           <CustomCheckbox
             id="unconfirmed-alerts"
             checked={onlyUnconfirmed}
-            onChange={(e) => setOnlyUnconfirmed(e.target.checked)}
+            onChange={(e) => dispatch(setOnlyUnconfirmed(e.target.checked))}
           >
             Only Un-Confirmed Alerts
           </CustomCheckbox>
@@ -222,25 +196,10 @@ export default function AlertLogHeader() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleRefresh}
-            className="flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-md transition-all duration-200 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 outline-none"
+            className="flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-md transition-all duration-200 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 outline-none cursor-pointer"
             title="Refresh"
           >
             <RefreshCw size={16} />
-          </motion.button>
-
-          {/* Auto Refresh Button */}
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleAutoRefresh}
-            className={`flex items-center justify-center w-9 h-9 rounded-md transition-all duration-200 border focus:ring-2 focus:ring-offset-1 outline-none ${
-              autoRefresh
-                ? "bg-blue-100 hover:bg-blue-200 text-blue-600 border-blue-300 focus:ring-blue-500"
-                : "bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 border-gray-300 focus:ring-blue-500"
-            }`}
-            title="Auto Refresh"
-          >
-            <RotateCcw size={16} />
           </motion.button>
         </div>
       </div>

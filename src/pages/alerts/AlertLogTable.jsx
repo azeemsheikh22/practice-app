@@ -1,121 +1,77 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setFilteredCount } from "../../features/alertSlice";
+import Select from 'react-select';
 import { motion } from "framer-motion";
-import { Pencil, X, ChevronDown } from "lucide-react";
+import { Pencil, X } from "lucide-react";
 
-export default function AlertLogTable() {
+export default function AlertLogTable({ alertLogs = [], logLoading = false, logError = null }) {
+  const dispatch = useDispatch();
+  // Redux global filters
+  const onlyUnconfirmed = useSelector(state => state.alert.onlyUnconfirmed);
+  const searchQuery = useSelector(state => state.alert.searchQuery);
   const [selectedRows, setSelectedRows] = useState({});
 
-  // Sample alert log data
-  const alertLogs = [
-    {
-      id: 1,
-      vehicle: "TMM-371 48KL",
-      driver: "-",
-      policyName: "VTS-Cessation of transmission",
-      alertType: "Interruption of Transmission",
-      alarmTriggered: "24/07/2025 03:17 PM",
-      status: "Un-Confirmed"
-    },
-    {
-      id: 2,
-      vehicle: "TUF-188 21KL",
-      driver: "-",
-      policyName: "VTS-Cessation of transmission",
-      alertType: "Interruption of Transmission",
-      alarmTriggered: "24/07/2025 03:17 PM",
-      status: "Un-Confirmed"
-    },
-    {
-      id: 3,
-      vehicle: "TUF-660 21KL",
-      driver: "-",
-      policyName: "VTS-Suspicious Parking",
-      alertType: "Long Stop",
-      alarmTriggered: "24/07/2025 03:17 PM",
-      status: "Un-Confirmed"
-    },
-    {
-      id: 4,
-      vehicle: "TUF-660 21KL",
-      driver: "-",
-      policyName: "VTS-Suspicious Parking",
-      alertType: "Long Stop",
-      alarmTriggered: "24/07/2025 03:17 PM",
-      status: "Un-Confirmed"
-    },
-    {
-      id: 5,
-      vehicle: "JQ-1003 48KL",
-      driver: "-",
-      policyName: "VTS-Suspicious Parking",
-      alertType: "Long Stop",
-      alarmTriggered: "24/07/2025 03:16 PM",
-      status: "Un-Confirmed"
-    },
-    {
-      id: 6,
-      vehicle: "TMM-371 48KL",
-      driver: "-",
-      policyName: "VTS-Cessation of transmission",
-      alertType: "Interruption of Transmission",
-      alarmTriggered: "24/07/2025 03:15 PM",
-      status: "Un-Confirmed"
-    },
-    {
-      id: 7,
-      vehicle: "GLTG-211 (Spot)",
-      driver: "-",
-      policyName: "VTS-Disconnection during driving",
-      alertType: "Interruption of Transmission",
-      alarmTriggered: "24/07/2025 03:13 PM",
-      status: "Un-Confirmed"
-    },
-    {
-      id: 8,
-      vehicle: "TUE-374 24KL",
-      driver: "-",
-      policyName: "VTS-Cessation of transmission",
-      alertType: "Interruption of Transmission",
-      alarmTriggered: "24/07/2025 03:11 PM",
-      status: "Un-Confirmed"
-    },
-    {
-      id: 9,
-      vehicle: "TUF-660 21KL",
-      driver: "-",
-      policyName: "VTS-Cessation of transmission",
-      alertType: "Interruption of Transmission",
-      alarmTriggered: "24/07/2025 03:10 PM",
-      status: "Un-Confirmed"
+
+  // Use API data if available, otherwise fallback to sample data
+  const logsToShow = alertLogs;
+
+  // Log API data for verification
+  useEffect(() => {
+    if (alertLogs && alertLogs.length > 0) {
+      console.log("Alert Logs API Data:", alertLogs);
     }
-  ];
+  }, [alertLogs]);
 
   // Column filters state
-  const [vehicleFilter, setVehicleFilter] = useState("All Vehicles");
-  const [driverFilter, setDriverFilter] = useState("All Drivers");
-  const [policyFilter, setPolicyFilter] = useState("All Policy");
-  const [alertTypeFilter, setAlertTypeFilter] = useState("All Alerts");
-  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [vehicleFilter, setVehicleFilter] = useState(null);
+  const [driverFilter, setDriverFilter] = useState(null);
+  const [policyFilter, setPolicyFilter] = useState(null);
+  const [alertTypeFilter, setAlertTypeFilter] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null);
 
-  // Filter options
-  const vehicleOptions = ["All Vehicles", ...new Set(alertLogs.map(log => log.vehicle))];
-  const driverOptions = ["All Drivers", ...new Set(alertLogs.map(log => log.driver))];
-  const policyOptions = ["All Policy", ...new Set(alertLogs.map(log => log.policyName))];
-  const alertTypeOptions = ["All Alerts", ...new Set(alertLogs.map(log => log.alertType))];
-  const statusOptions = ["All Status", ...new Set(alertLogs.map(log => log.status))];
+  // Filter options (from API keys)
+  const vehicleOptions = Array.from(new Set(logsToShow.map(log => log["Vehicle Name"] || log.vehicle))).map(v => ({ value: v, label: v }));
+  const driverOptions = Array.from(new Set(logsToShow.map(log => log["Driver_Name"] || log.driver))).map(v => ({ value: v, label: v }));
+  const policyOptions = Array.from(new Set(logsToShow.map(log => log["policyName"] || log.policyName))).map(v => ({ value: v, label: v }));
+  const alertTypeOptions = Array.from(new Set(logsToShow.map(log => log["ALARM_TYPE"] || log.alertType))).map(v => ({ value: v, label: v }));
+  const statusOptions = Array.from(new Set(logsToShow.map(log => log["Alarm_Status"] || log.status))).map(v => ({ value: v, label: v }));
 
   // Filtered data
   const filteredData = useMemo(() => {
-    return alertLogs.filter(log => {
+    return logsToShow.filter(log => {
+      const vehicleVal = (log["Vehicle Name"] || log.vehicle) || "";
+      const driverVal = (log["Driver_Name"] || log.driver) || "";
+      const policyVal = (log["policyName"] || log.policyName) || "";
+      const alertTypeVal = (log["ALARM_TYPE"] || log.alertType) || "";
+      const statusVal = (log["Alarm_Status"] || log.status) || "";
+      const alarmTriggeredVal = (log["LastDateTime"] || log.alarmTriggered) || "";
+      // Search query matches any major column
+      const searchLower = (searchQuery || "").toLowerCase();
+      const matchesSearch =
+        searchLower === "" ||
+        vehicleVal.toLowerCase().includes(searchLower) ||
+        driverVal.toLowerCase().includes(searchLower) ||
+        policyVal.toLowerCase().includes(searchLower) ||
+        alertTypeVal.toLowerCase().includes(searchLower) ||
+        statusVal.toLowerCase().includes(searchLower) ||
+        alarmTriggeredVal.toLowerCase().includes(searchLower);
       return (
-        (vehicleFilter === "All Vehicles" || log.vehicle === vehicleFilter) &&
-        (driverFilter === "All Drivers" || log.driver === driverFilter) &&
-        (policyFilter === "All Policy" || log.policyName === policyFilter) &&
-        (alertTypeFilter === "All Alerts" || log.alertType === alertTypeFilter) &&
-        (statusFilter === "All Status" || log.status === statusFilter)
+        (!vehicleFilter || vehicleVal === vehicleFilter.value) &&
+        (!driverFilter || driverVal === driverFilter.value) &&
+        (!policyFilter || policyVal === policyFilter.value) &&
+        (!alertTypeFilter || alertTypeVal === alertTypeFilter.value) &&
+        (!statusFilter || statusVal === statusFilter.value) &&
+        matchesSearch &&
+        (!onlyUnconfirmed || statusVal === "Un-Confirmed")
       );
     });
-  }, [vehicleFilter, driverFilter, policyFilter, alertTypeFilter, statusFilter]);
+  }, [vehicleFilter, driverFilter, policyFilter, alertTypeFilter, statusFilter, logsToShow, searchQuery, onlyUnconfirmed]);
+
+  // Update filteredCount in slice whenever filteredData changes
+  useEffect(() => {
+    dispatch(setFilteredCount(filteredData.length));
+  }, [filteredData, dispatch]);
 
   // Row selection handlers
   const handleRowSelect = (index) => {
@@ -154,10 +110,24 @@ export default function AlertLogTable() {
     return text.substring(0, maxLength) + "...";
   };
 
+
+
   return (
-    <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden relative ">
+      {/* Loading Spinner Overlay */}
+      {logLoading && (
+        <div className="absolute inset-0 bg-white  bg-opacity-70 flex items-center justify-center z-20">
+          <div className="flex flex-col items-center">
+            <svg className="animate-spin h-8 w-8 text-amber-500 mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
+            <span className="text-sm text-amber-600 font-medium">Loading alert logs...</span>
+          </div>
+        </div>
+      )}
       {/* Table Container */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto min-h-[450px]">
         <table className="w-full">
           {/* Table Header with Filters */}
           <thead className="bg-gray-100 sticky top-0 z-10">
@@ -173,106 +143,106 @@ export default function AlertLogTable() {
               </th>
               <th className="px-3 py-3 text-left">
                 <div className="space-y-1">
-                  <div className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                  <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Vehicle
                   </div>
-                  <div className="relative">
-                    <select
-                      value={vehicleFilter}
-                      onChange={(e) => setVehicleFilter(e.target.value)}
-                      className="text-xs bg-white border border-gray-300 rounded px-2 py-1 pr-6 appearance-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                    >
-                      {vehicleOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={12} className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  </div>
+                  <Select
+                    options={vehicleOptions}
+                    value={vehicleFilter}
+                    onChange={setVehicleFilter}
+                    isClearable
+                    placeholder="All Vehicles"
+                    classNamePrefix="react-select"
+                    styles={{
+                      container: (base) => ({ ...base, fontSize: '12px', fontWeight: 'normal', cursor: 'pointer' }),
+                      control: (base) => ({ ...base, cursor: 'pointer' })
+                    }}
+                  />
                 </div>
               </th>
               <th className="px-3 py-3 text-left">
                 <div className="space-y-1">
-                  <div className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                  <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Driver
                   </div>
-                  <div className="relative">
-                    <select
-                      value={driverFilter}
-                      onChange={(e) => setDriverFilter(e.target.value)}
-                      className="text-xs bg-white border border-gray-300 rounded px-2 py-1 pr-6 appearance-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                    >
-                      {driverOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={12} className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  </div>
+                  <Select
+                    options={driverOptions}
+                    value={driverFilter}
+                    onChange={setDriverFilter}
+                    isClearable
+                    placeholder="All Drivers"
+                    classNamePrefix="react-select"
+                    styles={{
+                      container: (base) => ({ ...base, fontSize: '12px', fontWeight: 'normal', cursor: 'pointer' }),
+                      control: (base) => ({ ...base, cursor: 'pointer' })
+                    }}
+                  />
                 </div>
               </th>
               <th className="px-3 py-3 text-left">
                 <div className="space-y-1">
-                  <div className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                  <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Policy Name
                   </div>
-                  <div className="relative">
-                    <select
-                      value={policyFilter}
-                      onChange={(e) => setPolicyFilter(e.target.value)}
-                      className="text-xs bg-white border border-gray-300 rounded px-2 py-1 pr-6 appearance-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                    >
-                      {policyOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={12} className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  </div>
+                  <Select
+                    options={policyOptions}
+                    value={policyFilter}
+                    onChange={setPolicyFilter}
+                    isClearable
+                    placeholder="All Policy"
+                    classNamePrefix="react-select"
+                    styles={{
+                      container: (base) => ({ ...base, fontSize: '12px', fontWeight: 'normal', cursor: 'pointer' }),
+                      control: (base) => ({ ...base, cursor: 'pointer' })
+                    }}
+                  />
                 </div>
               </th>
               <th className="px-3 py-3 text-left">
                 <div className="space-y-1">
-                  <div className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                  <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Alert Type
                   </div>
-                  <div className="relative">
-                    <select
-                      value={alertTypeFilter}
-                      onChange={(e) => setAlertTypeFilter(e.target.value)}
-                      className="text-xs bg-white border border-gray-300 rounded px-2 py-1 pr-6 appearance-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                    >
-                      {alertTypeOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={12} className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  </div>
+                  <Select
+                    options={alertTypeOptions}
+                    value={alertTypeFilter}
+                    onChange={setAlertTypeFilter}
+                    isClearable
+                    placeholder="All Alerts"
+                    classNamePrefix="react-select"
+                    styles={{
+                      container: (base) => ({ ...base, fontSize: '12px', fontWeight: 'normal', cursor: 'pointer' }),
+                      control: (base) => ({ ...base, cursor: 'pointer' })
+                    }}
+                  />
                 </div>
               </th>
               <th className="px-3 py-3 text-left">
-                <div className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Alarm Triggered
                 </div>
               </th>
               <th className="px-3 py-3 text-left">
                 <div className="space-y-1">
-                  <div className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                  <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Status
                   </div>
-                  <div className="relative">
-                    <select
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                      className="text-xs bg-white border border-gray-300 rounded px-2 py-1 pr-6 appearance-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500"
-                    >
-                      {statusOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                    <ChevronDown size={12} className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  </div>
+                  <Select
+                    options={statusOptions}
+                    value={statusFilter}
+                    onChange={setStatusFilter}
+                    isClearable
+                    placeholder="All Status"
+                    classNamePrefix="react-select"
+                    styles={{
+                      container: (base) => ({ ...base, fontSize: '12px', fontWeight: 'normal', cursor: 'pointer' }),
+                      control: (base) => ({ ...base, cursor: 'pointer' })
+                    }}
+                  />
                 </div>
               </th>
               <th className="px-3 py-3 text-center">
-                <div className="text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Actions
                 </div>
               </th>
@@ -310,37 +280,37 @@ export default function AlertLogTable() {
                     />
                   </td>
                   <td className="px-3 py-3">
-                    <div className="text-sm font-medium text-gray-900" title={log.vehicle}>
-                      {truncateText(log.vehicle, 20)}
+                    <div className="text-sm font-medium text-gray-900" title={log["Vehicle Name"] || log.vehicle}>
+                      {truncateText(log["Vehicle Name"] || log.vehicle, 20)}
                     </div>
                   </td>
                   <td className="px-3 py-3">
                     <div className="text-sm text-gray-600">
-                      {log.driver}
+                      {log["Driver_Name"] || log.driver}
                     </div>
                   </td>
                   <td className="px-3 py-3">
-                    <div className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer" title={log.policyName}>
-                      {truncateText(log.policyName, 25)}
+                    <div className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer" title={log["policyName"] || log.policyName}>
+                      {truncateText(log["policyName"] || log.policyName, 25)}
                     </div>
                   </td>
                   <td className="px-3 py-3">
-                    <div className="text-sm text-gray-600" title={log.alertType}>
-                      {truncateText(log.alertType, 20)}
+                    <div className="text-sm text-gray-600" title={log["ALARM_TYPE"] || log.alertType}>
+                      {truncateText(log["ALARM_TYPE"] || log.alertType, 20)}
                     </div>
                   </td>
                   <td className="px-3 py-3">
                     <div className="text-sm text-gray-600">
-                      {log.alarmTriggered}
+                      {log["LastDateTime"] || log.alarmTriggered}
                     </div>
                   </td>
                   <td className="px-3 py-3">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      log.status === "Un-Confirmed" 
+                      (log["Alarm_Status"] || log.status) === "Un-Confirmed" 
                         ? "bg-red-100 text-red-800" 
                         : "bg-green-100 text-green-800"
                     }`}>
-                      {log.status}
+                      {log["Alarm_Status"] || log.status}
                     </span>
                   </td>
                   <td className="px-3 py-3">
@@ -371,18 +341,6 @@ export default function AlertLogTable() {
           </tbody>
         </table>
       </div>
-
-      {/* Table Footer */}
-      {filteredData.length > 0 && (
-        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-          <div className="flex justify-between items-center text-sm text-gray-600">
-            <span>Total Alert Logs: {filteredData.length}</span>
-            {selectedCount > 0 && (
-              <span>{selectedCount} alert{selectedCount > 1 ? 's' : ''} selected</span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

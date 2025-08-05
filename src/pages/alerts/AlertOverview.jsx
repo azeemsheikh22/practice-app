@@ -9,7 +9,8 @@ import {
 export default function AlertOverview({ 
   alertSummary = [], 
   summaryLoading = false, 
-  summaryError = null 
+  summaryError = null, 
+  selectedSort = "Most Triggered" 
 }) {
   const [selectedCategory, setSelectedCategory] = useState("All");
 
@@ -74,11 +75,18 @@ export default function AlertOverview({
   const displayData = transformApiData(alertSummary)
 
   // Filter alerts based on category
-  const filteredAlerts = displayData.filter((alert) => {
+  let filteredAlerts = displayData.filter((alert) => {
     const matchesCategory =
       selectedCategory === "All" || alert.category === selectedCategory;
     return matchesCategory;
   });
+
+  // Sort alerts based on selectedSort
+  if (selectedSort === "Ascending (A-Z)") {
+    filteredAlerts = [...filteredAlerts].sort((a, b) => a.title.localeCompare(b.title));
+  } else if (selectedSort === "Most Triggered") {
+    filteredAlerts = [...filteredAlerts].sort((a, b) => (b.count || 0) - (a.count || 0));
+  }
 
   // Function to get severity color
   const getSeverityColor = (severity) => {
@@ -95,7 +103,7 @@ export default function AlertOverview({
   };
 
   return (
-    <div className="mb-10">
+    <div className="pb-5">
       {summaryLoading ? (
         <motion.div
           initial={{ opacity: 0 }}
@@ -152,67 +160,61 @@ export default function AlertOverview({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1, duration: 0.3 }}
-              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+              className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow flex items-stretch"
             >
-              <div className="flex flex-col sm:flex-row">
-                {/* Left side with count */}
-                <div className="relative bg-gray-100 w-full sm:w-20 md:w-24 flex items-center justify-center py-4 sm:py-6">
-                  <div
-                    className={`absolute top-2 left-2 ${getSeverityColor(
-                      alert.severity
-                    )} text-white text-xs font-bold rounded-full min-w-[2rem] h-8 flex items-center justify-center shadow-md px-1`}
-                  >
-                    <span className="text-xs leading-none">
-                      {alert.badgeCount > 999 ? `${Math.floor(alert.badgeCount/1000)}k` : alert.badgeCount}
-                    </span>
-                  </div>
-                  <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800">
-                    {alert.count}
+              {/* Left: count box */}
+              <div className="relative flex flex-col items-center justify-center min-w-[70px] max-w-[80px] w-20 bg-gray-200 rounded-l-xl p-0">
+                {/* Badge */}
+                <div
+                  className={`absolute top-2 left-2 ${getSeverityColor(alert.severity)} text-white text-[11px] font-bold rounded-full min-w-[1.7rem] h-6 flex items-center justify-center shadow px-1`}
+                  style={{ zIndex: 2 }}
+                >
+                  <span className="text-[11px] leading-none">
+                    {alert.badgeCount}
                   </span>
                 </div>
+                {/* Count */}
+                <span className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mt-6 mb-6" style={{ zIndex: 1 }}>
+                  {alert.count}
+                </span>
+              </div>
 
-                {/* Right side with details */}
-                <div className="p-3 md:p-4 flex-1 min-w-0">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-blue-600 font-medium text-xs sm:text-sm leading-tight mb-1 break-words">
-                        {alert.title}
-                      </h3>
-                      {alert.priority && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 mt-1">
-                          High Priority
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mb-2">
-                    <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full break-words max-w-full">
+              {/* Right: details */}
+              <div className="flex-1 flex flex-col justify-between px-2 py-2 sm:px-3 sm:py-3 min-w-0">
+                <div>
+                  <h3 className="text-blue-600 font-semibold text-xs sm:text-sm leading-tight mb-1 break-words">
+                    {alert.title}
+                  </h3>
+                  {alert.priority && (
+                    <span className="inline-flex items-center px-1 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-800 mt-1">
+                      High Priority
+                    </span>
+                  )}
+                  <div className="mt-1 mb-1">
+                    <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 text-[11px] rounded-full break-words max-w-full">
                       {alert.category}
                     </span>
                   </div>
-
-                  <div className="mb-3 flex items-center text-gray-500 text-xs">
-                    <Clock size={12} className="mr-1 flex-shrink-0" />
+                  <div className="flex items-center text-gray-500 text-[11px] mb-1">
+                    <Clock size={10} className="mr-1 flex-shrink-0" />
                     <span className="break-words">Last: {alert.lastTriggered}</span>
                   </div>
-
-                  <div className="flex flex-col sm:flex-row justify-between gap-2">
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="text-blue-600 text-xs hover:text-blue-800 font-medium flex-1 text-left"
-                    >
-                      Policy Summary
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="text-blue-600 text-xs hover:text-blue-800 font-medium flex-1 text-left sm:text-right"
-                    >
-                      Edit Policy
-                    </motion.button>
-                  </div>
+                </div>
+                <div className="flex flex-row justify-between items-end gap-2 mt-1">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="text-blue-600 text-xs hover:text-blue-800 font-medium flex-1 text-left cursor-pointer"
+                  >
+                    Policy Summary
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="text-blue-600 text-xs hover:text-blue-800 font-medium flex-1 text-right cursor-pointer"
+                  >
+                    Edit Policy
+                  </motion.button>
                 </div>
               </div>
             </motion.div>

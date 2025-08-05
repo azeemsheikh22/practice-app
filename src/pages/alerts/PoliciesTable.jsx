@@ -140,13 +140,6 @@ export default function PoliciesTable({
 
   const selectedCount = Object.keys(selectedRows).filter(key => selectedRows[key]).length;
 
-  // Export handlers
-  const handleExport = (type) => {
-    console.log(`Exporting as ${type}`);
-    setShowExportDropdown(false);
-    // Add export logic here
-  };
-
   // Action handlers
   const handleEdit = (policy) => {
     console.log("Edit policy:", policy);

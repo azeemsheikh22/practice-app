@@ -14,7 +14,6 @@
     "@microsoft/signalr": "^8.0.7",
     "@reduxjs/toolkit": "^2.7.0",
     "@tailwindcss/vite": "^4.1.7",
-    "@tanstack/react-table": "^8.21.3",
     "axios": "^1.9.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.10.4",
