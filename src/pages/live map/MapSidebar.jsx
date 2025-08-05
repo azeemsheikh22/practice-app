@@ -274,7 +274,7 @@ const MapSidebar = memo(({ onWidthChange }) => {
     return groupsToExpand;
   }, []);
 
-  // Search effect - optimized
+  // Pehla effect: Jab search empty ho to reset karo
   useEffect(() => {
     if (!debouncedSearchQuery.trim()) {
       if (Object.keys(originalExpandedGroups).length > 0) {
@@ -283,16 +283,18 @@ const MapSidebar = memo(({ onWidthChange }) => {
       }
       return;
     }
-    
+  }, [debouncedSearchQuery, originalExpandedGroups]);
+
+  // Dusra effect: Jab search ho to expand karo
+  useEffect(() => {
+    if (!debouncedSearchQuery.trim()) return;
+
+    // Sirf ek dafa set karo jab originalExpandedGroups empty ho
     if (Object.keys(originalExpandedGroups).length === 0) {
       setOriginalExpandedGroups({ ...expandedGroups });
     }
 
-    const groupsToExpand = getGroupsToExpand(
-      treeStructure,
-      debouncedSearchQuery
-    );
-
+    const groupsToExpand = getGroupsToExpand(treeStructure, debouncedSearchQuery);
     if (groupsToExpand.size === 0) return;
 
     setExpandedGroups((prev) => {
@@ -302,13 +304,8 @@ const MapSidebar = memo(({ onWidthChange }) => {
       });
       return newState;
     });
-  }, [
-    debouncedSearchQuery,
-    treeStructure,
-    expandedGroups,
-    originalExpandedGroups,
-    getGroupsToExpand,
-  ]);
+    // Yahan expandedGroups ko dependency array se hata dein
+  }, [debouncedSearchQuery, treeStructure, getGroupsToExpand]);
 
   // Search functions - optimized
   const itemMatchesSearch = useCallback((item, query) => {

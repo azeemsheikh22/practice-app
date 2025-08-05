@@ -187,7 +187,7 @@ const LocationSearch = forwardRef(
           // Primary: Nominatim (OSM)
           try {
             const nominatimResults = await searchNominatim(query);
-            allResults.push(...nominatimResults);g
+            allResults.push(...nominatimResults);
           } catch (error) {
             console.error("Nominatim failed:", error);
           }
