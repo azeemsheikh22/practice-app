@@ -1,17 +1,11 @@
-import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Search, 
-  ChevronDown, 
-  ChevronUp, 
-  Pencil, 
-  X, 
-  Download,
-  Copy,
-  FileSpreadsheet,
-  FileText,
-  File
-} from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { resetExportType } from "../../features/alertSlice";
+import { saveAs } from "file-saver";
+import { exportPoliciesToExcel } from "../../utils/exportExcel";
+import { exportPoliciesToPDF } from "../../utils/exportPDF";
+import { motion } from "framer-motion";
+import { ChevronDown, ChevronUp, Pencil, X } from "lucide-react";
 
 // Policy Name Display with See More functionality
 const PolicyNameDisplay = ({ name }) => {
@@ -20,7 +14,10 @@ const PolicyNameDisplay = ({ name }) => {
 
   if (!name || name.length <= maxLength) {
     return (
-      <div className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer text-sm" title={name}>
+      <div
+        className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer text-sm"
+        title={name}
+      >
         {name || "N/A"}
       </div>
     );
@@ -45,25 +42,27 @@ const PolicyNameDisplay = ({ name }) => {
   );
 };
 
-export default function PoliciesTable({ 
-  policyData = [], 
-  searchQuery = "", 
-  loading = false, 
-  error = null 
+export default function PoliciesTable({
+  policyData = [],
+  searchQuery = "",
+  loading = false,
+  error = null,
 }) {
   const [selectedRows, setSelectedRows] = useState({});
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
-  const [showExportDropdown, setShowExportDropdown] = useState(false);
-  const [showUserPoliciesOnly, setShowUserPoliciesOnly] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  // Correct: declare exportType and dispatch at the top
+  const exportType = useSelector((state) => state.alert.exportType);
+  const dispatch = useDispatch();
 
   // Filter data based on search query
   const filteredData = useMemo(() => {
-    let filtered = policyData.filter(policy => {
-      const matchesSearch = !searchQuery || 
+    let filtered = policyData.filter((policy) => {
+      const matchesSearch =
+        !searchQuery ||
         policy.policyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         policy.alertName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         policy.userName?.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       return matchesSearch;
     });
 
@@ -71,35 +70,35 @@ export default function PoliciesTable({
     if (sortConfig.key) {
       filtered.sort((a, b) => {
         let aValue, bValue;
-        
+
         // Handle different field mappings
         switch (sortConfig.key) {
-          case 'policyName':
-            aValue = a.policyName || '';
-            bValue = b.policyName || '';
+          case "policyName":
+            aValue = a.policyName || "";
+            bValue = b.policyName || "";
             break;
-          case 'alertType':
-            aValue = a.alertName || '';
-            bValue = b.alertName || '';
+          case "alertType":
+            aValue = a.alertName || "";
+            bValue = b.alertName || "";
             break;
-          case 'status':
-            aValue = a.STATUS || '';
-            bValue = b.STATUS || '';
+          case "status":
+            aValue = a.STATUS || "";
+            bValue = b.STATUS || "";
             break;
-          case 'lastTriggered':
-            aValue = a.lastTrigered || '';
-            bValue = b.lastTrigered || '';
+          case "lastTriggered":
+            aValue = a.lastTrigered || "";
+            bValue = b.lastTrigered || "";
             break;
           default:
-            aValue = a[sortConfig.key] || '';
-            bValue = b[sortConfig.key] || '';
+            aValue = a[sortConfig.key] || "";
+            bValue = b[sortConfig.key] || "";
         }
-        
+
         if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
+          return sortConfig.direction === "asc" ? -1 : 1;
         }
         if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
+          return sortConfig.direction === "asc" ? 1 : -1;
         }
         return 0;
       });
@@ -108,25 +107,70 @@ export default function PoliciesTable({
     return filtered;
   }, [policyData, searchQuery, sortConfig]);
 
+  // CSV Export logic
+  useEffect(() => {
+    if (exportType === "csv") {
+      if (filteredData.length > 0) {
+        const csvRows = [];
+        // Header
+        const headers = [
+          "Policy Name",
+          "Alert Type",
+          "Status",
+          "Last Triggered",
+        ];
+        csvRows.push(headers.join(","));
+        // Data
+        filteredData.forEach((row) => {
+          csvRows.push(
+            [
+              '"' + (row.policyName || "") + '"',
+              '"' + (row.alertName || "") + '"',
+              '"' + (row.STATUS || "") + '"',
+              '"' + (row.lastTrigered || "") + '"',
+            ].join(",")
+          );
+        });
+        const csvString = csvRows.join("\r\n");
+        const blob = new Blob([csvString], {
+          type: "text/csv;charset=utf-8;",
+        });
+        saveAs(blob, "policies.csv");
+      }
+      dispatch(resetExportType());
+    } else if (exportType === "excel") {
+      if (filteredData.length > 0) {
+        exportPoliciesToExcel(filteredData);
+      }
+      dispatch(resetExportType());
+    } else if (exportType === "pdf") {
+      if (filteredData.length > 0) {
+        exportPoliciesToPDF(filteredData);
+      }
+      dispatch(resetExportType());
+    }
+  }, [exportType, dispatch, filteredData]);
+
   // Sorting handler
   const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
     }
     setSortConfig({ key, direction });
   };
 
   // Row selection handlers
   const handleRowSelect = (index) => {
-    setSelectedRows(prev => ({
+    setSelectedRows((prev) => ({
       ...prev,
-      [index]: !prev[index]
+      [index]: !prev[index],
     }));
   };
 
   const handleSelectAll = () => {
-    const allSelected = Object.keys(selectedRows).length === filteredData.length;
+    const allSelected =
+      Object.keys(selectedRows).length === filteredData.length;
     if (allSelected) {
       setSelectedRows({});
     } else {
@@ -138,7 +182,11 @@ export default function PoliciesTable({
     }
   };
 
-  const selectedCount = Object.keys(selectedRows).filter(key => selectedRows[key]).length;
+  const selectedCount = Object.keys(selectedRows).filter(
+    (key) => selectedRows[key]
+  ).length;
+
+  // ...existing code...
 
   // Action handlers
   const handleEdit = (policy) => {
@@ -153,9 +201,11 @@ export default function PoliciesTable({
     if (sortConfig.key !== columnKey) {
       return <ChevronUp size={14} className="text-gray-400" />;
     }
-    return sortConfig.direction === 'asc' ? 
-      <ChevronUp size={14} className="text-blue-600" /> : 
-      <ChevronDown size={14} className="text-blue-600" />;
+    return sortConfig.direction === "asc" ? (
+      <ChevronUp size={14} className="text-blue-600" />
+    ) : (
+      <ChevronDown size={14} className="text-blue-600" />
+    );
   };
 
   return (
@@ -169,7 +219,10 @@ export default function PoliciesTable({
               <th className="px-3 py-2 text-left w-12">
                 <input
                   type="checkbox"
-                  checked={selectedCount === filteredData.length && filteredData.length > 0}
+                  checked={
+                    selectedCount === filteredData.length &&
+                    filteredData.length > 0
+                  }
                   onChange={handleSelectAll}
                   className="rounded border-gray-300 w-4 h-4 text-blue-500 focus:ring-blue-500/30"
                   disabled={filteredData.length === 0}
@@ -177,38 +230,38 @@ export default function PoliciesTable({
               </th>
               <th className="px-3 py-2 text-left">
                 <button
-                  onClick={() => handleSort('policyName')}
+                  onClick={() => handleSort("policyName")}
                   className="flex items-center gap-2 text-xs font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
                 >
                   Policy Name
-                  {getSortIcon('policyName')}
+                  {getSortIcon("policyName")}
                 </button>
               </th>
               <th className="px-3 py-2 text-left">
                 <button
-                  onClick={() => handleSort('alertType')}
+                  onClick={() => handleSort("alertType")}
                   className="flex items-center gap-2 text-xs font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
                 >
                   Alert Type
-                  {getSortIcon('alertType')}
+                  {getSortIcon("alertType")}
                 </button>
               </th>
               <th className="px-3 py-2 text-left">
                 <button
-                  onClick={() => handleSort('status')}
+                  onClick={() => handleSort("status")}
                   className="flex items-center gap-2 text-xs font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
                 >
                   Status
-                  {getSortIcon('status')}
+                  {getSortIcon("status")}
                 </button>
               </th>
               <th className="px-3 py-2 text-left">
                 <button
-                  onClick={() => handleSort('lastTriggered')}
+                  onClick={() => handleSort("lastTriggered")}
                   className="flex items-center gap-2 text-xs font-semibold text-gray-900 uppercase tracking-wider hover:text-blue-600 transition-colors"
                 >
                   Last Triggered
-                  {getSortIcon('lastTriggered')}
+                  {getSortIcon("lastTriggered")}
                 </button>
               </th>
               <th className="px-3 py-2 text-center">
@@ -225,8 +278,12 @@ export default function PoliciesTable({
               <tr>
                 <td colSpan="6" className="px-3 py-8 text-center">
                   <div className="text-gray-500">
-                    <div className="text-sm font-medium">Loading policies...</div>
-                    <div className="text-xs mt-1">Please wait while we fetch the data</div>
+                    <div className="text-sm font-medium">
+                      Loading policies...
+                    </div>
+                    <div className="text-xs mt-1">
+                      Please wait while we fetch the data
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -234,7 +291,9 @@ export default function PoliciesTable({
               <tr>
                 <td colSpan="6" className="px-3 py-8 text-center">
                   <div className="text-red-500">
-                    <div className="text-sm font-medium">Error loading policies</div>
+                    <div className="text-sm font-medium">
+                      Error loading policies
+                    </div>
                     <div className="text-xs mt-1">{error}</div>
                   </div>
                 </td>
@@ -244,7 +303,9 @@ export default function PoliciesTable({
                 <td colSpan="6" className="px-3 py-8 text-center">
                   <div className="text-gray-500">
                     <div className="text-sm font-medium">No policies found</div>
-                    <div className="text-xs mt-1">No policies match the current search criteria</div>
+                    <div className="text-xs mt-1">
+                      No policies match the current search criteria
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -272,21 +333,23 @@ export default function PoliciesTable({
                   </td>
                   <td className="px-3 py-2">
                     <div className="text-xs text-gray-900">
-                      {policy.alertName || '-'}
+                      {policy.alertName || "-"}
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
-                      policy.STATUS === "Enabled" 
-                        ? "bg-green-100 text-green-800" 
-                        : "bg-red-100 text-red-800"
-                    }`}>
-                      {policy.STATUS || 'Unknown'}
+                    <span
+                      className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${
+                        policy.STATUS === "Enabled"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {policy.STATUS || "Unknown"}
                     </span>
                   </td>
                   <td className="px-3 py-2">
                     <div className="text-xs text-gray-900">
-                      {policy.lastTrigered || '-'}
+                      {policy.lastTrigered || "-"}
                     </div>
                   </td>
                   <td className="px-3 py-2">
@@ -317,26 +380,6 @@ export default function PoliciesTable({
           </tbody>
         </table>
       </div>
-
-      {/* Table Footer - Compact */}
-      {filteredData.length > 0 && (
-        <div className="px-3 py-2 border-t border-gray-200 bg-gray-50">
-          <div className="flex justify-between items-center text-xs text-gray-600">
-            <span>Total Policies: {filteredData.length}</span>
-            {selectedCount > 0 && (
-              <span>{selectedCount} polic{selectedCount > 1 ? 'ies' : 'y'} selected</span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Click outside handler for dropdown */}
-      {showExportDropdown && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setShowExportDropdown(false)}
-        />
-      )}
     </div>
   );
 }

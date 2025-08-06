@@ -112,6 +112,7 @@ const alertSlice = createSlice({
     onlyUnconfirmed: false,
     searchQuery: "",
     filteredCount: 0,
+    exportType: null, // 'csv' | 'excel' | 'pdf' | 'log-csv' | null
   },
   reducers: {
     clearAlerts: (state) => {
@@ -149,6 +150,12 @@ const alertSlice = createSlice({
     },
     setFilteredCount: (state, action) => {
       state.filteredCount = action.payload;
+    },
+    setExportType: (state, action) => {
+      state.exportType = action.payload;
+    },
+    resetExportType: (state) => {
+      state.exportType = null;
     },
   },
   extraReducers: (builder) => {
@@ -212,6 +219,8 @@ export const {
   setOnlyUnconfirmed,
   setSearchQuery,
   setFilteredCount,
+  setExportType,
+  resetExportType,
 } = alertSlice.actions;
 
 export default alertSlice.reducer;

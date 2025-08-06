@@ -1,15 +1,17 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { setFilteredCount } from "../../features/alertSlice";
+import { setFilteredCount, resetExportType } from "../../features/alertSlice";
 import Select from 'react-select';
 import { motion } from "framer-motion";
 import { Pencil, X } from "lucide-react";
+import { saveAs } from "file-saver";
 
 export default function AlertLogTable({ alertLogs = [], logLoading = false, logError = null }) {
   const dispatch = useDispatch();
   // Redux global filters
   const onlyUnconfirmed = useSelector(state => state.alert.onlyUnconfirmed);
   const searchQuery = useSelector(state => state.alert.searchQuery);
+  const exportType = useSelector(state => state.alert.exportType);
   const [selectedRows, setSelectedRows] = useState({});
 
 
@@ -110,7 +112,39 @@ export default function AlertLogTable({ alertLogs = [], logLoading = false, logE
     return text.substring(0, maxLength) + "...";
   };
 
-
+  // CSV Export logic for alert logs
+  React.useEffect(() => {
+    if (exportType === 'log-csv') {
+      if (filteredData.length > 0) {
+        const csvRows = [];
+        // Header
+        const headers = [
+          "Vehicle",
+          "Driver",
+          "Policy Name",
+          "Alert Type",
+          "Alarm Triggered",
+          "Status"
+        ];
+        csvRows.push(headers.join(","));
+        // Data
+        filteredData.forEach(row => {
+          csvRows.push([
+            '"' + ((row["Vehicle Name"] || row.vehicle) || '') + '"',
+            '"' + ((row["Driver_Name"] || row.driver) || '') + '"',
+            '"' + ((row["policyName"] || row.policyName) || '') + '"',
+            '"' + ((row["ALARM_TYPE"] || row.alertType) || '') + '"',
+            '"' + ((row["LastDateTime"] || row.alarmTriggered) || '') + '"',
+            '"' + ((row["Alarm_Status"] || row.status) || '') + '"',
+          ].join(","));
+        });
+        const csvString = csvRows.join("\r\n");
+        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        saveAs(blob, 'alert-logs.csv');
+      }
+      dispatch(resetExportType());
+    }
+  }, [exportType, filteredData, dispatch]);
 
   return (
     <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden relative ">

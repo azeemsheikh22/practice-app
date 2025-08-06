@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useDispatch } from "react-redux";
+import { setExportType } from "../../features/alertSlice";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { 
@@ -20,6 +22,7 @@ export default function PolicyManagementHeader({
   setSearchQuery, 
   totalRecords 
 }) {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showUserPoliciesOnly, setShowUserPoliciesOnly] = useState(false);
@@ -37,9 +40,8 @@ export default function PolicyManagementHeader({
 
   // Export handlers
   const handleExport = (type) => {
-    console.log(`Exporting as ${type}`);
     setShowExportDropdown(false);
-    // Add export logic here
+    dispatch(setExportType(type));
   };
 
   const handleCreateNewPolicy = () => {
@@ -171,8 +173,8 @@ export default function PolicyManagementHeader({
                         <button
                           key={type}
                           onClick={() => handleExport(type)}
-                          className="flex items-center gap-2 w-full px-4 py-2 text-sm hover:bg-gray-50 transition-colors"
-                          style={{ color: 'var(--text-color)' }}
+                          className="flex items-center gap-2 w-full px-4 py-2 text-sm hover:bg-gray-50 transition-colors cursor-pointer"
+                          style={{ color: 'var(--text-color)', cursor: 'pointer' }}
                         >
                           <Icon size={14} />
                           {label}

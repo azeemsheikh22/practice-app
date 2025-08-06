@@ -1,6 +1,6 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchAlertLogs, setOnlyUnconfirmed, setSearchQuery } from "../../features/alertSlice";
+import { fetchAlertLogs, setOnlyUnconfirmed, setSearchQuery, setExportType } from "../../features/alertSlice";
 import { motion } from "framer-motion";
 import {
   Search,
@@ -191,6 +191,18 @@ export default function AlertLogHeader({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 sm:flex-shrink-0">
+          {/* Export CSV Button */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => dispatch(setExportType('log-csv'))}
+            className="flex items-center justify-center w-9 h-9 bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 rounded-md transition-all duration-200 border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 outline-none cursor-pointer"
+            title="Export CSV"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 16v-8m0 8l-3-3m3 3l3-3M4.5 19.5A2.25 2.25 0 006.75 21h10.5a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0017.25 4.5H6.75A2.25 2.25 0 004.5 6.75v12.75z" />
+            </svg>
+          </motion.button>
           {/* Refresh Button */}
           <motion.button
             whileHover={{ scale: 1.02 }}
