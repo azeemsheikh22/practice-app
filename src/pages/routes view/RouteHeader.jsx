@@ -1,21 +1,25 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  Download,
+  // Download,
   Search,
   Plus,
   FileText,
   FileSpreadsheet,
   FileDown,
 } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { setSearchQuery, selectFilteredRoutesCount, selectTotalRoutesCount } from "../../features/routeSlice";
+
 
 export default function RouteHeader() {
-  const [searchTerm, setSearchTerm] = useState("");
+  const dispatch = useDispatch();
+  const searchTerm = useSelector((state) => state.route.searchQuery);
+  const filteredCount = useSelector(selectFilteredRoutesCount);
+  const totalRoutes = useSelector(selectTotalRoutesCount);
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
   const downloadRef = useRef(null);
-
-  // Static data for now (API nahi hai abhi)
-  const totalRoutes = 125;
 
   // Outside click handler for download dropdown
   useEffect(() => {
@@ -118,7 +122,7 @@ export default function RouteHeader() {
                 type="text"
                 placeholder="Search for a route..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => dispatch(setSearchQuery(e.target.value))}
                 className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#25689f] focus:border-transparent outline-none transition-all duration-200 w-full"
               />
             </div>
@@ -127,18 +131,16 @@ export default function RouteHeader() {
             <div className="flex items-center space-x-1.5 flex-shrink-0">
               <div className="w-1.5 h-1.5 bg-[#25689f] rounded-full animate-pulse"></div>
               <span className="text-xs text-gray-600">
-                Showing <span className="font-semibold text-[#25689f]">50</span>{" "}
+                Showing <span className="font-semibold text-[#25689f]">{filteredCount}</span>{" "}
                 of{" "}
-                <span className="font-semibold text-[#25689f]">
-                  {totalRoutes}
-                </span>{" "}
+                <span className="font-semibold text-[#25689f]">{totalRoutes}</span>{" "}
                 routes
               </span>
             </div>
           </div>
 
           {/* ✅ COMPACT Right side - Download button - Updated with theme colors */}
-          <div className="flex-shrink-0">
+          {/* <div className="flex-shrink-0">
             <div className="relative" ref={downloadRef}>
               <motion.button
                 variants={buttonVariants}
@@ -151,7 +153,7 @@ export default function RouteHeader() {
                 Download
               </motion.button>
 
-              {/* ✅ COMPACT Download Options */}
+           
               {isDownloadOpen && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -176,7 +178,7 @@ export default function RouteHeader() {
                 </motion.div>
               )}
             </div>
-          </div>
+          </div> */}
         </div>
       </motion.div>
     </div>

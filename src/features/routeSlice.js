@@ -47,6 +47,7 @@ const routeSlice = createSlice({
     routeFiltersApplied: false, // Flag to track if filters are applied
     currentRoute: null, // Add this for current route being created
     routeCalculationData: null, // Add this for route calculation results
+    searchQuery: "", // <-- Add search query to state
   },
   reducers: {
     clearRoutes: (state) => {
@@ -65,6 +66,10 @@ const routeSlice = createSlice({
     // ✅ Manual control for showing routes
     setShowRoutes: (state, action) => {
       state.showRoutes = action.payload;
+    },
+    // Set search query
+    setSearchQuery: (state, action) => {
+      state.searchQuery = action.payload;
     },
     toggleShowRoutes: (state) => {
       state.showRoutes = !state.showRoutes;
@@ -163,6 +168,7 @@ export const {
   clearCurrentRoute,
   setRouteWaypoints,
   updateRouteCalculationData,
+  setSearchQuery,
 } = routeSlice.actions;
 
 // Selectors
@@ -180,4 +186,18 @@ export const selectRouteDistance = (state) => state.route.routeCalculationData?.
 export const selectRouteDuration = (state) => state.route.routeCalculationData?.duration;
 
 export default routeSlice.reducer;
+
+// Selector for filtered routes based on search query
+export const selectFilteredRoutes = (state) => {
+  const query = state.route.searchQuery?.toLowerCase() || "";
+  if (!query) return state.route.routes;
+  return state.route.routes.filter(route =>
+    (route.routeName || "").toLowerCase().includes(query) ||
+    (route.originLatLng || "").toLowerCase().includes(query) ||
+    (route.destinationLatLng || "").toLowerCase().includes(query)
+  );
+};
+
+export const selectFilteredRoutesCount = (state) => selectFilteredRoutes(state).length;
+export const selectTotalRoutesCount = (state) => state.route.routes.length;
 

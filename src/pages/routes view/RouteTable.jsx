@@ -1,46 +1,38 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+
+import { useState, useCallback, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Pencil, Trash2 } from "lucide-react";
-import { fetchRouteListForUser } from "../../features/routeSlice";
+import { fetchRouteListForUser, selectFilteredRoutes } from "../../features/routeSlice";
 
 const RouteTable = () => {
   const dispatch = useDispatch();
   const [selectedRows, setSelectedRows] = useState({});
 
-  // Get routes data from Redux store
-  const {
-    routes,
-    loading: routesLoading,
-  } = useSelector((state) => state.route);
+  // Get filtered routes and loading state from Redux store
+  const routes = useSelector(selectFilteredRoutes);
+  const routesLoading = useSelector((state) => state.route.loading);
 
-  // Fetch routes data on component mount
+  // Fetch routes data on component mount (fetches all, filtering is selector-based)
   useEffect(() => {
-    if (!routes || routes.length === 0) {
-      dispatch(fetchRouteListForUser());
-    }
-  }, [dispatch, routes]);
+    dispatch(fetchRouteListForUser());
+  }, [dispatch]);
 
-  console.log("RouteTable rendered with routes:", routes);
 
   // Transform Redux routes data to match table structure
-  const routeData = useMemo(() => {
-    if (!routes || routes.length === 0) return [];
-    
-    return routes.map((route, index) => ({
-      id: index + 1,
-      routeName: route.routeName || 'N/A',
-      origin: route.originLatLng ? 
-        `${route.originLatLng.split(' ')[0]}, ${route.originLatLng.split(' ')[1]}` : 
-        'N/A',
-      destination: route.destinationLatLng ? 
-        `${route.destinationLatLng.split(' ')[0]}, ${route.destinationLatLng.split(' ')[1]}` : 
-        'N/A',
-      originID: route.OriginID || 0,
-      destinationID: route.DestinationID || 0,
-      routeString: route.routeString || '',
-      originalData: route // Keep original data for reference
-    }));
-  }, [routes]);
+  const routeData = (routes || []).map((route, index) => ({
+    id: index + 1,
+    routeName: route.routeName || 'N/A',
+    origin: route.originLatLng ? 
+      `${route.originLatLng.split(' ')[0]}, ${route.originLatLng.split(' ')[1]}` : 
+      'N/A',
+    destination: route.destinationLatLng ? 
+      `${route.destinationLatLng.split(' ')[0]}, ${route.destinationLatLng.split(' ')[1]}` : 
+      'N/A',
+    originID: route.OriginID || 0,
+    destinationID: route.DestinationID || 0,
+    routeString: route.routeString || '',
+    originalData: route // Keep original data for reference
+  }));
 
   // Row selection handlers
   const handleRowSelect = useCallback((index) => {
@@ -93,19 +85,42 @@ const RouteTable = () => {
     return `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}`;
   };
 
-  // Loading state
-  if (routesLoading) {
-    return (
-      <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-4 py-8 text-center">
-          <div className="text-gray-500">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#25689f] mx-auto mb-4"></div>
-            <div className="text-sm font-medium">Loading routes...</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+
+  // CSV Export function (without Route String)
+  const handleExportCSV = () => {
+    if (!routeData.length) return;
+    // Define CSV headers (no Route String)
+    const headers = [
+      'Route Name',
+      'Origin',
+      'Destination',
+      'Origin ID',
+      'Destination ID'
+    ];
+    // Map data rows (no Route String)
+    const rows = routeData.map(row => [
+      row.routeName,
+      row.origin,
+      row.destination,
+      row.originID,
+      row.destinationID
+    ]);
+    // Build CSV string
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\r\n');
+    // Download
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'routes_export.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
@@ -138,14 +153,23 @@ const RouteTable = () => {
             )}
           </div>
           
-          {/* Refresh Button */}
-          <button
-            onClick={() => dispatch(fetchRouteListForUser())}
-            disabled={routesLoading}
-            className="px-3 py-1.5 text-sm bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {routesLoading ? 'Loading...' : 'Refresh'}
-          </button>
+          {/* Refresh & Export Buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => dispatch(fetchRouteListForUser())}
+              disabled={routesLoading}
+              className="px-3 cursor-pointer py-1.5 text-sm bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 rounded-lg transition-colors disabled:opacity-50"
+            >
+              {routesLoading ? 'Loading...' : 'Refresh'}
+            </button>
+            <button
+              onClick={handleExportCSV}
+              disabled={routeData.length === 0}
+              className="px-3 cursor-pointer py-1.5 text-sm bg-[#1F557F]/10 text-[#1F557F] hover:bg-[#1F557F]/20 rounded-lg transition-colors disabled:opacity-50"
+            >
+              Export
+            </button>
+          </div>
         </div>
       </div>
 
@@ -258,18 +282,6 @@ const RouteTable = () => {
           </tbody>
         </table>
       </div>
-
-      {/* ✅ Table Footer with Summary */}
-      {routeData.length > 0 && (
-        <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
-          <div className="flex justify-between items-center text-sm text-gray-600">
-            <span>Total Routes: {routeData.length}</span>
-            {selectedCount > 0 && (
-              <span>{selectedCount} route{selectedCount > 1 ? 's' : ''} selected</span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

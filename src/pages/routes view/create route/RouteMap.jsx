@@ -206,17 +206,19 @@ const RouteMap = ({
 
     // Update tooltip position during drag
     const handleMouseMove = (e) => {
+      if (!mapInstanceRef.current) return;
       if (dragTooltip) {
         dragTooltip.style.left = e.originalEvent.pageX + 'px';
         dragTooltip.style.top = e.originalEvent.pageY + 'px';
       }
-    };
+    }
 
     // Remove tooltip on drag end
     const handleMouseUp = () => {
       if (dragTooltip) {
         document.body.removeChild(dragTooltip);
-        dragTooltip = null;
+        mapInstanceRef.current.removeControl(routeLayer);
+        setRouteLayer(null);
       }
     };
 
@@ -225,7 +227,8 @@ const RouteMap = ({
     map.on('mouseup', handleMouseUp);
 
     return () => {
-      if (dragTooltip && document.body.contains(dragTooltip)) {
+      // Clean up dragTooltip if it exists
+      if (typeof dragTooltip !== 'undefined' && dragTooltip && document.body.contains(dragTooltip)) {
         document.body.removeChild(dragTooltip);
       }
       map.off('mousedown', handleMouseDown);
@@ -382,8 +385,9 @@ const RouteMap = ({
             mapInstanceRef.current,
             handleMarkerDragEnd
           );
-          
           setWaypointMarkers([marker]);
+          // Center and zoom to the first waypoint
+          mapInstanceRef.current.setView([coords.lat, coords.lng], 15, { animate: true });
         }
 
         dispatch(setRouteCalculationData(null));

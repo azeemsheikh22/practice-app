@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Route, Save, X, Menu, ChevronLeft, Settings } from "lucide-react";
@@ -6,10 +7,12 @@ import RouteDetailTab from "./RouteDetailTab";
 import OptionsTab from "./OptionsTab"; // New component
 import { useSearchParams } from "react-router-dom";
 import { useDispatch } from "react-redux";
+import axios from "axios";
 import {
   setCurrentRoute,
   setRouteCalculationData,
 } from "../../../features/routeSlice";
+
 
 const CreateRoute = () => {
   const [searchParams] = useSearchParams();
@@ -18,20 +21,88 @@ const CreateRoute = () => {
   const [activeTab, setActiveTab] = useState("route"); // New state for tab management
   const dispatch = useDispatch();
 
-  const [routeForm, setRouteForm] = useState({
-    routeName: "",
-    waypoints: [
-      { id: 1, location: "" },
-      { id: 2, location: "" },
-    ],
-    // New options state
-    options: {
-      formType: "location", // "location" or "geofence"
+  // API base URL and token (match CreateGeofence.jsx)
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  const token = localStorage.getItem("token");
+
+  // Edit mode: fetch route data if edit=true and id is present (axios, token, base url)
+  useEffect(() => {
+    const isEdit = searchParams.get("edit") === "true";
+    const routeId = searchParams.get("id");
+    if (isEdit && routeId) {
+      const fetchRoute = async () => {
+        try {
+          const response = await axios.get(
+            `${API_BASE_URL}api/Geofence/Route`,
+            {
+              params: { routeid: routeId },
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+          const dataArr = response.data;
+          if (Array.isArray(dataArr) && dataArr.length > 0) {
+            const data = dataArr[0];
+            // Parse waypoints: origin, waypoints, destination
+            const waypointsArr = [];
+            // Origin
+            if (data.originLatLng) {
+              const [olat, olng] = data.originLatLng.split(" ").map(Number);
+              waypointsArr.push({ id: 1, location: `${olat}, ${olng}` });
+            }
+            // Waypoints (pipe-separated)
+            if (data.waypoints) {
+              const wps = data.waypoints.split("|").filter(Boolean);
+              wps.forEach((wp, idx) => {
+                const [lat, lng] = wp.split(" ").map(Number);
+                waypointsArr.push({ id: waypointsArr.length + 1, location: `${lat}, ${lng}` });
+              });
+            }
+            // Destination
+            if (data.destinationLatLng) {
+              const [dlat, dlng] = data.destinationLatLng.split(" ").map(Number);
+              waypointsArr.push({ id: waypointsArr.length + 1, location: `${dlat}, ${dlng}` });
+            }
+
+            // Set form fields
+            setRouteForm((prev) => ({
+              ...prev,
+              routeName: data.routeName || "",
+              waypoints: waypointsArr.length > 1 ? waypointsArr : prev.waypoints,
+              // You can add more fields if needed
+            }));
+          }
+        } catch (error) {
+          console.error("Error fetching route:", error);
+        }
+      };
+      fetchRoute();
     }
+  }, [searchParams, API_BASE_URL, token]);
+
+  const [routeForm, setRouteForm] = useState(() => {
+    // Get coordinates from URL if present
+    const lat = searchParams.get("lat");
+    const lng = searchParams.get("lng");
+    let firstLocation = "";
+    if (lat && lng && !isNaN(Number(lat)) && !isNaN(Number(lng))) {
+      firstLocation = `${parseFloat(lat)}, ${parseFloat(lng)}`;
+    }
+    return {
+      routeName: "",
+      waypoints: [
+        { id: 1, location: firstLocation },
+        { id: 2, location: "" },
+      ],
+      options: {
+        formType: "location", // "location" or "geofence"
+      }
+    };
   });
 
   // Get URL parameters
-  const isEditMode = searchParams.get("type") === "edit";
+  const isEditMode = searchParams.get("edit");
   const routeId = searchParams.get("id");
 
   // Update handleRouteCalculated function

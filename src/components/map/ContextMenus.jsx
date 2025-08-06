@@ -74,6 +74,7 @@ const ContextMenus = ({
             </button>
 
             <button
+
               onClick={handleCreateGeofence}
               className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
@@ -87,6 +88,27 @@ const ContextMenus = ({
                 <circle cx="12" cy="10" r="3"></circle>
               </svg>
               Create Geofence
+            </button>
+
+            {/* Create Route Option */}
+            <button
+              onClick={() => {
+                if (contextMenu.lat && contextMenu.lng) {
+                  const url = `/#/create-route?lat=${contextMenu.lat}&lng=${contextMenu.lng}`;
+                  window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no');
+                }
+              }}
+              className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
+            >
+              <svg
+                className="w-4 h-4 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 2v20M2 12h20" />
+              </svg>
+              Create Route
             </button>
 
             <button
