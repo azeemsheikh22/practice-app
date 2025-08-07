@@ -377,6 +377,7 @@ const ContextMenus = ({
               Zoom To
             </button>
 
+
             <button
               onClick={() =>
                 handleVehicleMenuAction(
@@ -396,6 +397,33 @@ const ContextMenus = ({
                 <circle cx="12" cy="10" r="3"></circle>
               </svg>
               Create a Geofence Here
+            </button>
+
+            {/* Create Route Option for Vehicle */}
+            <button
+              onClick={() => {
+                const v = vehicleContextMenu.vehicleData;
+                // Try to get lat/lng from vehicleData (support both camelCase and snake_case)
+                const lat = v.lat || v.latitude || v.Lat || v.Latitude || v.car_lat || v.carLat;
+                const lng = v.lng || v.lon || v.long || v.longitude || v.Lng || v.Lon || v.Longitude || v.car_lng || v.carLng;
+                if (lat && lng) {
+                  const url = `/#/create-route?lat=${lat}&lng=${lng}`;
+                  window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no');
+                } else {
+                  alert('Vehicle coordinates not available');
+                }
+              }}
+              className="w-full flex items-center cursor-pointer gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50"
+            >
+              <svg
+                className="w-4 h-4 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M12 2v20M2 12h20" />
+              </svg>
+              Create Route
             </button>
 
             <button
