@@ -262,7 +262,7 @@ const GeofenceManager = ({
     );
 
     // ✅ PERFORMANCE: Viewport culling for large datasets
-    if (filtered.length > 200 && mapBounds && mapZoom < 10) {
+    if (mapBounds) {
       filtered = filtered.filter((geofence) => {
         const coords = getCoordinates(geofence);
         return coords ? mapBounds.contains(coords) : false;

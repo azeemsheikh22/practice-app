@@ -5,7 +5,6 @@ import {
 } from "@reduxjs/toolkit";
 import * as signalR from "@microsoft/signalr";
 
-
 // Add these variables for saving connection state
 let savedUserId = null;
 let savedUserTypeId = null;
@@ -40,7 +39,6 @@ const initialState = {
   cacheExpiry: 5 * 60 * 1000, // 5 minutes cache expiry
 };
 
-
 export const initializeConnection = createAsyncThunk(
   "gpsTracking/initializeConnection",
   async (scope = 3, { dispatch, getState }) => {
@@ -68,7 +66,8 @@ export const initializeConnection = createAsyncThunk(
 
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(
-        `${import.meta.env.VITE_API_BASE_URL
+        `${
+          import.meta.env.VITE_API_BASE_URL
         }gpstracking?access_token=${encodeURIComponent(token)}`,
         {
           transport:
@@ -159,7 +158,8 @@ export const initializeConnection = createAsyncThunk(
           window.lastReceiveCarDataTime = now;
           console.log(`${data.length} vehicles`);
         } else {
-          const diffMs = now.getTime() - window.lastReceiveCarDataTime.getTime();
+          const diffMs =
+            now.getTime() - window.lastReceiveCarDataTime.getTime();
           const diffSec = (diffMs / 1000).toFixed(2);
           console.log(`${data.length} vehicles, ${diffSec} seconds`);
           window.lastReceiveCarDataTime = now;
@@ -245,6 +245,7 @@ export const updateVehicleFilter = createAsyncThunk(
   "gpsTracking/updateVehicleFilter",
   async (vehicleIds, { getState }) => {
     const { connection } = getState().gpsTracking;
+
     // Update saved vehicle IDs for reconnection
     window.savedVehicleIds = vehicleIds || [];
 
@@ -252,6 +253,8 @@ export const updateVehicleFilter = createAsyncThunk(
       connection &&
       connection.state === signalR.HubConnectionState.Connected
     ) {
+      console.log(vehicleIds);
+
       await connection.invoke("UpdateVehicleFilter", vehicleIds);
       return vehicleIds;
     } else {
@@ -341,7 +344,6 @@ const gpsTrackingSlice = createSlice({
           (car) => car.movingstatus === state.movingStatusFilter
         );
         state.carData = statusData;
-
       } else {
         state.carData = action.payload;
       }
@@ -360,8 +362,8 @@ const gpsTrackingSlice = createSlice({
         state.movingStatusFilter === "all"
           ? newVehicles
           : newVehicles.filter(
-            (v) => v.movingstatus === state.movingStatusFilter
-          );
+              (v) => v.movingstatus === state.movingStatusFilter
+            );
 
       // Use Map for efficient deduplication
       const vehicleMap = new Map();
@@ -438,8 +440,8 @@ const gpsTrackingSlice = createSlice({
             state.movingStatusFilter === "all"
               ? vehiclesToAdd
               : vehiclesToAdd.filter(
-                (car) => car.movingstatus === state.movingStatusFilter
-              );
+                  (car) => car.movingstatus === state.movingStatusFilter
+                );
 
           // Add new vehicles to carData (avoid duplicates)
           const existingCarIds = new Set(
@@ -606,8 +608,8 @@ const gpsTrackingSlice = createSlice({
               state.movingStatusFilter === "all"
                 ? vehiclesToAdd
                 : vehiclesToAdd.filter(
-                  (car) => car.movingstatus === state.movingStatusFilter
-                );
+                    (car) => car.movingstatus === state.movingStatusFilter
+                  );
 
             // Add new vehicles to carData (avoid duplicates)
             const existingCarIds = new Set(
