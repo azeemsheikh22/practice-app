@@ -952,7 +952,7 @@ const GeofenceMap = ({
         </div>
       </div> */}
 
-      <div className="absolute top-16 sm:top-120 right-2 z-[1000]">
+      <div className="absolute top-120 sm:top-120 right-2 z-[1000]">
         <div className="flex flex-col space-y-1 bg-white rounded-lg p-1 shadow-lg border border-gray-200">
           <button
             onClick={handleZoomIn}
@@ -969,7 +969,7 @@ const GeofenceMap = ({
         </div>
       </div>
 
-      <div className="absolute bottom-3 right-3 z-[1000]">
+      <div className="absolute bottom-10 right-3 z-[1000]">
         <div className="flex items-center space-x-2">
           <button
             onClick={handleFitToBounds}

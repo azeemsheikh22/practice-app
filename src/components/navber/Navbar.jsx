@@ -7,7 +7,7 @@ import menuIcon2 from "../../assets/menuICON2.png";
 import menuIcon3 from "../../assets/menuICON3.png";
 // import menuIcon4 from "../../assets/menuICON4.png";
 import menuIcon5 from "../../assets/menuICON5.png";
-import menuIcon6 from "../../assets/menuICON6.png";
+// import menuIcon6 from "../../assets/menuICON6.png";
 import menuIcon7 from "../../assets/menuICON7.png";
 import menuIcon8 from "../../assets/menuICON8.png";
 import menuIcon9 from "../../assets/menuICON9.png";
@@ -168,7 +168,7 @@ const Navbar = () => {
                 <NavItem
                   icon={<img src={menuIcon2} className="w-[18px] h-[18px]" />}
                   label="Reports"
-                  to="#"
+                  to="/reports"
                   active={isActive("/reports")}
                   openInNewTab={true}
                 />
@@ -379,7 +379,7 @@ const Navbar = () => {
                   <MobileNavItem
                     icon={<img src={menuIcon2} className="w-5 h-5" />}
                     label="Reports"
-                    to="#"
+                    to="/reports"
                     active={isActive("/reports")}
                     onClick={() => setMobileMenuOpen(false)}
                     openInNewTab={true}

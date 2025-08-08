@@ -14,6 +14,7 @@ import ChartDashboard from "../pages/chart dashboard/ChartDashboard";
 import NotFound from "../pages/not found/NotFound";
 import AdminNavigation from "../admin/AdminRoot";
 import AddPolicy from "../pages/alerts/alert policy/AddPolicy";
+import Reports from "../pages/reports/Reports";
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -65,6 +66,15 @@ function AllRoute() {
         element={
           <ProtectedRoute>
             <GeoFence />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute>
+            <Reports />
           </ProtectedRoute>
         }
       />

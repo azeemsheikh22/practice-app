@@ -214,6 +214,7 @@ const CreateGeofence = () => {
   return (
     <div className="min-h-screen bg-gray-50 relative">
       {/* Header - Reduced height and padding to match CreateRoute */}
+
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -221,22 +222,23 @@ const CreateGeofence = () => {
         className="bg-white shadow-sm border-b border-gray-200 px-2 sm:px-3 py-2 sm:py-3 overflow-hidden relative z-40"
       >
         {/* Responsive Header content */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 h-full w-full">
-          <div className="flex flex-row items-center gap-2 w-full">
+        <div className="flex items-center justify-between w-full min-h-[48px]">
+          {/* Left: Sidebar toggle, icon, title */}
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={toggleSidebar}
-              className="lg:hidden flex items-center justify-center w-8 h-8 bg-[#25689f]/10 rounded-md text-[#25689f] hover:bg-[#25689f]/20 transition-colors"
+              className="lg:hidden flex items-center justify-center w-9 h-9 bg-[#25689f]/10 rounded-md text-[#25689f] hover:bg-[#25689f]/20 transition-colors shrink-0"
+              aria-label="Open sidebar"
             >
-              <Menu size={16} />
+              <Menu size={18} />
             </motion.button>
-
-            <div className="p-1 bg-[#25689f]/10 rounded-md flex items-center justify-center">
-              <MapPin size={18} className="text-[#25689f]" />
+            <div className="p-1 bg-[#25689f]/10 rounded-md flex items-center justify-center shrink-0">
+              <MapPin size={20} className="text-[#25689f]" />
             </div>
             <div className="flex flex-col justify-center min-w-0">
-              <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+              <h1 className="text-base sm:text-lg font-semibold text-gray-900 truncate max-w-[60vw] sm:max-w-xs">
                 {isEditMode ? "Edit Geofence" : "Create Geofence"}
               </h1>
               {/* Show geofence name in header if edit mode and data available */}
@@ -244,21 +246,23 @@ const CreateGeofence = () => {
                 EditGeofenceData &&
                 Array.isArray(EditGeofenceData) &&
                 EditGeofenceData.length > 0 && (
-                  <div className="text-xs sm:text-sm text-gray-600 truncate">
+                  <div className="text-xs sm:text-sm text-gray-600 truncate max-w-[60vw] sm:max-w-xs">
                     <span className="font-medium">Name:</span>{" "}
                     {EditGeofenceData[0].geofenceName || "-"}
                   </div>
                 )}
             </div>
           </div>
-          <div className="flex items-center justify-end w-full sm:w-auto">
+          {/* Right: Close button */}
+          <div className="flex items-center justify-end flex-shrink-0 ml-2">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleClose}
               className="flex items-center px-2 sm:px-3 py-2 cursor-pointer bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors duration-200"
+              aria-label="Close"
             >
-              <X size={14} />
+              <X size={16} />
             </motion.button>
           </div>
         </div>
@@ -355,32 +359,6 @@ const CreateGeofence = () => {
           </div>
         </div>
       </motion.div>
-
-      {/* Mobile Status Bar - Compact */}
-      {geofenceData && (
-        <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="lg:hidden fixed bottom-16 left-3 right-3 bg-[#25689f] text-white p-2.5 rounded-md shadow-lg z-30"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-              <span className="text-xs font-medium">
-                ✅ {geofenceData.type} Geofence Ready
-              </span>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleSidebar}
-              className="text-xs bg-white/20 px-2 py-0.5 rounded-full hover:bg-white/30 transition-colors"
-            >
-              Settings
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 };
