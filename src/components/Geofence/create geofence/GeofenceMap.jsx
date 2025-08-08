@@ -58,6 +58,7 @@ L.Edit.Circle = L.Edit.CircleMarker.extend({
   },
 });
 
+
 const GeofenceMap = ({
   mapType,
   setMapType,
@@ -70,12 +71,12 @@ const GeofenceMap = ({
   const drawnItemsRef = useRef(null);
   const drawControlRef = useRef(null);
   const [isAddToMapOpen, setIsAddToMapOpen] = useState(false);
-  // const [suggestedGeofenceChecked, setSuggestedGeofenceChecked] =
-  //   useState(false);
-  // const [geofencesChecked, setGeofencesChecked] = useState(false);
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  // For radius input UI
+  const [activeCircle, setActiveCircle] = useState(null);
+  const [radiusInput, setRadiusInput] = useState(0);
 
   const dispatch = useDispatch();
   const { selectedLocation } = useSelector((state) => state.locationSearch);
@@ -220,6 +221,14 @@ const GeofenceMap = ({
             drawnItems.clearLayers();
             drawnItems.addLayer(layer);
 
+            // If circle, set up radius input
+            if (layerType === 'circle') {
+              setActiveCircle(layer);
+              setRadiusInput(Math.round(layer.getRadius()));
+            } else {
+              setActiveCircle(null);
+            }
+
             const geofenceData = calculateGeofenceData(layer, layerType);
             if (geofenceData && onGeofenceDrawn) {
               onGeofenceDrawn(geofenceData);
@@ -238,6 +247,12 @@ const GeofenceMap = ({
             const layers = e.layers;
             layers.eachLayer((layer) => {
               const layerType = getLayerType(layer);
+              if (layerType === 'circle') {
+                setActiveCircle(layer);
+                setRadiusInput(Math.round(layer.getRadius()));
+              } else {
+                setActiveCircle(null);
+              }
               const geofenceData = calculateGeofenceData(layer, layerType);
               if (geofenceData && onGeofenceDrawn) {
                 onGeofenceDrawn(geofenceData);
@@ -265,7 +280,21 @@ const GeofenceMap = ({
         // Clear previous shapes when starting new draw
         map.on(L.Draw.Event.DRAWSTART, () => {
           drawnItems.clearLayers();
+          setActiveCircle(null);
           setError(null);
+        });
+
+        // Listen for circle selection (edit mode)
+        map.on('click', function (e) {
+          let found = false;
+          drawnItems.eachLayer((layer) => {
+            if (layer instanceof L.Circle && layer.getBounds().contains(e.latlng)) {
+              setActiveCircle(layer);
+              setRadiusInput(Math.round(layer.getRadius()));
+              found = true;
+            }
+          });
+          if (!found) setActiveCircle(null);
         });
 
         mapInstanceRef.current = map;
@@ -720,6 +749,7 @@ const GeofenceMap = ({
           opacity: 0.8,
         });
         drawnItemsRef.current.addLayer(polygon);
+        setActiveCircle(null);
         if (latlngs.length > 0) {
           mapInstanceRef.current.fitBounds(polygon.getBounds(), {
             padding: [20, 20],
@@ -748,6 +778,8 @@ const GeofenceMap = ({
           opacity: 0.8,
         });
         drawnItemsRef.current.addLayer(circle);
+        setActiveCircle(circle);
+        setRadiusInput(Math.round(data.radius));
 
         mapInstanceRef.current.setView(center, data.zoomlevel || 13, {
           animate: true,
@@ -756,6 +788,23 @@ const GeofenceMap = ({
       }
     }
   }, [editMode, editGeofenceData]);
+
+  // Handle radius input change
+  const handleRadiusInputChange = (e) => {
+    const value = Number(e.target.value);
+    setRadiusInput(value);
+    if (activeCircle && !isNaN(value) && value > 0) {
+      activeCircle.setRadius(value);
+      // Fire edit event so parent gets updated data
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.fire(L.Draw.Event.EDITED, {
+          layers: {
+            eachLayer: (cb) => cb(activeCircle)
+          }
+        });
+      }
+    }
+  };
 
   return (
     <div className="relative h-full">
@@ -793,6 +842,25 @@ const GeofenceMap = ({
       )}
 
       <div ref={mapRef} className="w-full h-full" />
+
+      {/* Radius input for circle - always visible if a circle exists */}
+      {drawnItemsRef.current && drawnItemsRef.current.getLayers().some(l => l instanceof L.Circle) && (
+        <div
+          className="fixed right-0 top-20 transform -translate-x-1/2 z-[2001] bg-white rounded-lg shadow-lg border border-gray-200 px-3 py-1.5 flex items-center space-x-2"
+          style={{maxWidth: '95vw', minWidth: 0}}
+        >
+          <span className="text-xs font-medium text-gray-700 whitespace-nowrap">Radius:</span>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            value={radiusInput}
+            onChange={handleRadiusInputChange}
+            className="w-20 sm:w-24 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 text-xs"
+            style={{minWidth: 0}}
+          />
+        </div>
+      )}
 
       <div className="absolute top-3 left-3 z-[1000]">
         <div className="flex items-center space-x-1 bg-white rounded-lg p-1 shadow-lg border border-gray-200">

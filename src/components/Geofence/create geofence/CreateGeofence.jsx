@@ -271,7 +271,7 @@ const CreateGeofence = () => {
         transition={{ duration: 0.4, delay: 0.1 }}
         className="relative"
       >
-        <div className="grid grid-cols-1 lg:grid-cols-12 h-[90vh]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 h-[92vh]">
           {/* Desktop Sidebar - Reduced padding */}
           <div className="hidden lg:block lg:col-span-4 xl:col-span-3 bg-white overflow-auto shadow-sm border-r border-gray-200">
             <SidebarContent

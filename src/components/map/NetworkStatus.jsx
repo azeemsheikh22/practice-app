@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Wifi, WifiOff, Signal, Activity } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
+// Use only endpoints that allow CORS and are reliable
 const testEndpoints = [
-  '/api/ping',
-  'https://www.google.com/favicon.ico',
-  'https://jsonplaceholder.typicode.com/posts/1'
+  '/api/ping', // Your backend ping endpoint (should return 200)
+  'https://jsonplaceholder.typicode.com/posts/1' // Public test endpoint with CORS
 ];
 
 const NetworkStatus = () => {
@@ -15,14 +15,15 @@ const NetworkStatus = () => {
   const [isChecking, setIsChecking] = useState(false);
   const [lastStatus, setLastStatus] = useState('');
 
+  // Only return true if a real HTTP 200 response is received
   const verifyActualConnectivity = useCallback(async () => {
     for (const url of testEndpoints) {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 3000);
-        await fetch(url, { method: 'HEAD', cache: 'no-store', mode: 'no-cors', signal: controller.signal });
+        const res = await fetch(url, { method: 'GET', cache: 'no-store', mode: 'cors', signal: controller.signal });
         clearTimeout(timeout);
-        return true;
+        if (res && res.status === 200) return true;
       } catch {
         continue;
       }
@@ -30,6 +31,8 @@ const NetworkStatus = () => {
     return false;
   }, []);
 
+
+  // Only show ms if a real HTTP 200 response is received
   const checkConnectionSpeed = useCallback(async () => {
     if (!navigator.onLine) {
       setIsOnline(false);
@@ -40,33 +43,33 @@ const NetworkStatus = () => {
 
     setIsChecking(true);
     let pingDurations = [];
+    let got200 = false;
 
     for (const endpoint of testEndpoints) {
       try {
         const start = performance.now();
-        await fetch(endpoint, {
-          method: 'HEAD',
+        const res = await fetch(endpoint, {
+          method: 'GET',
           cache: 'no-cache',
-          mode: 'no-cors',
+          mode: 'cors',
           signal: AbortSignal.timeout(10000)
         });
         const end = performance.now();
-        const duration = end - start;
-        pingDurations.push(duration);
-        break;
+        if (res && res.status === 200) {
+          const duration = end - start;
+          pingDurations.push(duration);
+          got200 = true;
+          break;
+        }
       } catch (e) {
         continue;
       }
     }
 
-    if (pingDurations.length === 0) {
-      // fallback test using image
-      const imageDuration = await checkViaImage();
-      if (imageDuration) pingDurations.push(imageDuration);
-    }
-
-    if (pingDurations.length === 0) {
-      setConnectionSpeed('poor');
+    if (!got200) {
+      setConnectionSpeed('offline');
+      setIsOnline(false);
+      setPingTime(null);
       setIsChecking(false);
       return;
     }
@@ -90,15 +93,7 @@ const NetworkStatus = () => {
     setIsChecking(false);
   }, []);
 
-  const checkViaImage = () => {
-    return new Promise<number | null>((resolve) => {
-      const img = new Image();
-      const start = performance.now();
-      img.onload = () => resolve(performance.now() - start);
-      img.onerror = () => resolve(null);
-      img.src = `https://via.placeholder.com/50?cacheBust=${Date.now()}`;
-    });
-  };
+  // Remove checkViaImage fallback (not reliable for CORS)
 
   // Toast alerts
   useEffect(() => {
