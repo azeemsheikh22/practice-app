@@ -44,6 +44,8 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
     head: true,
     terminalKey: true,
     voltage: true,
+    duration: true,
+    trend: true,
   });
 
   const dispatch = useDispatch();
@@ -53,6 +55,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
   const columnDefinitions = [
     { key: "name", label: "Vehicle", width: "140px", isSticky: true },
     { key: "status", label: "Status", width: "100px" },
+    { key: "duration", label: "Duration", width: "100px" },
     { key: "location", label: "Location", width: "250px" },
     { key: "lastUpdate", label: "Last Update", width: "160px" },
     { key: "speed", label: "Speed", width: "80px" },
@@ -62,9 +65,10 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
     { key: "longitude", label: "Longitude", width: "100px" },
     { key: "acc", label: "ACC", width: "60px" },
     { key: "engine", label: "Engine", width: "70px" },
-    { key: "head", label: "Heading", width: "80px" },
-    { key: "terminalKey", label: "Terminal ID", width: "120px" },
+    { key: "head", label: "Direction", width: "80px" },
+    { key: "terminalKey", label: "Unit ID", width: "120px" },
     { key: "voltage", label: "Voltage", width: "80px" },
+    { key: "trend", label: "Movement Trend", width: "100px" },
   ];
 
   // ✅ VIRTUAL SCROLLING CONSTANTS
@@ -138,6 +142,8 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
       head: car?.head ?? "N/A",
       terminalKey: car?.terminalkey ?? "N/A",
       voltage: car?.voltage ?? "N/A",
+      duration: car?.duration ?? "N/A",
+      trend: car?.trend ?? "N/A",
       originalData: car,
     }));
   }, [carData]);
@@ -356,6 +362,16 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
       voltage: (
         <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
           {row.voltage}
+        </td>
+      ),
+      duration: (
+        <td className={`px-3 py-2 whitespace-nowrap text-xs ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
+          {row.duration}
+        </td>
+      ),
+      trend: (
+        <td className={`px-3 py-2 whitespace-nowrap text-xs ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
+          {row.trend && row.trend !== "N/A" ? row.trend : "-"}
         </td>
       ),
     };

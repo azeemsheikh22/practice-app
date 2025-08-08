@@ -253,7 +253,6 @@ export const updateVehicleFilter = createAsyncThunk(
       connection &&
       connection.state === signalR.HubConnectionState.Connected
     ) {
-      console.log(vehicleIds);
 
       await connection.invoke("UpdateVehicleFilter", vehicleIds);
       return vehicleIds;

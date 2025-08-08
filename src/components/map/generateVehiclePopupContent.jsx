@@ -8,20 +8,30 @@ export const generateVehiclePopupContent = (vehicleData) => {
     speed = 0,
     gps_time,
     location = "Unknown Address",
-    // mileage,
-    // signalstrength,
-    // acc,
     latitude,
     longitude,
+    duration,
+    voltage,
   } = vehicleData;
 
   // ✅ Static data for missing fields
   const drivername = "Unknown Driver";
-  const battery_percentage = 85;
 
   // ✅ CONDITIONAL SPEED: Only show for moving vehicles
   const isMoving = movingstatus?.toLowerCase() === "moving";
   const speedDisplay = isMoving ? `Speed: ${speed} km/h` : `Status: ${movingstatus || "Unknown"}`;
+
+  // ✅ Format voltage (show only the second value if comma-separated, else show as is)
+  let voltageDisplay = "-";
+  if (typeof voltage === "string" && voltage.includes(",")) {
+    const parts = voltage.split(",");
+    voltageDisplay = parts[1] ? `${parts[1]} V` : `${parts[0]} V`;
+  } else if (voltage !== undefined && voltage !== null && voltage !== "N/A") {
+    voltageDisplay = `${voltage} V`;
+  }
+
+  // ✅ Use duration from data, fallback to old calculation if missing
+  const durationDisplay = duration && duration !== "N/A" ? duration : formatDuration(gps_time);
 
   return `
     <div class="popup-container">
@@ -35,18 +45,12 @@ export const generateVehiclePopupContent = (vehicleData) => {
         </div>
       </div>
       <div class="popup-meta">
-        <div class="popup-meta-left">${formatDuration(gps_time)}</div>
+        <div class="popup-meta-left">${durationDisplay}</div>
         <div class="popup-meta-right ${isMoving ? 'speed-active' : 'status-inactive'}">${speedDisplay}</div>
       </div>
-      <div class="popup-info"><strong>Last update:</strong> ${formatTime(gps_time)}</div>
+      <div class="popup-info"><strong>Last update:</strong> ${formatDateTime(gps_time)}</div>
       <div class="popup-info">${location}</div>
-      <div class="popup-battery">
-        <span>Asset tracker battery</span>
-        <div class="battery-box">
-          <div class="battery-fill" style="width: ${battery_percentage}%"></div>
-        </div>
-        <span class="battery-text">${battery_percentage}%</span>
-      </div>
+      <div class="popup-info"><strong>Voltage:</strong> ${voltageDisplay}</div>
       <div class="popup-buttons">
         <button class="popup-btn" onclick="window.zoomToVehicle && window.zoomToVehicle(${car_id})">ZOOM TO</button>
         <button class="popup-btn" onclick="window.openStreetView && window.openStreetView(${latitude}, ${longitude})">STREET VIEW</button>
@@ -56,37 +60,33 @@ export const generateVehiclePopupContent = (vehicleData) => {
 };
 
 // ✅ Helper functions
-function formatTime(dateStr) {
+
+// Show both date and time in a nice format
+function formatDateTime(dateStr) {
   if (!dateStr) return "N/A";
   try {
-    return new Date(dateStr).toLocaleTimeString();
+    const d = new Date(dateStr);
+    return d.toLocaleDateString() + ' ' + d.toLocaleTimeString();
   } catch (error) {
-    return "Invalid time";
+    return "Invalid date/time";
   }
 }
 
 function formatDuration(gps_time) {
   if (!gps_time) return "00:00";
-  
   try {
     const now = new Date();
     const gps = new Date(gps_time);
     const diffMs = now - gps;
-    
     if (diffMs < 0) return "00:00";
-    
     const minutes = Math.floor(diffMs / 60000);
     const seconds = Math.floor((diffMs % 60000) / 1000);
-    
     if (minutes >= 60) {
       const hours = Math.floor(minutes / 60);
       const remainingMinutes = minutes % 60;
       return `${hours}h ${remainingMinutes}m`;
     }
-    
-    return `${minutes.toString().padStart(2, "0")}:${seconds
-      .toString()
-      .padStart(2, "0")}`;
+    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   } catch (error) {
     return "00:00";
   }

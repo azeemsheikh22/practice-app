@@ -7,7 +7,6 @@ import {
   MoreVertical,
   Battery,
   Wifi,
-  Activity,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedVehicle } from "../../features/mapInteractionSlice";
@@ -122,10 +121,17 @@ const VehicleCard = React.memo(({ car }) => {
     return parseFloat(mileage).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }, []);
 
-  // Format voltage
+  // Format voltage (show only the second value if comma-separated, else show as is)
   const formatVoltage = useCallback((voltage) => {
     if (voltage === null || voltage === undefined) return "N/A";
-    return parseFloat(voltage).toFixed(1) + "V";
+    if (typeof voltage === "string" && voltage.includes(",")) {
+      const parts = voltage.split(",");
+      return (parts[1] ? parseFloat(parts[1]).toFixed(2) : parseFloat(parts[0]).toFixed(2)) + " V";
+    }
+    if (voltage !== "N/A") {
+      return parseFloat(voltage).toFixed(2) + " V";
+    }
+    return "N/A";
   }, []);
 
   const handleCardClick = useCallback(() => {
@@ -422,11 +428,11 @@ const VehicleCard = React.memo(({ car }) => {
               </span>
             </div>
             
-            {/* Mileage */}
+            {/* Duration */}
             <div className="flex items-center">
-              <Activity size={14} className="mr-1.5 flex-shrink-0 text-blue-500" />
-              <span title="Mileage (km)">
-                {formatMileage(stableCarData.mileage)}
+              <Clock size={14} className="mr-1.5 flex-shrink-0 text-blue-500" />
+              <span title="Duration">
+                {car.duration && car.duration !== "N/A" ? car.duration : "-"}
               </span>
             </div>
             
