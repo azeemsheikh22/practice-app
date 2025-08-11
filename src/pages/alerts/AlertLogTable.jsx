@@ -18,12 +18,6 @@ export default function AlertLogTable({ alertLogs = [], logLoading = false, logE
   // Use API data if available, otherwise fallback to sample data
   const logsToShow = alertLogs;
   
-  // Log API data for verification
-  useEffect(() => {
-    if (alertLogs && alertLogs.length > 0) {
-      console.log("Alert Logs API Data:", alertLogs);
-    }
-  }, [alertLogs]);
 
   // Column filters state
   const [vehicleFilter, setVehicleFilter] = useState(null);

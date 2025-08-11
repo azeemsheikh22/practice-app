@@ -11,6 +11,8 @@ const MatrixPage = () => {
   const [selectedTimeFilter, setSelectedTimeFilter] = useState("today");
   const [metricsData, setMetricsData] = useState(null);
   const [matrixTableData, setMatrixTableData] = useState(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [tableLoading, setTableLoading] = useState(false);
   const token = localStorage.getItem("token");
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -125,10 +127,12 @@ const MatrixPage = () => {
 
   // Fetch metrics data when selectedTimeFilter or geoid changes
   useEffect(() => {
+    let isMounted = true;
+    setMetricsLoading(true);
+    setMetricsData(null);
     const fetchMetrics = async () => {
       try {
         const { from, to } = getDateRange(selectedTimeFilter);
-
         const response = await axios.get(
           `${API_BASE_URL}api/geofence/GeofenceMatrics`,
           {
@@ -142,22 +146,26 @@ const MatrixPage = () => {
             },
           }
         );
-        setMetricsData(response.data);
+        if (isMounted) setMetricsData(response.data);
       } catch (error) {
+        if (isMounted) setMetricsData(null);
         console.error("Error fetching geofence metrics:", error);
-        setMetricsData(null);
+      } finally {
+        if (isMounted) setMetricsLoading(false);
       }
     };
-
     fetchMetrics();
+    return () => { isMounted = false; };
   }, [selectedTimeFilter, geoid]);
 
   // Fetch matrix table data when selectedTimeFilter or geoid changes
   useEffect(() => {
+    let isMounted = true;
+    setTableLoading(true);
+    setMatrixTableData(null);
     const fetchMatrixTableData = async () => {
       try {
         const { from, to } = getDateRange(selectedTimeFilter);
-
         const response = await axios.get(
           `${API_BASE_URL}api/geofence/GeofenceStops`,
           {
@@ -171,14 +179,16 @@ const MatrixPage = () => {
             },
           }
         );
-        setMatrixTableData(response.data);
+        if (isMounted) setMatrixTableData(response.data);
       } catch (error) {
+        if (isMounted) setMatrixTableData(null);
         console.error("Error fetching geofence stops:", error);
-        setMatrixTableData(null);
+      } finally {
+        if (isMounted) setTableLoading(false);
       }
     };
-
     fetchMatrixTableData();
+    return () => { isMounted = false; };
   }, [selectedTimeFilter, geoid]);
 
   return (
@@ -237,6 +247,7 @@ const MatrixPage = () => {
               selectedTimeFilter={selectedTimeFilter}
               setSelectedTimeFilter={setSelectedTimeFilter}
               metricsData={metricsData}
+              loading={metricsLoading}
             />
           </div>
 
@@ -277,6 +288,7 @@ const MatrixPage = () => {
                   setSelectedTimeFilter={setSelectedTimeFilter}
                   isMobile={true}
                   metricsData={metricsData}
+                  loading={metricsLoading}
                 />
               </motion.div>
             </>
@@ -284,7 +296,7 @@ const MatrixPage = () => {
 
           {/* Table Section */}
           <div className="col-span-1 lg:col-span-8 xl:col-span-9 h-full overflow-hidden">
-            <MatrixTable selectedTimeFilter={selectedTimeFilter} matrixTableData={matrixTableData} />
+            <MatrixTable selectedTimeFilter={selectedTimeFilter} matrixTableData={matrixTableData} loading={tableLoading} />
           </div>
         </div>
       </motion.div>

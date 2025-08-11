@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Calendar, Car, Clock, MapPin, Route, Timer } from "lucide-react";
 
-const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, metricsData, isMobile = false }) => {
+const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, metricsData, isMobile = false, loading = false }) => {
   // Time filter options
   const timeFilterOptions = [
     { value: "today", label: "Today" },
@@ -115,44 +115,51 @@ const MatrixSidebar = ({ selectedTimeFilter, setSelectedTimeFilter, metricsData,
         <h3 className="text-lg font-semibold text-gray-800 border-b border-gray-200 pb-2">
           Analytics Overview
         </h3>
-        
-        {analyticsData.map((item, index) => (
-          <motion.div
-            key={item.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-            className={`p-4 rounded-lg border-2 ${item.bgColor} ${item.borderColor} hover:shadow-md transition-all duration-200`}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-1">
-                  {item.icon}
-                  <h4 className="text-sm font-medium text-gray-700">
-                    {item.title}
-                  </h4>
-                </div>
-                
-                <div className="flex items-baseline space-x-1">
-                  <span className="text-2xl font-bold text-gray-900">
-                    {item.value}
-                  </span>
-                  {item.unit && (
-                    <span className="text-sm text-gray-600 font-medium">
-                      {item.unit}
+        {loading ? (
+          <div className="flex justify-center items-center h-40">
+            <svg className="animate-spin h-8 w-8 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
+            <span className="ml-2 text-amber-600 font-medium">Loading analytics...</span>
+          </div>
+        ) : (
+          analyticsData.map((item, index) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+              className={`p-4 rounded-lg border-2 ${item.bgColor} ${item.borderColor} hover:shadow-md transition-all duration-200`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-1">
+                    {item.icon}
+                    <h4 className="text-sm font-medium text-gray-700">
+                      {item.title}
+                    </h4>
+                  </div>
+                  <div className="flex items-baseline space-x-1">
+                    <span className="text-2xl font-bold text-gray-900">
+                      {item.value}
                     </span>
+                    {item.unit && (
+                      <span className="text-sm text-gray-600 font-medium">
+                        {item.unit}
+                      </span>
+                    )}
+                  </div>
+                  {item.subtitle && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {item.subtitle}
+                    </p>
                   )}
                 </div>
-                
-                {item.subtitle && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {item.subtitle}
-                  </p>
-                )}
               </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          ))
+        )}
       </div>  
     </div>
   );
