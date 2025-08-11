@@ -12,7 +12,7 @@ export const fetchRouteListForUser = createAsyncThunk(
 
       const apiUrl = `${API_BASE_URL}api/geofence/RouteListforUser?userid=${userid}`;
 
-      const response = await fetch(apiUrl, {
+      const response = await fetch(apiUrl,{
         method: "GET",
         headers: {
           "Content-Type": "application/json",
