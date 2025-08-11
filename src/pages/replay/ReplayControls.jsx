@@ -99,7 +99,7 @@ const ReplayControls = ({
     };
 
     return (
-        <div className="bg-white border-t border-gray-200 shadow-lg">
+        <div className="bg-white ">
             {/* Compact Progress Bar */}
             <div className="px-2 sm:px-4 py-2">
                 <ReplayProgressBar

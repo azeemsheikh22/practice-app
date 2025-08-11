@@ -272,31 +272,31 @@ const ReplayMap = forwardRef(({ replayData, isPlaying, currentTime, isMobileMenu
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleFitToBounds}
-          className="flex items-center px-3 py-2 bg-white/95 backdrop-blur-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg shadow-lg border border-gray-200 text-xs font-medium transition-all duration-200"
+          className="flex items-center px-3 py-2 bg-white/95 backdrop-blur-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg shadow-lg border border-gray-200 text-xs font-medium transition-all cursor-pointer duration-200"
         >
-          <Navigation size={14} className="mr-1.5" />
-          Fit View
+          <Navigation size={14} />
+    
         </motion.button>
         
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={toggleFullscreen}
-          className="flex items-center px-3 py-2 bg-white/95 backdrop-blur-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg shadow-lg border border-gray-200 text-xs font-medium transition-all duration-200"
+          className="flex items-center px-3 py-2 bg-white/95 backdrop-blur-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg shadow-lg border border-gray-200 text-xs font-medium transition-all cursor-pointer duration-200"
         >
-          {isFullscreen ? <Minimize size={14} className="mr-1.5" /> : <Maximize size={14} className="mr-1.5" />}
-          {isFullscreen ? 'Exit' : 'Full'}
+          {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
+ 
         </motion.button>
 
-        <motion.button
+        {/* <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handlePrintMap}
           className="flex items-center px-3 py-2 bg-white/95 backdrop-blur-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg shadow-lg border border-gray-200 text-xs font-medium transition-all duration-200"
         >
           <Printer size={14} className="mr-1.5" />
-          Print
-        </motion.button>
+  
+        </motion.button> */}
       </div>
     </div>
   </div>

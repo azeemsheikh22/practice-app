@@ -96,7 +96,7 @@ const Replay = () => {
       {!isMobileMenuOpen && (
         <button
           onClick={toggleMobileMenu}
-          className="lg:hidden fixed top-20 left-4 z-[9999] p-3 bg-gradient-to-r from-[#25689f] to-[#1F557F] text-white rounded-full shadow-xl hover:from-[#1F557F] hover:to-[#184567] transition-all duration-200 cursor-pointer transform hover:scale-105 border-2 border-white"
+          className="lg:hidden fixed top-30 left-4 z-[9999] p-3 bg-gradient-to-r from-[#25689f] to-[#1F557F] text-white rounded-full  hover:from-[#1F557F] hover:to-[#184567] transition-all duration-200 cursor-pointer transform hover:scale-105 border-2 border-white"
           style={{
             boxShadow: "0 8px 25px rgba(37, 104, 159, 0.5)",
           }}
@@ -141,7 +141,7 @@ const Replay = () => {
           </div>
 
           {/* Controls */}
-          <div className="flex-shrink-0 relative z-10">
+          <div className="flex-shrink-0 relative ">
             <ReplayControls
               replayData={replayData}
               onPlayStateChange={handlePlayStateChange}
