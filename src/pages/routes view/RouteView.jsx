@@ -1,5 +1,6 @@
 import Navbar from "../../components/navber/Navbar";
 import RouteHeader from "./RouteHeader";
+import DashboardPage from "./DashboardPage";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { 
@@ -10,41 +11,54 @@ import {
   ChevronRight 
 } from "lucide-react";
 import RouteTable from "./RouteTable";
+import PlanningPage from "./PlanningPage";
+import UploadKMLPage from "./UploadKMLPage";
 
 const RoutesView = () => {
+  // Tabs state
+  const [activeTab, setActiveTab] = useState("routes");
 
   const navigationItems = [
     {
       id: "dashboard",
       label: "Dashboard",
       icon: <LayoutDashboard size={16} />,
-      path: "#"
     },
     {
       id: "routes", 
       label: "Routes",
       icon: <Route size={16} />,
-      path: "#",
-      active: true
     },
     {
       id: "planning",
       label: "Planning", 
       icon: <MapPin size={16} />,
-      path: "#"
     },
     {
       id: "upload-kml",
       label: "Upload KML File", 
       icon: <Upload size={16} />,
-      path: "#"
     }
   ];
 
-  const handleNavigation = (item) => {
-    if (!item.active) {
-      // Navigate to other pages
-      window.location.href = item.path;
+  // Render content for each tab
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "dashboard":
+        return <DashboardPage />;
+      case "routes":
+        return (
+          <>
+            <RouteHeader />
+            <RouteTable />
+          </>
+        );
+      case "planning":
+        return <PlanningPage />;
+      case "upload-kml":
+        return <UploadKMLPage />;
+      default:
+        return null;
     }
   };
 
@@ -62,19 +76,18 @@ const RoutesView = () => {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  // onClick={() => handleNavigation(item)}
+                  onClick={() => setActiveTab(item.id)}
                   className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg cursor-pointer text-sm font-medium transition-all duration-200 ${
-                    item.active
+                    activeTab === item.id
                       ? "bg-gradient-to-r from-[#25689f] to-[#1F557F] text-white shadow-md"
                       : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
                 >
-                  <span className={item.active ? "text-white" : "text-gray-500"}>
+                  <span className={activeTab === item.id ? "text-white" : "text-gray-500"}>
                     {item.icon}
                   </span>
                   <span>{item.label}</span>
                 </motion.button>
-                
                 {index < navigationItems.length - 1 && (
                   <ChevronRight size={16} className="text-gray-400 mx-2" />
                 )}
@@ -95,13 +108,8 @@ const RoutesView = () => {
               {/* Mobile Menu Button */}
               <div className="relative">
                 <select
-                  onChange={(e) => {
-                    const selectedItem = navigationItems.find(item => item.id === e.target.value);
-                    if (selectedItem && !selectedItem.active) {
-                      handleNavigation(selectedItem);
-                    }
-                  }}
-                  value="routes"
+                  onChange={(e) => setActiveTab(e.target.value)}
+                  value={activeTab}
                   className="appearance-none bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f]"
                 >
                   {navigationItems.map((item) => (
@@ -119,8 +127,7 @@ const RoutesView = () => {
 
       {/* Main Content */}
       <div className="w-full max-w-[1800px] mx-auto px-2 sm:px-4 lg:px-6 py-4">
-        <RouteHeader />
-        <RouteTable />
+        {renderTabContent()}
       </div>
     </div>
   );

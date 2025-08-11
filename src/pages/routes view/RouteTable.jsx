@@ -131,12 +131,6 @@ const RouteTable = () => {
             <h3 className="text-md font-semibold text-gray-900">
               Routes ({routeData.length})
             </h3>
-            {routesLoading && (
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#25689f]"></div>
-                <span className="text-sm text-gray-500">Loading...</span>
-              </div>
-            )}
             {selectedCount > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">

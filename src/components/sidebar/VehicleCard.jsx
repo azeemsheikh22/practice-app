@@ -116,10 +116,10 @@ const VehicleCard = React.memo(({ car }) => {
   }, []);
 
   // Format mileage with commas and fixed decimal
-  const formatMileage = useCallback((mileage) => {
-    if (mileage === null || mileage === undefined) return "N/A";
-    return parseFloat(mileage).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  }, []);
+  // const formatMileage = useCallback((mileage) => {
+  //   if (mileage === null || mileage === undefined) return "N/A";
+  //   return parseFloat(mileage).toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  // }, []);
 
   // Format voltage (show only the second value if comma-separated, else show as is)
   const formatVoltage = useCallback((voltage) => {
