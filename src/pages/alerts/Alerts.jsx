@@ -21,6 +21,7 @@ export default function Alerts() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSort, setSelectedSort] = useState("Most Triggered");
   const [selectedLogDateRange, setSelectedLogDateRange] = useState("Today");
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const dispatch = useDispatch();
   const {
     policyList,
@@ -105,6 +106,16 @@ export default function Alerts() {
       dispatch(fetchAlertLogs(dateRange));
     }
   }, [dispatch, selectedLogDateRange, activeTab]);
+
+  // Auto Refresh logic for Alert Log tab
+  useEffect(() => {
+    if (activeTab !== "alert-log" || !autoRefresh) return;
+    const dateRange = getLogDateRange(selectedLogDateRange);
+    const interval = setInterval(() => {
+      dispatch(fetchAlertLogs(dateRange));
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, activeTab, selectedLogDateRange, dispatch]);
   const handleLogDateRangeChange = (newTimeframe) => {
     setSelectedLogDateRange(newTimeframe);
   };
@@ -243,6 +254,8 @@ export default function Alerts() {
               selectedTimeframe={selectedLogDateRange}
               setSelectedTimeframe={handleLogDateRangeChange}
               dateRange={getLogDateRange(selectedLogDateRange)}
+              autoRefresh={autoRefresh}
+              setAutoRefresh={setAutoRefresh}
             />
             <AlertLogTable
               alertLogs={alertLogs}

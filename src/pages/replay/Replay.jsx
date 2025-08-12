@@ -4,8 +4,10 @@ import Navbar from "../../components/navber/Navbar";
 import ReplaySidebar from "./ReplaySidebar";
 import ReplayMap from "./ReplayMap";
 import ReplayControls from "./ReplayControls";
+
 import { useDispatch, useSelector } from "react-redux";
 import { initializeConnection, selectConnectionStatus } from "../../features/gpsTrackingSlice";
+import { fetchReplayData, selectReplayData } from "../../features/replaySlice";
 
 const Replay = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
@@ -16,7 +18,22 @@ const Replay = () => {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [filters, setFilters] = useState({});
   const mapRef = useRef(null);
+
   const dispatch = useDispatch();
+  const replayApiData = useSelector(selectReplayData);
+  // Fetch replay data on mount
+  useEffect(() => {
+    dispatch(fetchReplayData());
+  }, [dispatch]);
+
+  // Log replay data from API
+  useEffect(() => {
+    if (replayApiData) {
+      console.log("[Replay API Data]", replayApiData);
+    }
+  }, [replayApiData]);
+
+
 
   const connectionStatus = useSelector(selectConnectionStatus);
 

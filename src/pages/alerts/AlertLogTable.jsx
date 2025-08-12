@@ -15,6 +15,9 @@ export default function AlertLogTable({ alertLogs = [], logLoading = false, logE
   const [selectedRows, setSelectedRows] = useState({});
 
 
+  // console.log(alertLogs)
+
+
   // Use API data if available, otherwise fallback to sample data
   const logsToShow = alertLogs;
   

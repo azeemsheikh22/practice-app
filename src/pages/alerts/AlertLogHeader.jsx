@@ -13,13 +13,16 @@ import {
 export default function AlertLogHeader({
   selectedTimeframe,
   setSelectedTimeframe,
-  dateRange
+  dateRange,
+  autoRefresh,
+  setAutoRefresh
 }) {
   const dispatch = useDispatch();
   const onlyUnconfirmed = useSelector((state) => state.alert.onlyUnconfirmed);
   const searchQuery = useSelector((state) => state.alert.searchQuery);
   const [alarmSound, setAlarmSound] = React.useState(false);
-  const [autoRefresh, setAutoRefresh] = React.useState(false);
+
+
 
   // Dynamic counts from slice
   const totalAlerts = useSelector((state) => state.alert.alertLogs.length);

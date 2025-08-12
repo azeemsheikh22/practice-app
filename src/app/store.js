@@ -6,6 +6,7 @@ import geofenceReducer from '../features/geofenceSlice';
 import liveDashboardReducer from '../features/liveDashboardSlice';
 import locationSearchReducer from '../features/locationSearchSlice';
 import routeReducer from '../features/routeSlice'; // ✅ NEW IMPORT
+import replayReducer from '../features/replaySlice'; // ✅ REPLAY IMPORT
 import alertReducer from '../features/alertSlice'; // ✅ ALERT IMPORT
 
 export const store = configureStore({
@@ -18,7 +19,7 @@ export const store = configureStore({
     locationSearch: locationSearchReducer,
     route: routeReducer, // ✅ NEW REDUCER
     alert: alertReducer, // ✅ ALERT REDUCER
-    // other reducers...
+    replay: replayReducer, // ✅ REPLAY REDUCER
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

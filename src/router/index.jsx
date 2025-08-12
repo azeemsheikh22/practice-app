@@ -15,6 +15,7 @@ import NotFound from "../pages/not found/NotFound";
 import AdminNavigation from "../admin/AdminRoot";
 import AddPolicy from "../pages/alerts/alert policy/AddPolicy";
 import Reports from "../pages/reports/Reports";
+import Prevention from "../pages/prevention/Prevention";
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -66,6 +67,15 @@ function AllRoute() {
         element={
           <ProtectedRoute>
             <GeoFence />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/prevention"
+        element={
+          <ProtectedRoute>
+            <Prevention />
           </ProtectedRoute>
         }
       />
