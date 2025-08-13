@@ -1,4 +1,6 @@
+// (moved inside component)
 import { useState, useEffect } from "react";
+import ReplayDetailsTab from "./ReplayDetailsTab";
 import {
   Play,
   Search,
@@ -13,10 +15,13 @@ import ReplayTreeView from "./ReplayTreeView";
 const ReplaySidebar = ({
   isExpanded,
   onToggleExpand,
-  onReplayDataReceived,
+  onGetReplayData,
   isMobileMenuOpen,
   onMobileMenuToggle,
 }) => {
+  const replayData = useSelector((state) => state.replay.replayData);
+  // (already declared above)
+  const replayLoading = useSelector((state) => state.replay.loading);
   const [activeTab, setActiveTab] = useState("selection");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState(null);
@@ -30,6 +35,7 @@ const ReplaySidebar = ({
   const [quickFilter, setQuickFilter] = useState("today");
 
   const rawVehicles = useSelector((state) => state.gpsTracking.rawVehicleList);
+  const vehiclesLoading = useSelector((state) => state.gpsTracking.loading);
 
   // Initialize dates
   useEffect(() => {
@@ -186,53 +192,16 @@ const ReplaySidebar = ({
       alert("Please select a vehicle first");
       return;
     }
-
-    const replayData = {
-      vehicle: selectedVehicle,
-      fromDate,
-      toDate,
-      fromTime,
-      toTime,
-      quickFilter,
-    };
-
-    console.log("Getting replay data:", replayData);
-
-    if (onReplayDataReceived) {
-      onReplayDataReceived([
-        {
-          latitude: 30.3753,
-          longitude: 69.3451,
-          timestamp: "2024-01-01T10:00:00Z",
-          speed: 45,
-        },
-        {
-          latitude: 30.3853,
-          longitude: 69.3551,
-          timestamp: "2024-01-01T10:01:00Z",
-          speed: 50,
-        },
-        {
-          latitude: 30.3953,
-          longitude: 69.3651,
-          timestamp: "2024-01-01T10:02:00Z",
-          speed: 40,
-        },
-        {
-          latitude: 30.4053,
-          longitude: 69.3751,
-          timestamp: "2024-01-01T10:03:00Z",
-          speed: 35,
-        },
-        {
-          latitude: 30.4153,
-          longitude: 69.3851,
-          timestamp: "2024-01-01T10:04:00Z",
-          speed: 55,
-        },
-      ]);
+    if (onGetReplayData) {
+      onGetReplayData({
+        vehicle: selectedVehicle,
+        fromDate,
+        toDate,
+        fromTime,
+        toTime,
+        quickFilter,
+      });
     }
-
     // Close mobile menu after getting data on small screens
     if (window.innerWidth < 1024) {
       onMobileMenuToggle(false);
@@ -270,9 +239,6 @@ const ReplaySidebar = ({
                   <h2 className="text-md font-semibold text-gray-900">
                     Replay Track
                   </h2>
-                  <p className="text-xs text-gray-600">
-                    Vehicle history playback
-                  </p>
                 </div>
               </div>
               <button
@@ -316,87 +282,65 @@ const ReplaySidebar = ({
           )}
         </div>
 
+        {(isExpanded || isMobileMenuOpen) && (
+          <div className="flex border-b border-gray-200 bg-white flex-shrink-0">
+            {[
+              { id: "selection", label: "Selection", icon: "🎯" },
+              { id: "details", label: "Details", icon: "📋" },
+              { id: "trips", label: "Trips", icon: "🛣️" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 py-3 px-4 text-sm font-medium transition-all duration-200 cursor-pointer ${
+                  activeTab === tab.id
+                    ? "text-[#25689f] border-b-2 border-[#25689f] bg-[#25689f]/10"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                {/* <span className="mr-2 text-xs hidden sm:block">{tab.icon}</span> */}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Content - Only show when expanded or mobile menu open */}
         {(isExpanded || isMobileMenuOpen) && (
-          <div className="flex flex-col h-[82vh] overflow-y-scroll">
+          <div className="flex flex-col h-[75vh] overflow-auto">
             {/* Tabs */}
-            <div className="flex border-b border-gray-200 bg-white flex-shrink-0">
-              {[
-                { id: "selection", label: "Selection", icon: "🎯" },
-                { id: "details", label: "Details", icon: "📋" },
-                { id: "trips", label: "Trips", icon: "🛣️" },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 py-3 px-4 text-sm font-medium transition-all duration-200 cursor-pointer ${
-                    activeTab === tab.id
-                      ? "text-[#25689f] border-b-2 border-[#25689f] bg-[#25689f]/10"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                  }`}
-                >
-                  <span className="mr-2 text-xs">{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
             {/* Main Content Area with Scrolling */}
             <div className="flex-1 flex flex-col">
               {activeTab === "selection" && (
                 <div className="flex-1 flex flex-col">
                   {/* Search Input */}
-                  <div className="px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
+                  <div className="px-3 pt-2 flex-shrink-0">
                     <div className="relative">
                       <input
                         type="text"
                         placeholder="Search vehicles..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full p-3 pl-10 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] text-sm transition-all duration-200"
+                        className="w-full py-1.5 pl-8 pr-6 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#25689f] focus:border-[#25689f] text-xs transition-all duration-200"
+                        style={{ minHeight: 32 }}
                       />
                       <Search
-                        size={18}
-                        className="absolute left-3 top-3.5 text-gray-400"
+                        size={14}
+                        className="absolute left-2 top-2.5 text-gray-400"
                       />
                       {searchQuery && (
                         <button
                           onClick={() => setSearchQuery("")}
-                          className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600 cursor-pointer"
+                          className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600 cursor-pointer"
                         >
-                          <X size={16} />
+                          <X size={12} />
                         </button>
                       )}
                     </div>
                   </div>
 
-                  {/* Selected Vehicle Info */}
-                  {selectedVehicle && (
-                    <div className="px-4 py-3 bg-[#25689f]/10 border-b border-[#25689f]/20 flex-shrink-0">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-3 h-3 bg-[#25689f] rounded-full animate-pulse"></div>
-                          <div>
-                            <p className="text-sm font-medium text-[#1F557F]">
-                              Selected Vehicle
-                            </p>
-                            <p className="text-xs text-[#25689f] truncate max-w-[200px]">
-                              {selectedVehicle.text}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setSelectedVehicle(null)}
-                          className="text-[#25689f] hover:text-[#1F557F] cursor-pointer"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Tree View with Scrolling */}
-                  <div className="flex-1 px-2 py-2">
+                  <div className="px-2 pb-2 h-auto lg:h-[245px] 2xl:h-[321px] 3xl:h-[600px] overflow-y-auto" style={{flexShrink: 0 }}>
                     <ReplayTreeView
                       vehicles={rawVehicles}
                       searchQuery={searchQuery}
@@ -404,23 +348,21 @@ const ReplaySidebar = ({
                       expandedGroups={expandedGroups}
                       onVehicleSelect={handleVehicleSelect}
                       onToggleGroup={toggleGroup}
+                      loading={vehiclesLoading}
                     />
                   </div>
 
-                  {/* Date/Time Filters */}
-                  <div className="border-t border-gray-200 p-4 space-y-4 bg-gray-50 flex-shrink-0">
-                    {/* Quick Filter */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {/* Date/Time Filters - compact row */}
+                  <div className="border-t border-gray-200 px-3 pt-2 pb-2 bg-gray-50 flex-shrink-0">
+                    <div className="mb-2">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
                         📅 Quick Select
                       </label>
                       <div className="relative">
                         <select
                           value={quickFilter}
-                          onChange={(e) =>
-                            handleQuickFilterChange(e.target.value)
-                          }
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] text-sm appearance-none bg-white cursor-pointer transition-all duration-200"
+                          onChange={(e) => handleQuickFilterChange(e.target.value)}
+                          className="w-full py-1.5 px-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#25689f] focus:border-[#25689f] text-xs appearance-none bg-white cursor-pointer"
                         >
                           {quickFilterOptions.map((option) => (
                             <option key={option.value} value={option.value}>
@@ -429,59 +371,81 @@ const ReplaySidebar = ({
                           ))}
                         </select>
                         <ChevronDown
-                          size={16}
-                          className="absolute right-3 top-3.5 text-gray-400 pointer-events-none"
+                          size={14}
+                          className="absolute right-2 top-2 text-gray-400 pointer-events-none"
                         />
                       </div>
                     </div>
-
-                    {/* From DateTime */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        🕐 From Date & Time
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={`${fromDate}T${fromTime}`}
-                        onChange={(e) => {
-                          const [date, time] = e.target.value.split("T");
-                          setFromDate(date);
-                          setFromTime(time);
-                        }}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] text-sm cursor-pointer transition-all duration-200"
-                      />
+                    {/* DateTime Row */}
+                    <div className="flex mb-2 gap-2 w-full">
+                      <div className="w-1/2">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          🕐 From
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={`${fromDate}T${fromTime}`}
+                          onChange={(e) => {
+                            const [date, time] = e.target.value.split("T");
+                            setFromDate(date);
+                            setFromTime(time);
+                          }}
+                          className="w-full py-1 px-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#25689f] focus:border-[#25689f] text-xs box-border"
+                        />
+                      </div>
+                      <div className="w-1/2">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          🕐 To
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={`${toDate}T${toTime}`}
+                          onChange={(e) => {
+                            const [date, time] = e.target.value.split("T");
+                            setToDate(date);
+                            setToTime(time);
+                          }}
+                          className="w-full py-1 px-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#25689f] focus:border-[#25689f] text-xs box-border"
+                        />
+                      </div>
                     </div>
-
-                    {/* To DateTime */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        🕐 To Date & Time
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={`${toDate}T${toTime}`}
-                        onChange={(e) => {
-                          const [date, time] = e.target.value.split("T");
-                          setToDate(date);
-                          setToTime(time);
-                        }}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-[#25689f] text-sm cursor-pointer transition-all duration-200"
-                      />
-                    </div>
-
                     {/* Get Button */}
                     <button
                       onClick={handleGetReplay}
-                      disabled={!selectedVehicle}
-                      className={`w-full py-3 px-4 rounded-lg font-medium text-sm transition-all duration-200 cursor-pointer ${
-                        selectedVehicle
-                          ? "bg-gradient-to-r from-[#25689f] to-[#1F557F] text-white hover:from-[#1F557F] hover:to-[#184567] shadow-md hover:shadow-lg transform hover:scale-[1.02]"
+                      disabled={!selectedVehicle || replayLoading}
+                      className={`w-full py-2 rounded font-medium text-xs transition-all duration-200 cursor-pointer ${
+                        selectedVehicle && !replayLoading
+                          ? "bg-gradient-to-r from-[#25689f] to-[#1F557F] text-white hover:from-[#1F557F] hover:to-[#184567] shadow-md hover:shadow-lg"
                           : "bg-gray-300 text-gray-500 cursor-not-allowed"
                       }`}
                     >
-                      {selectedVehicle ? (
+                      {replayLoading ? (
                         <span className="flex items-center justify-center">
-                          <Play size={16} className="mr-2" />
+                          <svg
+                            className="animate-spin h-4 w-4 mr-2 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                            ></path>
+                          </svg>
+                          Loading...
+                        </span>
+                      ) : selectedVehicle ? (
+                        <span className="flex items-center justify-center">
+                          <Play size={14} className="mr-1" />
                           Get Replay Data
                         </span>
                       ) : (
@@ -494,19 +458,7 @@ const ReplaySidebar = ({
 
               {/* Details Tab */}
               {activeTab === "details" && (
-                <div className="flex-1 p-6 overflow-y-auto">
-                  <div className="text-center text-gray-500 py-12">
-                    <div className="text-6xl mb-4">📋</div>
-                    <div className="text-lg font-medium mb-2 text-gray-700">
-                      Vehicle Details
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {selectedVehicle
-                        ? `Detailed information for ${selectedVehicle.text}`
-                        : "Select a vehicle to view detailed information"}
-                    </div>
-                  </div>
-                </div>
+                <ReplayDetailsTab replayLoading={replayLoading} replayData={replayData} />
               )}
 
               {/* Trips Tab */}

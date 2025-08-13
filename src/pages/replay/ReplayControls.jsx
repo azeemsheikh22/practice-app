@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { setFilters, selectReplayFilters } from "../../features/replaySlice";
 import {
     Play,
     Pause,
@@ -26,12 +28,8 @@ const ReplayControls = ({
     const [currentTime, setCurrentTime] = useState(0);
     const [playbackSpeed, setPlaybackSpeed] = useState(1);
     const [duration, setDuration] = useState(100);
-    const [filters, setFilters] = useState({
-        showAlarms: true,
-        showStops: true,
-        stopDuration: "all",
-        displayMode: "line",
-    });
+    const dispatch = useDispatch();
+    const filters = useSelector(selectReplayFilters);
 
     // Auto-play logic
     useEffect(() => {
@@ -43,6 +41,7 @@ const ReplayControls = ({
                     if (newTime >= 100) {
                         setIsPlaying(false);
                         onPlayStateChange(false);
+                        onTimeChange(100);
                         return 100;
                     }
                     onTimeChange(newTime);
@@ -52,6 +51,17 @@ const ReplayControls = ({
         }
         return () => clearInterval(interval);
     }, [isPlaying, playbackSpeed, currentTime, onPlayStateChange, onTimeChange]);
+
+    // Jab currentTime 100 ho jaye, bar ko auto reset karo (0 par)
+    useEffect(() => {
+        if (currentTime === 100) {
+            const resetTimeout = setTimeout(() => {
+                setCurrentTime(0);
+                onTimeChange(0);
+            }, 600); // 0.6s ke baad reset ho
+            return () => clearTimeout(resetTimeout);
+        }
+    }, [currentTime, onTimeChange]);
 
     const handlePlayPause = () => {
         const newPlayState = !isPlaying;
@@ -94,8 +104,8 @@ const ReplayControls = ({
     };
 
     const handleFiltersChange = (newFilters) => {
-        setFilters(newFilters);
-        onFiltersChange(newFilters);
+        dispatch(setFilters(newFilters));
+        if (onFiltersChange) onFiltersChange(newFilters);
     };
 
     return (

@@ -1,72 +1,80 @@
-import React from "react";
+
+
+import React, { useRef, useState } from "react";
 import { motion } from "framer-motion";
 
-const ReplayProgressBar = ({ 
-  currentTime, 
-  duration, 
-  onSeek, 
+const ReplayProgressBar = ({
+  currentTime,
+  onSeek,
   isPlaying,
-  timestamps = [] 
+  timestamps = []
 }) => {
-  const handleProgressClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const percentage = (clickX / rect.width) * 100;
-    onSeek(Math.max(0, Math.min(100, percentage)));
+  const barRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+
+  // Remove time display, just show progress bar
+  const handleSeek = (e) => {
+    const rect = barRef.current.getBoundingClientRect();
+    const x = e.touches ? e.touches[0].clientX : e.clientX;
+    const clickX = x - rect.left;
+    const percent = Math.max(0, Math.min(100, (clickX / rect.width) * 100));
+    onSeek(percent);
   };
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  const handleDrag = (e) => {
+    if (!dragging) return;
+    handleSeek(e);
+  };
+
+  const handleDragStart = (e) => {
+    setDragging(true);
+    handleSeek(e);
+    window.addEventListener('mousemove', handleDrag);
+    window.addEventListener('touchmove', handleDrag);
+    window.addEventListener('mouseup', handleDragEnd);
+    window.addEventListener('touchend', handleDragEnd);
+  };
+
+  const handleDragEnd = () => {
+    setDragging(false);
+    window.removeEventListener('mousemove', handleDrag);
+    window.removeEventListener('touchmove', handleDrag);
+    window.removeEventListener('mouseup', handleDragEnd);
+    window.removeEventListener('touchend', handleDragEnd);
   };
 
   return (
-    <div className="w-full">
-      {/* Responsive Time Display */}
-      <div className="flex justify-between items-center mb-1">
-        <span className="text-xs text-gray-500 font-mono">
-          {formatTime((currentTime / 100) * duration)}
-        </span>
-        <div className="flex items-center space-x-1 sm:space-x-2">
-          <div className={`w-1.5 h-1.5 rounded-full ${isPlaying ? 'bg-green-500' : 'bg-gray-400'}`} />
-          <span className="text-xs text-gray-500">
-            {isPlaying ? 'Playing' : 'Paused'}
-          </span>
-        </div>
-        <span className="text-xs text-gray-500 font-mono">
-          {formatTime(duration)}
-        </span>
-      </div>
-
-      {/* Responsive Progress Bar - Larger touch target on mobile */}
-      <div 
+    <div className="w-full select-none">
+      <div
+        ref={barRef}
         className="relative h-2 sm:h-1.5 bg-gray-200 rounded-full cursor-pointer group hover:h-2.5 sm:hover:h-2 transition-all duration-200"
-        onClick={handleProgressClick}
+        onClick={handleSeek}
+        onMouseDown={handleDragStart}
+        onTouchStart={handleDragStart}
+        style={{ userSelect: 'none' }}
       >
         {/* Progress Fill */}
         <motion.div
           className="absolute top-0 left-0 h-full bg-[#25689f] rounded-full"
           style={{ width: `${currentTime}%` }}
-          initial={{ width: 0 }}
+          initial={false}
           animate={{ width: `${currentTime}%` }}
           transition={{ duration: 0.1 }}
         />
 
-        {/* Progress Handle - Larger on mobile for better touch */}
+        {/* Progress Handle - always visible for drag */}
         <motion.div
-          className="absolute top-1/2 transform -translate-y-1/2 w-4 sm:w-3 h-4 sm:h-3 bg-white border-2 border-[#25689f] rounded-full shadow-md cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-1/2 transform -translate-y-1/2 w-4 sm:w-3 h-4 sm:h-3 bg-white border-2 border-[#25689f] rounded-full shadow-md cursor-pointer"
           style={{ left: `calc(${currentTime}% - 8px)` }}
           whileHover={{ scale: 1.2 }}
         />
 
-        {/* Timestamps */}
+        {/* Timestamps (if any) */}
         {timestamps.map((timestamp, index) => (
           <div
             key={index}
             className="absolute top-0 w-0.5 h-full bg-gray-400 opacity-50"
-            style={{ left: `${(timestamp.time / duration) * 100}%` }}
-            title={`${timestamp.label} - ${formatTime(timestamp.time)}`}
+            style={{ left: `${timestamp.time}%` }}
           />
         ))}
       </div>

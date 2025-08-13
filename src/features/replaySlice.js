@@ -2,16 +2,13 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-const STATIC_CAR_ID = 1005631;
-const STATIC_DATE = "2025/06/17";
 
 export const fetchReplayData = createAsyncThunk(
   "replay/fetchReplayData",
-  async (_, { rejectWithValue }) => {
+  async ({ carId, datefrom, dateto }, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem("token");
-      // You can also get clientId if needed: const userid = localStorage.getItem("clientId");
-      const apiUrl = `${API_BASE_URL}api/replay/replay?carid=${STATIC_CAR_ID}&datefrom=${STATIC_DATE} 00:00:00&dateto=${STATIC_DATE} 23:59:59`;
+      const apiUrl = `${API_BASE_URL}api/replay/replay?carid=${carId}&datefrom=${datefrom} 00:00:00&dateto=${dateto} 23:59:59`;
 
       const response = await fetch(apiUrl, {
         method: "GET",
@@ -39,8 +36,18 @@ const replaySlice = createSlice({
     replayData: null,
     loading: false,
     error: null,
+    filters: {
+      displayMode: 'line', // 'line' | 'marker' | 'all'
+      stopDuration: 'all',
+      showAlarms: true,
+      showStops: true,
+    },
   },
-  reducers: {},
+  reducers: {
+    setFilters: (state, action) => {
+      state.filters = { ...state.filters, ...action.payload };
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchReplayData.pending, (state) => {
@@ -60,7 +67,9 @@ const replaySlice = createSlice({
   },
 });
 
+export const { setFilters } = replaySlice.actions;
 export default replaySlice.reducer;
 export const selectReplayData = (state) => state.replay.replayData;
 export const selectReplayLoading = (state) => state.replay.loading;
 export const selectReplayError = (state) => state.replay.error;
+export const selectReplayFilters = (state) => state.replay.filters;

@@ -6,13 +6,16 @@ import ReplayMap from "./ReplayMap";
 import ReplayControls from "./ReplayControls";
 
 import { useDispatch, useSelector } from "react-redux";
-import { initializeConnection, selectConnectionStatus } from "../../features/gpsTrackingSlice";
+import {
+  initializeConnection,
+  selectConnectionStatus,
+} from "../../features/gpsTrackingSlice";
 import { fetchReplayData, selectReplayData } from "../../features/replaySlice";
 
 const Replay = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [replayData, setReplayData] = useState(null);
+  // Remove local replayData state, use replayApiData from Redux
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
@@ -21,19 +24,16 @@ const Replay = () => {
 
   const dispatch = useDispatch();
   const replayApiData = useSelector(selectReplayData);
-  // Fetch replay data on mount
-  useEffect(() => {
-    dispatch(fetchReplayData());
-  }, [dispatch]);
 
-  // Log replay data from API
-  useEffect(() => {
-    if (replayApiData) {
-      console.log("[Replay API Data]", replayApiData);
-    }
-  }, [replayApiData]);
-
-
+  // Handler to get replay data from sidebar
+  const handleGetReplayData = ({ vehicle, fromDate, toDate }) => {
+    // console.log(vehicle)
+    if (!vehicle || !fromDate || !toDate) return;
+    // Format dates for API (YYYY/MM/DD)
+    const datefrom = fromDate.replace(/-/g, "/");
+    const dateto = toDate.replace(/-/g, "/");
+    dispatch(fetchReplayData({ carId: vehicle.valueId, datefrom, dateto }));
+  };
 
   const connectionStatus = useSelector(selectConnectionStatus);
 
@@ -43,28 +43,6 @@ const Replay = () => {
       dispatch(initializeConnection(3));
     }
   }, []);
-
-  // Sample replay data
-  const sampleReplayData = [
-    {
-      latitude: 30.3753,
-      longitude: 69.3451,
-      timestamp: "2024-01-01T10:00:00Z",
-      speed: 45,
-    },
-    {
-      latitude: 30.3853,
-      longitude: 69.3551,
-      timestamp: "2024-01-01T10:01:00Z",
-      speed: 50,
-    },
-    {
-      latitude: 30.3953,
-      longitude: 69.3651,
-      timestamp: "2024-01-01T10:02:00Z",
-      speed: 40,
-    },
-  ];
 
   const handlePlayStateChange = (playing) => {
     setIsPlaying(playing);
@@ -88,15 +66,7 @@ const Replay = () => {
     }
   };
 
-  const handleReplayDataReceived = (data) => {
-    setReplayData(data || sampleReplayData);
-    setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.drawTrack();
-        mapRef.current.fitToBounds();
-      }
-    }, 100);
-  };
+  // Remove unused handleReplayDataReceived
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -134,7 +104,7 @@ const Replay = () => {
           <ReplaySidebar
             isExpanded={isSidebarExpanded}
             onToggleExpand={setIsSidebarExpanded}
-            onReplayDataReceived={handleReplayDataReceived}
+            onGetReplayData={handleGetReplayData}
             isMobileMenuOpen={isMobileMenuOpen}
             onMobileMenuToggle={setIsMobileMenuOpen}
           />
@@ -148,19 +118,20 @@ const Replay = () => {
         >
           {/* Map */}
           <div className="flex-1 relative">
-            <ReplayMap
-              ref={mapRef}
-              replayData={replayData}
-              isPlaying={isPlaying}
-              currentTime={currentTime}
-              isMobileMenuOpen={isMobileMenuOpen}
-            />
+          <ReplayMap
+            ref={mapRef}
+            replayData={replayApiData}
+            isPlaying={isPlaying}
+            currentTime={currentTime}
+            isMobileMenuOpen={isMobileMenuOpen}
+            sidebarExpanded={isSidebarExpanded}
+          />
           </div>
 
           {/* Controls */}
           <div className="flex-shrink-0 relative ">
             <ReplayControls
-              replayData={replayData}
+              replayData={replayApiData}
               onPlayStateChange={handlePlayStateChange}
               onTimeChange={handleTimeChange}
               onSpeedChange={handleSpeedChange}

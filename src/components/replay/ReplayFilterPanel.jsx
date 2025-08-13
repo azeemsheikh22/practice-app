@@ -20,7 +20,7 @@ const ReplayFilterPanel = ({
   const displayOptions = [
     { value: "line", label: "Line", icon: "📍" },
     { value: "marker", label: "Marker", icon: "🎯" },
-    { value: "all", label: "All", icon: "🗺️" },
+    // { value: "all", label: "All", icon: "🗺️" },
   ];
 
   const handleFilterChange = (key, value) => {

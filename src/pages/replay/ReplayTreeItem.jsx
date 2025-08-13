@@ -89,7 +89,7 @@ const ReplayTreeItem = ({
       {/* Text */}
       <div className="flex-1 min-w-0">
         <div
-          className={`text-[14px] font-normal truncate ${
+          className={`text-[13px] font-normal truncate ${
             isSelected ? "text-white" : "text-gray-900"
           }`}
           title={item.text}
