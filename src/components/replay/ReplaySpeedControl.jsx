@@ -6,11 +6,11 @@ const ReplaySpeedControl = ({ currentSpeed, onSpeedChange }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const speedOptions = [
-    { value: 0.25, label: "Very Slow", icon: "🐌" },
-    { value: 0.5, label: "Slow", icon: "🚶" },
-    { value: 1, label: "Normal", icon: "🚗" },
-    { value: 2, label: "Fast", icon: "🏃" },
-    { value: 4, label: "Very Fast", icon: "🚀" },
+    { value: 0.1, label: "Very Slow", icon: "🐌" },
+    { value: 0.2, label: "Slow", icon: "🚶" },
+    { value: 0.3, label: "Normal", icon: "🚗" },
+    { value: 0.5, label: "Fast", icon: "🏃" },
+    { value: 1, label: "Very Fast", icon: "🚀" },
   ];
 
   const currentSpeedOption = speedOptions.find(option => option.value === currentSpeed) || speedOptions[2];

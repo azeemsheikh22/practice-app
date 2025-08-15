@@ -307,7 +307,7 @@ const ReplaySidebar = ({
 
         {/* Content - Only show when expanded or mobile menu open */}
         {(isExpanded || isMobileMenuOpen) && (
-          <div className="flex flex-col h-[75vh] overflow-auto">
+          <div className={`flex flex-col h-[75vh] ${activeTab === 'details' ? '' : 'overflow-auto'}`}>
             {/* Tabs */}
             {/* Main Content Area with Scrolling */}
             <div className="flex-1 flex flex-col">
@@ -340,7 +340,7 @@ const ReplaySidebar = ({
                   </div>
 
                   {/* Tree View with Scrolling */}
-                  <div className="px-2 pb-2 h-auto lg:h-[245px] 2xl:h-[321px] 3xl:h-[600px] overflow-y-auto" style={{flexShrink: 0 }}>
+                  <div className="px-2 pb-2 h-auto lg:h-[255px] 2xl:h-[340px] 3xl:h-[600px] overflow-y-auto" style={{flexShrink: 0 }}>
                     <ReplayTreeView
                       vehicles={rawVehicles}
                       searchQuery={searchQuery}
@@ -355,9 +355,9 @@ const ReplaySidebar = ({
                   {/* Date/Time Filters - compact row */}
                   <div className="border-t border-gray-200 px-3 pt-2 pb-2 bg-gray-50 flex-shrink-0">
                     <div className="mb-2">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                      {/* <label className="block text-xs font-medium text-gray-700 mb-1">
                         📅 Quick Select
-                      </label>
+                      </label> */}
                       <div className="relative">
                         <select
                           value={quickFilter}

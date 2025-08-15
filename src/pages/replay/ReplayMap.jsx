@@ -23,10 +23,10 @@ const getVehicleIcon = (status, head = 0) => {
   const rotation = statusKey === "moving" ? (head || 0) - 140 : 0;
   return L.divIcon({
     className: "vehicle-marker",
-    html: `<div style=\"width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;\">\n      <img src=\"${iconImg}\" alt=\"${statusKey}\" style=\"width: 18px; height: 18px; transform: rotate(${rotation}deg); display: block; margin: 0 auto;\" />\n    </div>`,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
-    popupAnchor: [0, -11],
+    html: `<div style=\"width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;\">\n      <img src=\"${iconImg}\" alt=\"${statusKey}\" style=\"width: 24px; height: 24px; transform: rotate(${rotation}deg); display: block; margin: 0 auto;\" />\n    </div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
   });
 };
 import React, {
@@ -36,7 +36,8 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { setCurrentReplayIndex, selectCurrentReplayIndex } from "../../features/replaySlice";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
@@ -47,7 +48,6 @@ import {
   Maximize,
   Minimize,
   Navigation,
-  Printer,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -69,8 +69,15 @@ const ReplayMap = forwardRef(
     { replayData, isPlaying, currentTime, isMobileMenuOpen, sidebarExpanded },
     ref
   ) => {
-    // Redux: get displayMode from replaySlice
-    const displayMode = useSelector(state => state.replay.filters?.displayMode || 'line');  
+    // Redux: get displayMode and followVehicle from replaySlice
+    const filters = useSelector(state => state.replay.filters || {});
+    const displayMode = filters.displayMode || 'line';
+    const dispatch = useDispatch();
+    // Redux: get currentReplayIndex for table row selection
+    const currentReplayIndex = useSelector(selectCurrentReplayIndex);
+
+    // Add this ref at the top level, not inside useEffect
+    const lastViewRef = useRef({ lat: null, lng: null, zoom: null });
 
     // Invalidate map size when sidebar expands/collapses
     useEffect(() => {
@@ -306,15 +313,15 @@ const ReplayMap = forwardRef(
         if (coordinates.length > 0) {
           const startIcon = L.divIcon({
             className: "start-marker",
-            html: '<div style="background: #10b981; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">S</div>',
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
+            html: '<div style="background: #10b981; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">S</div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13],
           });
           const endIcon = L.divIcon({
             className: "end-marker",
-            html: '<div style="background: #ef4444; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">E</div>',
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
+            html: '<div style="background: #ef4444; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">E</div>',
+            iconSize: [26, 26],
+            iconAnchor: [13, 13],
           });
           L.marker(coordinates[0], { icon: startIcon, zIndexOffset: 5000 }).addTo(
             mapInstanceRef.current
@@ -364,15 +371,15 @@ const ReplayMap = forwardRef(
       if (coordinates.length > 0) {
         const startIcon = L.divIcon({
           className: "start-marker",
-          html: '<div style="background: #10b981; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">S</div>',
-          iconSize: [24, 24],
-          iconAnchor: [12, 12],
+          html: '<div style="background: #10b981; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">S</div>',
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
         });
         const endIcon = L.divIcon({
           className: "end-marker",
-          html: '<div style="background: #ef4444; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">E</div>',
-          iconSize: [24, 24],
-          iconAnchor: [12, 12],
+          html: '<div style="background: #ef4444; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">E</div>',
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
         });
         L.marker(coordinates[0], { icon: startIcon, zIndexOffset: 5000 }).addTo(
           mapInstanceRef.current
@@ -400,19 +407,18 @@ const ReplayMap = forwardRef(
       }
     }, [isPlaying, displayMode]);
 
-    // Smooth animated vehicle marker
+    // Smooth animated vehicle marker (for animation)
     useEffect(() => {
       if (replayData && replayData.length > 0 && currentTime !== null) {
-        // Interpolate position for smooth animation
         const total = replayData.length - 1;
         const floatIdx = (currentTime / 100) * total;
         let idx = Math.floor(floatIdx);
         let nextIdx = Math.ceil(floatIdx);
         if (idx < 0) idx = 0;
         if (nextIdx >= replayData.length) nextIdx = replayData.length - 1;
+        dispatch(setCurrentReplayIndex(idx));
         const p1 = replayData[idx];
         const p2 = replayData[nextIdx];
-        // Linear interpolation
         let lat = p1.latitude;
         let lng = p1.longitude;
         let head = p1.head || 0;
@@ -422,31 +428,81 @@ const ReplayMap = forwardRef(
           lat = p1.latitude + (p2.latitude - p1.latitude) * t;
           lng = p1.longitude + (p2.longitude - p1.longitude) * t;
           head = p1.head + (p2.head - p1.head) * t;
-          // If status changes between p1 and p2, prefer p2 if t > 0.5
           if (t > 0.5) status = p2.status || p2.status1 || status;
         }
         if (lat && lng) {
-          // Remove existing marker
-          if (currentMarker) {
-            mapInstanceRef.current.removeLayer(currentMarker);
-          }
-          // Use the correct icon for the current status and heading
-          const marker = L.marker(
-            [lat, lng],
-            {
-              icon: getVehicleIcon(status, head),
-              title: p1.car_name || "",
-              zIndexOffset: 4000, // Animated vehicle icon sab se upar (S/E se neeche)
+          // Only update marker if position changed
+          const prev = currentMarker && currentMarker.getLatLng();
+          if (!prev || prev.lat !== lat || prev.lng !== lng) {
+            if (currentMarker) {
+              mapInstanceRef.current.removeLayer(currentMarker);
             }
-          );
-          marker.bindPopup(
-            `<div style=\"min-width:120px\"><b>${p1.car_name || ''}</b><br/>${p1.gps_time || ''}<br/>Status: ${status || ''}<br/>Speed: ${p1.speed ?? '-'} km/h</div>`
-          );
-          marker.addTo(mapInstanceRef.current);
-          setCurrentMarker(marker);
+            const marker = L.marker(
+              [lat, lng],
+              {
+                icon: getVehicleIcon(status, head),
+                title: p1.car_name || "",
+                zIndexOffset: 4000,
+              }
+            );
+            marker.bindPopup(
+              `<div style=\"min-width:120px\"><b>${p1.car_name || ''}</b><br/>${p1.gps_time || ''}<br/>Status: ${status || ''}<br/>Speed: ${p1.speed ?? '-'} km/h</div>`
+            );
+            marker.addTo(mapInstanceRef.current);
+            setCurrentMarker(marker);
+          }
+          // Center map if needed
+          if (mapInstanceRef.current) {
+            const map = mapInstanceRef.current;
+            const currentZoom = map.getZoom();
+            const last = lastViewRef.current;
+            if (last.lat !== lat || last.lng !== lng || last.zoom !== currentZoom) {
+              map.setView([lat, lng], currentZoom, { animate: true });
+              lastViewRef.current = { lat, lng, zoom: currentZoom };
+            }
+          }
         }
       }
-    }, [currentTime, replayData]);
+    }, [currentTime, replayData, dispatch]);
+
+    // Table row select: move vehicle to selected point (no double marker)
+    useEffect(() => {
+      if (replayData && replayData.length > 0 && currentReplayIndex != null) {
+        const point = replayData[currentReplayIndex];
+        if (point && point.latitude && point.longitude) {
+          // Only update marker if position changed
+          const prev = currentMarker && currentMarker.getLatLng();
+          if (!prev || prev.lat !== point.latitude || prev.lng !== point.longitude) {
+            if (currentMarker) {
+              mapInstanceRef.current.removeLayer(currentMarker);
+            }
+            const marker = L.marker(
+              [point.latitude, point.longitude],
+              {
+                icon: getVehicleIcon(point.status || point.status1, point.head),
+                title: point.car_name || "",
+                zIndexOffset: 4000,
+              }
+            );
+            marker.bindPopup(
+              `<div style=\"min-width:120px\"><b>${point.car_name || ''}</b><br/>${point.gps_time || ''}<br/>Status: ${point.status || point.status1 || ''}<br/>Speed: ${point.speed ?? '-'} km/h</div>`
+            );
+            marker.addTo(mapInstanceRef.current);
+            setCurrentMarker(marker);
+          }
+          // Center map on this point
+          if (mapInstanceRef.current) {
+            const map = mapInstanceRef.current;
+            const currentZoom = map.getZoom();
+            const last = lastViewRef.current;
+            if (last.lat !== point.latitude || last.lng !== point.longitude || last.zoom !== currentZoom) {
+              map.setView([point.latitude, point.longitude], currentZoom, { animate: true });
+              lastViewRef.current = { lat: point.latitude, lng: point.longitude, zoom: currentZoom };
+            }
+          }
+        }
+      }
+    }, [currentReplayIndex]);
 
     // Expose methods to parent
     useImperativeHandle(ref, () => ({

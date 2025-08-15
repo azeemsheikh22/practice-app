@@ -1,4 +1,3 @@
-
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -42,10 +41,20 @@ const replaySlice = createSlice({
       showAlarms: true,
       showStops: true,
     },
+    currentReplayIndex: null, // index of the currently animated point
+    isReplayPaused: true, // replay pause state
   },
   reducers: {
     setFilters: (state, action) => {
-      state.filters = { ...state.filters, ...action.payload };
+      // Remove followVehicle if present in payload
+      const { followVehicle, ...rest } = action.payload || {};
+      state.filters = { ...state.filters, ...rest };
+    },
+    setCurrentReplayIndex: (state, action) => {
+      state.currentReplayIndex = action.payload;
+    },
+    setReplayPaused: (state, action) => {
+      state.isReplayPaused = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -67,9 +76,11 @@ const replaySlice = createSlice({
   },
 });
 
-export const { setFilters } = replaySlice.actions;
+export const { setFilters, setCurrentReplayIndex, setReplayPaused } = replaySlice.actions;
 export default replaySlice.reducer;
 export const selectReplayData = (state) => state.replay.replayData;
 export const selectReplayLoading = (state) => state.replay.loading;
 export const selectReplayError = (state) => state.replay.error;
 export const selectReplayFilters = (state) => state.replay.filters;
+export const selectReplayPaused = (state) => state.replay.isReplayPaused;
+export const selectCurrentReplayIndex = (state) => state.replay.currentReplayIndex;

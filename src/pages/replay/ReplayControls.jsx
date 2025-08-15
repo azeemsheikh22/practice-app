@@ -9,7 +9,9 @@ import {
     Square,
     RotateCcw,
     Gauge,
-    Layers
+    Layers,
+    Navigation,
+    Crosshair
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ReplayProgressBar from "../../components/replay/ReplayProgressBar";
@@ -26,7 +28,7 @@ const ReplayControls = ({
 }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
-    const [playbackSpeed, setPlaybackSpeed] = useState(1);
+    const [playbackSpeed, setPlaybackSpeed] = useState(0.3);
     const [duration, setDuration] = useState(100);
     const dispatch = useDispatch();
     const filters = useSelector(selectReplayFilters);
@@ -37,7 +39,7 @@ const ReplayControls = ({
         if (isPlaying && currentTime < 100) {
             interval = setInterval(() => {
                 setCurrentTime((prev) => {
-                    const newTime = prev + playbackSpeed * 0.5;
+                    const newTime = prev + playbackSpeed * 0.05;
                     if (newTime >= 100) {
                         setIsPlaying(false);
                         onPlayStateChange(false);
@@ -107,6 +109,8 @@ const ReplayControls = ({
         dispatch(setFilters(newFilters));
         if (onFiltersChange) onFiltersChange(newFilters);
     };
+
+
 
     return (
         <div className="bg-white ">
@@ -226,10 +230,7 @@ const ReplayControls = ({
 
                 {/* Right Controls - Speed Controls (3 columns on mobile, 4 on desktop) */}
                 <div className="col-span-3 sm:col-span-4 flex items-center justify-end space-x-1 sm:space-x-2">
-                    <div className="flex items-center space-x-1 text-xs text-gray-600">
-                        <Gauge size={12} className="text-gray-400" />
-                        <span className="font-medium">{playbackSpeed}x</span>
-                    </div>
+
 
                     <ReplaySpeedControl
                         currentSpeed={playbackSpeed}
