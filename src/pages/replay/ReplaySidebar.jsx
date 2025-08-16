@@ -202,6 +202,7 @@ const ReplaySidebar = ({
         quickFilter,
       });
     }
+    setActiveTab("details"); // Switch to details tab after getting data
     // Close mobile menu after getting data on small screens
     if (window.innerWidth < 1024) {
       onMobileMenuToggle(false);

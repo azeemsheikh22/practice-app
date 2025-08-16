@@ -431,26 +431,25 @@ const ReplayMap = forwardRef(
           if (t > 0.5) status = p2.status || p2.status1 || status;
         }
         if (lat && lng) {
-          // Only update marker if position changed
-          const prev = currentMarker && currentMarker.getLatLng();
-          if (!prev || prev.lat !== lat || prev.lng !== lng) {
-            if (currentMarker) {
-              mapInstanceRef.current.removeLayer(currentMarker);
+          // Remove all vehicle markers before adding new
+          mapInstanceRef.current.eachLayer(layer => {
+            if (layer.options && layer.options.icon && layer.options.icon.options && layer.options.icon.options.className === 'vehicle-marker') {
+              mapInstanceRef.current.removeLayer(layer);
             }
-            const marker = L.marker(
-              [lat, lng],
-              {
-                icon: getVehicleIcon(status, head),
-                title: p1.car_name || "",
-                zIndexOffset: 4000,
-              }
-            );
-            marker.bindPopup(
-              `<div style=\"min-width:120px\"><b>${p1.car_name || ''}</b><br/>${p1.gps_time || ''}<br/>Status: ${status || ''}<br/>Speed: ${p1.speed ?? '-'} km/h</div>`
-            );
-            marker.addTo(mapInstanceRef.current);
-            setCurrentMarker(marker);
-          }
+          });
+          const marker = L.marker(
+            [lat, lng],
+            {
+              icon: getVehicleIcon(status, head),
+              title: p1.car_name || "",
+              zIndexOffset: 4000,
+            }
+          );
+          marker.bindPopup(
+            `<div style=\"min-width:120px\"><b>${p1.car_name || ''}</b><br/>${p1.gps_time || ''}<br/>Status: ${status || ''}<br/>Speed: ${p1.speed ?? '-'} km/h</div>`
+          );
+          marker.addTo(mapInstanceRef.current);
+          setCurrentMarker(marker);
           // Center map if needed
           if (mapInstanceRef.current) {
             const map = mapInstanceRef.current;
@@ -467,29 +466,29 @@ const ReplayMap = forwardRef(
 
     // Table row select: move vehicle to selected point (no double marker)
     useEffect(() => {
-      if (replayData && replayData.length > 0 && currentReplayIndex != null) {
+      // Only add marker on row select if replay is paused
+      if (!isPlaying && replayData && replayData.length > 0 && currentReplayIndex != null) {
         const point = replayData[currentReplayIndex];
         if (point && point.latitude && point.longitude) {
-          // Only update marker if position changed
-          const prev = currentMarker && currentMarker.getLatLng();
-          if (!prev || prev.lat !== point.latitude || prev.lng !== point.longitude) {
-            if (currentMarker) {
-              mapInstanceRef.current.removeLayer(currentMarker);
+          // Remove all vehicle markers before adding new
+          mapInstanceRef.current.eachLayer(layer => {
+            if (layer.options && layer.options.icon && layer.options.icon.options && layer.options.icon.options.className === 'vehicle-marker') {
+              mapInstanceRef.current.removeLayer(layer);
             }
-            const marker = L.marker(
-              [point.latitude, point.longitude],
-              {
-                icon: getVehicleIcon(point.status || point.status1, point.head),
-                title: point.car_name || "",
-                zIndexOffset: 4000,
-              }
-            );
-            marker.bindPopup(
-              `<div style=\"min-width:120px\"><b>${point.car_name || ''}</b><br/>${point.gps_time || ''}<br/>Status: ${point.status || point.status1 || ''}<br/>Speed: ${point.speed ?? '-'} km/h</div>`
-            );
-            marker.addTo(mapInstanceRef.current);
-            setCurrentMarker(marker);
-          }
+          });
+          const marker = L.marker(
+            [point.latitude, point.longitude],
+            {
+              icon: getVehicleIcon(point.status || point.status1, point.head),
+              title: point.car_name || "",
+              zIndexOffset: 4000,
+            }
+          );
+          marker.bindPopup(
+            `<div style=\"min-width:120px\"><b>${point.car_name || ''}</b><br/>${point.gps_time || ''}<br/>Status: ${point.status || point.status1 || ''}<br/>Speed: ${point.speed ?? '-'} km/h</div>`
+          );
+          marker.addTo(mapInstanceRef.current);
+          setCurrentMarker(marker);
           // Center map on this point
           if (mapInstanceRef.current) {
             const map = mapInstanceRef.current;
@@ -502,7 +501,7 @@ const ReplayMap = forwardRef(
           }
         }
       }
-    }, [currentReplayIndex]);
+    }, [currentReplayIndex, isPlaying]);
 
     // Expose methods to parent
     useImperativeHandle(ref, () => ({

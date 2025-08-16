@@ -33,6 +33,7 @@ const ReplayControls = ({
     const dispatch = useDispatch();
     const filters = useSelector(selectReplayFilters);
 
+
     // Auto-play logic
     useEffect(() => {
         let interval;
@@ -53,6 +54,19 @@ const ReplayControls = ({
         }
         return () => clearInterval(interval);
     }, [isPlaying, playbackSpeed, currentTime, onPlayStateChange, onTimeChange]);
+
+    // Listen for table row seek event and update currentTime accordingly
+    useEffect(() => {
+        function handleReplaySeek(e) {
+            if (!replayData || !Array.isArray(replayData) || replayData.length < 2) return;
+            const idx = e.detail && typeof e.detail.index === 'number' ? e.detail.index : 0;
+            const percent = (idx / (replayData.length - 1)) * 100;
+            setCurrentTime(percent);
+            onTimeChange(percent);
+        }
+        window.addEventListener('replay-seek', handleReplaySeek);
+        return () => window.removeEventListener('replay-seek', handleReplaySeek);
+    }, [replayData, onTimeChange]);
 
     // Jab currentTime 100 ho jaye, bar ko auto reset karo (0 par)
     useEffect(() => {

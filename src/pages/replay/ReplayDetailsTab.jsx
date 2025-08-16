@@ -95,17 +95,22 @@ const VirtualizedTable = ({ data, containerHeight = 400, currentIndex }) => {
         setScrollTop(e.target.scrollTop);
     }, []);
 
-    // Auto-scroll to highlighted row
+    // Improved auto-scroll: only scroll if highlighted row is out of view
     useEffect(() => {
         if (currentIndex == null || !containerRef.current) return;
         const itemHeight = 32;
         const container = containerRef.current;
         const containerHeightPx = container.offsetHeight;
-        // Center the highlighted row in the visible area
-        const targetScroll = currentIndex * itemHeight - (containerHeightPx / 2) + (itemHeight / 2);
-        // Clamp scroll to valid range
-        const maxScroll = container.scrollHeight - containerHeightPx;
-        container.scrollTop = Math.max(0, Math.min(targetScroll, maxScroll));
+        const visibleStart = container.scrollTop;
+        const visibleEnd = visibleStart + containerHeightPx;
+        const rowTop = currentIndex * itemHeight;
+        const rowBottom = rowTop + itemHeight;
+        // If highlighted row is above or below visible area, scroll to center it
+        if (rowTop < visibleStart || rowBottom > visibleEnd) {
+            const targetScroll = currentIndex * itemHeight - (containerHeightPx / 2) + (itemHeight / 2);
+            const maxScroll = container.scrollHeight - containerHeightPx;
+            container.scrollTop = Math.max(0, Math.min(targetScroll, maxScroll));
+        }
     }, [currentIndex, containerHeight]);
   if (!data || data.length === 0) return null;
     return ( 
@@ -140,7 +145,12 @@ const VirtualizedTable = ({ data, containerHeight = 400, currentIndex }) => {
               isActive={item.index === currentIndex}
               onClick={() => {
                 dispatch(setCurrentReplayIndex(item.index));
-                dispatch(setReplayPaused(true));
+                // Update replay bar (currentTime) so animation starts from this row
+                if (typeof window !== 'undefined' && window.dispatchEvent) {
+                  const event = new CustomEvent('replay-seek', { detail: { index: item.index } });
+                  window.dispatchEvent(event);
+                }
+                dispatch(setReplayPaused(false));
               }}
             />
           ))}
