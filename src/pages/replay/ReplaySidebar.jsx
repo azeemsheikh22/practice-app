@@ -1,5 +1,6 @@
 // (moved inside component)
 import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import ReplayDetailsTab from "./ReplayDetailsTab";
 import {
   Play,
@@ -37,12 +38,13 @@ const ReplaySidebar = ({
   const rawVehicles = useSelector((state) => state.gpsTracking.rawVehicleList);
   const vehiclesLoading = useSelector((state) => state.gpsTracking.loading);
 
-  // Initialize dates
+  // Initialize dates and show info toast about 7-day limit
   useEffect(() => {
     const today = new Date();
     const todayStr = today.toISOString().split("T")[0];
     setFromDate(todayStr);
     setToDate(todayStr);
+    toast("You can only get up to 7 days of replay data.", { icon: "ℹ️" });
   }, []);
 
   // Helper function
@@ -99,10 +101,7 @@ const ReplaySidebar = ({
   const quickFilterOptions = [
     { value: "today", label: "Today" },
     { value: "yesterday", label: "Yesterday" },
-    { value: "last24hours", label: "Last 24 Hours" },
-    { value: "thisweek", label: "This Week" },
-    { value: "thismonth", label: "This Month" },
-    { value: "lastmonth", label: "Last Month" },
+    { value: "7day", label: "7 Days" },
   ];
 
   const handleToggleExpand = () => {
@@ -112,64 +111,40 @@ const ReplaySidebar = ({
   const handleQuickFilterChange = (filterValue) => {
     setQuickFilter(filterValue);
     const today = new Date();
-
+    let from, to, fromTime, toTime;
     switch (filterValue) {
-      case "today":
+      case "today": {
         const todayStr = today.toISOString().split("T")[0];
-        setFromDate(todayStr);
-        setToDate(todayStr);
-        setFromTime("00:00");
-        setToTime("23:59");
+        from = to = todayStr;
+        fromTime = "00:00";
+        toTime = "23:59";
         break;
-      case "yesterday":
+      }
+      case "yesterday": {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split("T")[0];
-        setFromDate(yesterdayStr);
-        setToDate(yesterdayStr);
-        setFromTime("00:00");
-        setToTime("23:59");
+        from = to = yesterdayStr;
+        fromTime = "00:00";
+        toTime = "23:59";
         break;
-      case "last24hours":
-        const last24 = new Date(today);
-        last24.setHours(last24.getHours() - 24);
-        setFromDate(last24.toISOString().split("T")[0]);
-        setFromTime(last24.toTimeString().slice(0, 5));
-        setToDate(today.toISOString().split("T")[0]);
-        setToTime(today.toTimeString().slice(0, 5));
+      }
+      case "7day": {
+        const sevenAgo = new Date(today);
+        sevenAgo.setDate(today.getDate() - 6); // 7 days including today
+        from = sevenAgo.toISOString().split("T")[0];
+        to = today.toISOString().split("T")[0];
+        fromTime = "00:00";
+        toTime = "23:59";
         break;
-      case "thisweek":
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - today.getDay());
-        setFromDate(startOfWeek.toISOString().split("T")[0]);
-        setToDate(today.toISOString().split("T")[0]);
-        setFromTime("00:00");
-        setToTime("23:59");
-        break;
-      case "thismonth":
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        setFromDate(startOfMonth.toISOString().split("T")[0]);
-        setToDate(today.toISOString().split("T")[0]);
-        setFromTime("00:00");
-        setToTime("23:59");
-        break;
-      case "lastmonth":
-        const startOfLastMonth = new Date(
-          today.getFullYear(),
-          today.getMonth() - 1,
-          1
-        );
-        const endOfLastMonth = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          0
-        );
-        setFromDate(startOfLastMonth.toISOString().split("T")[0]);
-        setToDate(endOfLastMonth.toISOString().split("T")[0]);
-        setFromTime("00:00");
-        setToTime("23:59");
-        break;
+      }
+      default:
+        return;
     }
+    setFromDate(from);
+    setToDate(to);
+    setFromTime(fromTime);
+    setToTime(toTime);
   };
 
   const handleVehicleSelect = (vehicle) => {
@@ -189,7 +164,16 @@ const ReplaySidebar = ({
 
   const handleGetReplay = () => {
     if (!selectedVehicle) {
-      alert("Please select a vehicle first");
+      toast.error("Please select a vehicle first");
+      return;
+    }
+    // 7-day range limit
+    const from = new Date(`${fromDate}T${fromTime}`);
+    const to = new Date(`${toDate}T${toTime}`);
+    const diffMs = to - from;
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    if (diffDays > 7) {
+      toast.error("You can only select up to 7 days. Please reduce the date range.");
       return;
     }
     if (onGetReplayData) {
@@ -388,8 +372,28 @@ const ReplaySidebar = ({
                           value={`${fromDate}T${fromTime}`}
                           onChange={(e) => {
                             const [date, time] = e.target.value.split("T");
-                            setFromDate(date);
-                            setFromTime(time);
+                            // If new fromDate > toDate, adjust toDate
+                            let newFrom = date;
+                            let newFromTime = time;
+                            let to = toDate;
+                            let toT = toTime;
+                            const fromDT = new Date(`${date}T${time}`);
+                            const toDT = new Date(`${to}T${toT}`);
+                            if (fromDT > toDT) {
+                              to = date;
+                              toT = time;
+                            }
+                            // Enforce 7-day max
+                            const maxToDT = new Date(fromDT.getTime() + 7 * 24 * 60 * 60 * 1000);
+                            if (toDT > maxToDT) {
+                              to = maxToDT.toISOString().slice(0, 10);
+                              toT = maxToDT.toTimeString().slice(0, 5);
+                              toast.error("You can only select up to 7 days. 'To' date adjusted.");
+                            }
+                            setFromDate(newFrom);
+                            setFromTime(newFromTime);
+                            setToDate(to);
+                            setToTime(toT);
                           }}
                           className="w-full py-1 px-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#25689f] focus:border-[#25689f] text-xs box-border"
                         />
@@ -403,8 +407,28 @@ const ReplaySidebar = ({
                           value={`${toDate}T${toTime}`}
                           onChange={(e) => {
                             const [date, time] = e.target.value.split("T");
-                            setToDate(date);
-                            setToTime(time);
+                            // If new toDate < fromDate, adjust fromDate
+                            let newTo = date;
+                            let newToTime = time;
+                            let from = fromDate;
+                            let fromT = fromTime;
+                            const toDT = new Date(`${date}T${time}`);
+                            const fromDT = new Date(`${from}T${fromT}`);
+                            if (toDT < fromDT) {
+                              from = date;
+                              fromT = time;
+                            }
+                            // Enforce 7-day max
+                            const maxFromDT = new Date(toDT.getTime() - 7 * 24 * 60 * 60 * 1000);
+                            if (fromDT < maxFromDT) {
+                              from = maxFromDT.toISOString().slice(0, 10);
+                              fromT = maxFromDT.toTimeString().slice(0, 5);
+                              toast.error("You can only select up to 7 days. 'From' date adjusted.");
+                            }
+                            setToDate(newTo);
+                            setToTime(newToTime);
+                            setFromDate(from);
+                            setFromTime(fromT);
                           }}
                           className="w-full py-1 px-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#25689f] focus:border-[#25689f] text-xs box-border"
                         />

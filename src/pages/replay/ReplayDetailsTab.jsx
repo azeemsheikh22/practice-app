@@ -4,7 +4,7 @@ import { setCurrentReplayIndex, setReplayPaused } from "../../features/replaySli
 import { selectReplayData, selectReplayLoading, selectCurrentReplayIndex } from "../../features/replaySlice";
 
 const columnDefs = [
-  { label: '#', width: 48, align: 'left', key: null },
+  { label: '#', width: 70, align: 'left', key: null },
   { label: 'Status', width: 90, align: 'left', key: 'status' },
   { label: 'Speed', width: 60, align: 'right', key: 'speed' },
   { label: 'ODO', width: 70, align: 'right', key: 'odo' },
@@ -43,20 +43,77 @@ const VirtualizedTableRow = ({ row, index, style, getStatusColor, isActive, onCl
     className="border-b border-gray-100 text-xs"
     onClick={onClick}
   >
-    <div style={{width: columnDefs[0].width, textAlign: columnDefs[0].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}>{index + 1}</div>
-    <div style={{width: columnDefs[1].width, textAlign: columnDefs[1].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={`font-semibold ${getStatusColor(row.status)}`}>{row.status ?? '-'}</div>
-    <div style={{width: columnDefs[2].width, textAlign: columnDefs[2].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)}>{row.speed !== undefined ? Number(row.speed).toFixed(2) : '-'}</div>
-    <div style={{width: columnDefs[3].width, textAlign: columnDefs[3].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)}>{row.odo !== undefined ? Number(row.odo).toLocaleString() : '-'}</div>
-    <div style={{width: columnDefs[4].width, textAlign: columnDefs[4].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)}>{row.gps_time ? new Date(row.gps_time).toLocaleString() : '-'}</div>
-    <div style={{width: columnDefs[5].width, textAlign: columnDefs[5].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)} title={row.locationName || row.Location}>{(row.locationName || row.Location) ? String(row.locationName || row.Location) : '-'}</div>
-    <div style={{width: columnDefs[6].width, textAlign: columnDefs[6].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)}>{row.Signal_Strength ?? '-'}</div>
-    <div style={{width: columnDefs[7].width, textAlign: columnDefs[7].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)}>{row.acc ?? '-'}</div>
-    <div style={{width: columnDefs[8].width, textAlign: columnDefs[8].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)}>{row.valid ?? '-'}</div>
-    <div style={{width: columnDefs[9].width, textAlign: columnDefs[9].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)}>{row.head ?? '-'}</div>
-    <div style={{width: columnDefs[10].width, textAlign: columnDefs[10].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)}>{row.latitude !== undefined ? Number(row.latitude).toFixed(6) : '-'}</div>
-    <div style={{width: columnDefs[11].width, textAlign: columnDefs[11].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)}>{row.longitude !== undefined ? Number(row.longitude).toFixed(6) : '-'}</div>
-    <div style={{width: columnDefs[12].width, textAlign: columnDefs[12].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)}>{row.fuel !== undefined ? Number(row.fuel).toFixed(2) : '-'}</div>
-    <div style={{width: columnDefs[13].width, textAlign: columnDefs[13].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}} className={getStatusColor(row.status)}>{row.mileage !== undefined ? Number(row.mileage).toLocaleString(undefined, {maximumFractionDigits: 1}) : '-'}</div>
+    <div
+      style={{width: columnDefs[0].width, textAlign: columnDefs[0].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      title={String(index + 1)}
+    >
+      {index + 1}
+    </div>
+    <div
+      style={{width: columnDefs[1].width, textAlign: columnDefs[1].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={`font-semibold ${getStatusColor(row.status)}`}
+      title={row.status ?? '-'}
+    >{row.status ?? '-'}</div>
+    <div
+      style={{width: columnDefs[2].width, textAlign: columnDefs[2].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={row.speed !== undefined ? Number(row.speed).toFixed(2) : '-'}
+    >{row.speed !== undefined ? Number(row.speed).toFixed(2) : '-'}</div>
+    <div
+      style={{width: columnDefs[3].width, textAlign: columnDefs[3].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={row.odo !== undefined ? Number(row.odo).toLocaleString() : '-'}
+    >{row.odo !== undefined ? Number(row.odo).toLocaleString() : '-'}</div>
+    <div
+      style={{width: columnDefs[4].width, textAlign: columnDefs[4].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={row.gps_time ? new Date(row.gps_time).toLocaleString() : '-'}
+    >{row.gps_time ? new Date(row.gps_time).toLocaleString() : '-'}</div>
+    <div
+      style={{width: columnDefs[5].width, textAlign: columnDefs[5].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={(row.locationName || row.Location) ? String(row.locationName || row.Location) : '-'}
+    >{(row.locationName || row.Location) ? String(row.locationName || row.Location) : '-'}</div>
+    <div
+      style={{width: columnDefs[6].width, textAlign: columnDefs[6].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={row.Signal_Strength !== undefined ? String(row.Signal_Strength) : '-'}
+    >{row.Signal_Strength ?? '-'}</div>
+    <div
+      style={{width: columnDefs[7].width, textAlign: columnDefs[7].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={row.acc !== undefined ? String(row.acc) : '-'}
+    >{row.acc ?? '-'}</div>
+    <div
+      style={{width: columnDefs[8].width, textAlign: columnDefs[8].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={row.valid !== undefined ? String(row.valid) : '-'}
+    >{row.valid ?? '-'}</div>
+    <div
+      style={{width: columnDefs[9].width, textAlign: columnDefs[9].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={row.head !== undefined ? String(row.head) : '-'}
+    >{row.head ?? '-'}</div>
+    <div
+      style={{width: columnDefs[10].width, textAlign: columnDefs[10].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={row.latitude !== undefined ? Number(row.latitude).toFixed(6) : '-'}
+    >{row.latitude !== undefined ? Number(row.latitude).toFixed(6) : '-'}</div>
+    <div
+      style={{width: columnDefs[11].width, textAlign: columnDefs[11].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={row.longitude !== undefined ? Number(row.longitude).toFixed(6) : '-'}
+    >{row.longitude !== undefined ? Number(row.longitude).toFixed(6) : '-'}</div>
+    <div
+      style={{width: columnDefs[12].width, textAlign: columnDefs[12].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={row.fuel !== undefined ? Number(row.fuel).toFixed(2) : '-'}
+    >{row.fuel !== undefined ? Number(row.fuel).toFixed(2) : '-'}</div>
+    <div
+      style={{width: columnDefs[13].width, textAlign: columnDefs[13].align, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 8px'}}
+      className={getStatusColor(row.status)}
+      title={row.mileage !== undefined ? Number(row.mileage).toLocaleString(undefined, {maximumFractionDigits: 1}) : '-'}
+    >{row.mileage !== undefined ? Number(row.mileage).toLocaleString(undefined, {maximumFractionDigits: 1}) : '-'}</div>
   </div>
 );
 

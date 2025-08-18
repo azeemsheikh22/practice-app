@@ -14,7 +14,7 @@ const ReplayTreeItem = ({
   const getItemIcon = (isSelected) => {
     if (isGroup) {
       return null; // No icon for groups
-    } else if (item.icon && item.icon.includes("truck.png")) {
+    } else if (item.icon) {
       return <Truck size={14} className={` ${isSelected ? "text-white" : "text-green-600"}`} />;
     } else {
       return <Car size={14} className={` ${isSelected ? "text-white" : "text-[#25689f]"}`} />; // Changed from text-teal-600 to text-[#25689f]
