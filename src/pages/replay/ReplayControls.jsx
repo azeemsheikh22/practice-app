@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setFilters, selectReplayFilters } from "../../features/replaySlice";
 import {
@@ -14,6 +14,23 @@ import { motion } from "framer-motion";
 import ReplayProgressBar from "../../components/replay/ReplayProgressBar";
 import ReplaySpeedControl from "../../components/replay/ReplaySpeedControl";
 
+const getStatusColor = (status) => {
+    if (!status) return '';
+    const s = String(status).toLowerCase();
+    if (s.includes('moving')) return 'text-green-600';
+    if (s.includes('idle')) return 'text-yellow-600';
+    if (s.includes('stop') || s.includes('ign_off')) return 'text-red-600';
+    return '';
+};
+
+function formatDuration(seconds) {
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return `${d}d ${h}h ${m}m ${s}s`;
+}
+
 const ReplayControls = ({
     replayData,
     onPlayStateChange,
@@ -22,13 +39,14 @@ const ReplayControls = ({
     onFiltersChange,
     onDrawTrack,
 }) => {
+    const dispatch = useDispatch();
+    const filters = useSelector(selectReplayFilters);
+    const showSummary = filters.showSummary || false;
+
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [playbackSpeed, setPlaybackSpeed] = useState(0.3);
     const [duration, setDuration] = useState(100);
-    const dispatch = useDispatch();
-    const filters = useSelector(selectReplayFilters);
-
 
     // Auto-play logic
     useEffect(() => {
@@ -74,6 +92,43 @@ const ReplayControls = ({
             return () => clearTimeout(resetTimeout);
         }
     }, [currentTime, onTimeChange]);
+
+    // Summary calculation
+    const summary = useMemo(() => {
+        if (!Array.isArray(replayData) || replayData.length === 0) return null;
+        let moving = 0, idle = 0, stop = 0, total = 0, distance = 0;
+        for (let i = 0; i < replayData.length; i++) {
+            const curr = replayData[i];
+            const next = replayData[i + 1];
+            let status = (curr.status || curr.status1 || '').toLowerCase();
+            if (next) {
+                // Duration between this and next point
+                const t1 = new Date(curr.gps_time).getTime();
+                const t2 = new Date(next.gps_time).getTime();
+                const diff = Math.max(0, Math.floor((t2 - t1) / 1000));
+                if (status.includes('moving')) moving += diff;
+                else if (status.includes('idle')) idle += diff;
+                else if (status.includes('stop') || status.includes('ign_off')) stop += diff;
+                total += diff;
+            }
+            // Distance
+            if (next && curr.latitude && curr.longitude && next.latitude && next.longitude) {
+                const toRad = deg => deg * Math.PI / 180;
+                const R = 6371; // km
+                const dLat = toRad(next.latitude - curr.latitude);
+                const dLon = toRad(next.longitude - curr.longitude);
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(toRad(curr.latitude)) * Math.cos(toRad(next.latitude)) *
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                distance += R * c;
+            }
+        }
+        return {
+            moving, idle, stop, total,
+            distance: Math.round(distance)
+        };
+    }, [replayData]);
 
     const handlePlayPause = () => {
         const newPlayState = !isPlaying;
@@ -122,9 +177,33 @@ const ReplayControls = ({
 
 
 
-
     return (
         <div className="bg-white ">
+            {/* Summary Bar */}
+            {showSummary && summary && (
+                <div className="w-full flex flex-wrap items-center justify-between gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-[11px] md:text-xs font-medium">
+                    <div className="flex items-center gap-1">
+                        <span className="text-gray-500">Total Moving Time:</span>
+                        <span className="font-semibold text-green-600">{formatDuration(summary.moving)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="text-gray-500">Total Stop Time:</span>
+                        <span className="font-semibold text-red-600">{formatDuration(summary.stop)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="text-gray-500">Total Idle Time:</span>
+                        <span className="font-semibold text-yellow-600">{formatDuration(summary.idle)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="text-gray-500">Total Time:</span>
+                        <span className="font-semibold text-gray-800">{formatDuration(summary.total)}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="text-gray-500">Total Distance Traveled:</span>
+                        <span className="font-semibold text-blue-700">{summary.distance} km</span>
+                    </div>
+                </div>
+            )}
             {/* Compact Progress Bar */}
             <div className="px-2 sm:px-4 py-2">
                 <ReplayProgressBar
@@ -132,13 +211,24 @@ const ReplayControls = ({
                     duration={duration}
                     onSeek={handleSeek}
                     isPlaying={isPlaying}
+                    replayData={replayData}
                 />
             </div>
 
             {/* Responsive Controls Layout with inline filter options */}
             <div className="grid grid-cols-12 gap-1 sm:gap-4 items-center px-2 sm:px-4 py-2">
-                {/* Left Controls - Display Mode and Stop Duration (4 columns) */}
+                {/* Left Controls - Summary Checkbox, Display Mode and Stop Duration (4 columns) */}
                 <div className="col-span-4 flex items-center space-x-1 sm:space-x-2">
+                    {/* Show Summary Checkbox */}
+                    <input
+                        type="checkbox"
+                        id="show-summary"
+                        checked={showSummary}
+                        onChange={e => handleFiltersChange({ ...filters, showSummary: e.target.checked })}
+                        className="mr-1 accent-[#25689f] cursor-pointer"
+                        style={{ marginTop: 1 }}
+                    />
+                    <label htmlFor="show-summary" className="text-xs font-medium text-gray-700 cursor-pointer select-none mr-2">Summary</label>
                     {/* Display Mode Dropdown */}
                     <select
                         value={filters.displayMode || "line"}
@@ -149,7 +239,6 @@ const ReplayControls = ({
                         <option value="line">📍 Line</option>
                         <option value="marker">🎯 Marker</option>
                     </select>
-
                     {/* Stop Duration Dropdown */}
                     <select
                         value={filters.stopDuration || "all"}

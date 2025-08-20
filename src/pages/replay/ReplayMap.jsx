@@ -522,7 +522,7 @@ const ReplayMap = forwardRef(
 
         {/* Map Controls - Adjust z-index based on mobile menu state */}
         <div
-          className={`absolute top-4 left-4 z-[${controlsZIndex}]`}
+          className={`absolute top-2 left-4 z-[${controlsZIndex}]`}
           style={{ zIndex: controlsZIndex }}
         >
           <div className="flex items-center space-x-1 bg-white/95 backdrop-blur-sm rounded-lg p-1 shadow-lg border border-gray-200">
@@ -557,7 +557,7 @@ const ReplayMap = forwardRef(
 
         {/* Zoom Controls */}
         <div
-          className={`absolute top-4 right-4`}
+          className={`absolute top-2 right-4`}
           style={{ zIndex: controlsZIndex }}
         >
           <div className="flex flex-col space-y-1 bg-white/95 backdrop-blur-sm rounded-lg p-1 shadow-lg border border-gray-200">

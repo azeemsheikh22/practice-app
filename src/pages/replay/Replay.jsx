@@ -116,16 +116,42 @@ const Replay = () => {
             isMobileMenuOpen ? "lg:z-0" : "z-0"
           }`}
         >
+
+          {/* Info Bar Above Map */}
+          {Array.isArray(replayApiData) && replayApiData.length > 0 && (
+            <div className="w-full flex flex-row items-center justify-between px-2 py-1 bg-gradient-to-r from-[#25689f]/10 to-[#1F557F]/10 shadow-sm text-[11px] md:text-xs font-medium z-20" style={{minHeight: 28, lineHeight: 1.1}}>
+              {/* Start Time */}
+              <div className="flex flex-row items-center gap-1">
+                <span className="text-gray-500">Start:</span>
+                <span className="font-semibold text-gray-800 truncate max-w-[150px]" title={replayApiData[0].gps_time}>
+                  {new Date(replayApiData[0].gps_time).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
+                </span>
+              </div>
+              {/* Vehicle Name */}
+              <div className="flex flex-row items-center gap-1">
+                {/* <img src={require('../../assets/logo.png')} alt="vehicle" className="w-5 h-5 rounded object-contain border border-gray-200 bg-white" /> */}
+                <span className="font-semibold text-[#25689f] text-xs md:text-sm truncate max-w-[120px]" title={replayApiData[0].car_name}>{replayApiData[0].car_name}</span>
+              </div>
+              {/* End Time */}
+              <div className="flex flex-row items-center gap-1">
+                <span className="text-gray-500">End:</span>
+                <span className="font-semibold text-gray-800 truncate max-w-[150px]" title={replayApiData[replayApiData.length-1].gps_time}>
+                  {new Date(replayApiData[replayApiData.length-1].gps_time).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Map */}
           <div className="flex-1 relative">
-          <ReplayMap
-            ref={mapRef}
-            replayData={replayApiData}
-            isPlaying={isPlaying}
-            currentTime={currentTime}
-            isMobileMenuOpen={isMobileMenuOpen}
-            sidebarExpanded={isSidebarExpanded}
-          />
+            <ReplayMap
+              ref={mapRef}
+              replayData={replayApiData}
+              isPlaying={isPlaying}
+              currentTime={currentTime}
+              isMobileMenuOpen={isMobileMenuOpen}
+              sidebarExpanded={isSidebarExpanded}
+            />
           </div>
 
           {/* Controls */}

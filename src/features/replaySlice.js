@@ -40,6 +40,7 @@ const replaySlice = createSlice({
       stopDuration: 'all',
       showAlarms: true,
       showStops: true,
+      showSummary: false,
     },
     currentReplayIndex: null, // index of the currently animated point
     isReplayPaused: true, // replay pause state
