@@ -22,6 +22,7 @@ export default function Alerts() {
   const [selectedSort, setSelectedSort] = useState("Most Triggered");
   const [selectedLogDateRange, setSelectedLogDateRange] = useState("Today");
   const [autoRefresh, setAutoRefresh] = useState(false);
+  const [alarmSound, setAlarmSound] = useState(false);
   const dispatch = useDispatch();
   const {
     policyList,
@@ -261,6 +262,7 @@ export default function Alerts() {
               alertLogs={alertLogs}
               logLoading={logLoading}
               logError={logError}
+              alarmSound={autoRefresh ? false : autoRefresh} // default false, will update below
             />
           </div>
         );
@@ -333,7 +335,26 @@ export default function Alerts() {
             setSelectedSort={setSelectedSort}
           />
         )}
-        {renderTabContent()}
+        {/* Pass autoRefresh as alarmSound to AlertLogTable in Alert Log tab */}
+        {activeTab === "alert-log" ? (
+          <>
+            <AlertLogHeader
+              selectedTimeframe={selectedLogDateRange}
+              setSelectedTimeframe={handleLogDateRangeChange}
+              dateRange={getLogDateRange(selectedLogDateRange)}
+              autoRefresh={autoRefresh}
+              setAutoRefresh={setAutoRefresh}
+              alarmSound={alarmSound}
+              setAlarmSound={setAlarmSound}
+            />
+            <AlertLogTable
+              alertLogs={alertLogs}
+              logLoading={logLoading}
+              logError={logError}
+              alarmSound={alarmSound}
+            />
+          </>
+        ) : renderTabContent()}
       </div>
     </div>
   );

@@ -15,12 +15,14 @@ export default function AlertLogHeader({
   setSelectedTimeframe,
   dateRange,
   autoRefresh,
-  setAutoRefresh
+  setAutoRefresh,
+  alarmSound,
+  setAlarmSound
 }) {
   const dispatch = useDispatch();
   const onlyUnconfirmed = useSelector((state) => state.alert.onlyUnconfirmed);
   const searchQuery = useSelector((state) => state.alert.searchQuery);
-  const [alarmSound, setAlarmSound] = React.useState(false);
+  // alarmSound state ab parent se aa raha hai
 
 
 
