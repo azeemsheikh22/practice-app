@@ -235,6 +235,8 @@ export default function GeofenceTable() {
     (state) => state.geofence
   );
 
+  console.log(geofences)
+
   const categories = useMemo(() => getAllCategories(geofences), [geofences]);
 
   const filteredData = useMemo(() => {
