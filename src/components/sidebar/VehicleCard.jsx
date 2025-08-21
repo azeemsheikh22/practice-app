@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { createPortal } from "react-dom";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   MapPin,
   Clock,
@@ -23,10 +22,7 @@ const VehicleCard = React.memo(({ car }) => {
   );
   const isSelected = selectedVehicleId === car.car_id;
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const menuButtonRef = useRef(null);
-  const menuRef = useRef(null);
+  const [expanded, setExpanded] = useState(false);
 
   // ✅ STABLE: Memoize car data to prevent unnecessary re-renders
   // Added new fields: signalstrength, mileage, voltage
@@ -132,212 +128,19 @@ const VehicleCard = React.memo(({ car }) => {
       return parseFloat(voltage).toFixed(2) + " V";
     }
     return "N/A";
-  }, []);
+  }, [])  ;
 
   const handleCardClick = useCallback(() => {
-    if (!menuOpen) {
+    if (!expanded) {
       dispatch(setSelectedVehicle(stableCarData.car_id));
     }
-  }, [dispatch, stableCarData.car_id, menuOpen]);
+  }, [dispatch, stableCarData.car_id, expanded]);
 
-  // Menu position calculation - memoized
-  const calculateMenuPosition = useCallback(() => {
-    if (menuButtonRef.current) {
-      const buttonRect = menuButtonRef.current.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      
-      const menuWidth = 180;
-      const menuHeight = 280;
-      
-      let x = buttonRect.right + 8;
-      let y = buttonRect.top;
-      
-      // Adjust horizontal position
-      if (x + menuWidth > viewportWidth) {
-        x = buttonRect.left - menuWidth - 8;
-      }
-      
-      // Adjust vertical position
-      if (y + menuHeight > viewportHeight) {
-        y = Math.max(8, viewportHeight - menuHeight - 8);
-      }
-      
-      return { x, y };
-    }
-    return { x: 0, y: 0 };
+  const handleExpandToggle = useCallback((e) => {
+    e.stopPropagation();
+    setExpanded((prev) => !prev);
   }, []);
 
-  const handleMenuToggle = useCallback((e) => {
-    e.stopPropagation();
-    
-    if (!menuOpen) {
-      const position = calculateMenuPosition();
-      setMenuPosition(position);
-      setMenuOpen(true);
-    } else {
-      setMenuOpen(false);
-    }
-  }, [menuOpen, calculateMenuPosition]);
-
-  const handleMenuItemClick = useCallback((action, e) => {
-    e.stopPropagation();
-
-    // Handle different menu actions
-    switch (action) {
-      case "zoomTo":
-        console.log("Zoom To clicked for", stableCarData.carname);
-        break;
-      case "viewReplay":
-        console.log("View Replay clicked for", stableCarData.carname);
-        break;
-      case "dailyReport":
-        console.log("Daily Report clicked for", stableCarData.carname);
-        break;
-      case "directionsTo":
-        console.log("Directions To clicked for", stableCarData.carname);
-        break;
-      case "editVehicle":
-        console.log("Edit Vehicle clicked for", stableCarData.carname);
-        break;
-      case "removeFromMap":
-        console.log("Remove from Map clicked for", stableCarData.carname);
-        break;
-      default:
-        break;
-    }
-
-    // Close menu
-    setMenuOpen(false);
-  }, [stableCarData.carname]);
-
-  // ✅ STABLE EVENT HANDLING: Only depend on menuOpen, not car data
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    let isClosing = false;
-
-    const handleClickOutside = (event) => {
-      if (isClosing) return;
-      
-      // Only close if click is truly outside both menu and button
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(event.target) &&
-        menuButtonRef.current &&
-        !menuButtonRef.current.contains(event.target)
-      ) {
-        isClosing = true;
-        setMenuOpen(false);
-      }
-    };
-
-    const handleEscapeKey = (event) => {
-      if (event.key === 'Escape' && !isClosing) {
-        isClosing = true;
-        setMenuOpen(false);
-      }
-    };
-
-    // Add listeners with delay to prevent immediate closing
-    const timer = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside, { passive: true });
-      document.addEventListener("keydown", handleEscapeKey, { passive: true });
-    }, 100);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscapeKey);
-    };
-  }, [menuOpen]); // ✅ Only depend on menuOpen
-
-  // ✅ STABLE MENU COMPONENT: Use stableCarData
-  const MenuComponent = useMemo(() => {
-    if (!menuOpen) return null;
-
-    return (
-      <div
-        ref={menuRef}
-        className="fixed bg-white border border-gray-300 rounded-lg shadow-xl z-[99999] w-[180px] select-none"
-        style={{
-          left: `${menuPosition.x}px`,
-          top: `${menuPosition.y}px`,
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-          pointerEvents: 'auto',
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-        onClick={(e) => e.stopPropagation()}
-        onContextMenu={(e) => e.preventDefault()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-          <div className="font-medium text-sm text-gray-900 truncate">
-            {stableCarData.carname || `Vehicle ${stableCarData.car_id}`}
-          </div>
-        </div>
-
-        {/* Menu Items */}
-        <div className="py-2">
-          <button
-            onClick={(e) => handleMenuItemClick("zoomTo", e)}
-            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center"
-            type="button"
-          >
-            <span className="mr-2">🎯</span>
-            Zoom To
-          </button>
-
-          <button
-            onClick={(e) => handleMenuItemClick("viewReplay", e)}
-            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center"
-            type="button"
-          >
-            <span className="mr-2">▶️</span>
-            View Replay
-          </button>
-
-          <button
-            onClick={(e) => handleMenuItemClick("dailyReport", e)}
-            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center"
-            type="button"
-          >
-            <span className="mr-2">📊</span>
-            Daily Report
-          </button>
-
-          <button
-            onClick={(e) => handleMenuItemClick("directionsTo", e)}
-            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center"
-            type="button"
-          >
-            <span className="mr-2">🧭</span>
-            Directions
-          </button>
-
-          <button
-            onClick={(e) => handleMenuItemClick("editVehicle", e)}
-            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center"
-            type="button"
-          >
-            <span className="mr-2">✏️</span>
-            Edit Vehicle
-          </button>
-
-          <div className="border-t border-gray-200 my-1"></div>
-
-          <button
-            onClick={(e) => handleMenuItemClick("removeFromMap", e)}
-            className="w-full text-left cursor-pointer px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center"
-            type="button"
-          >
-            <span className="mr-2">❌</span>
-            Remove
-          </button>
-        </div>
-      </div>
-    );
-  }, [menuOpen, menuPosition, stableCarData, handleMenuItemClick]);
 
   return (
     <>
@@ -384,13 +187,11 @@ const VehicleCard = React.memo(({ car }) => {
               >
                 {stableCarData.movingstatus || "Unknown"}
               </div>
-
-              {/* 3-dot menu button */}
+              {/* 3-dot menu button: expands card */}
               <button
-                ref={menuButtonRef}
-                onClick={handleMenuToggle}
+                onClick={handleExpandToggle}
                 className="menu-button p-1.5 rounded-full hover:bg-gray-100 cursor-pointer transition-colors duration-200"
-                title="Vehicle Actions"
+                title="Show Options"
                 type="button"
               >
                 <MoreVertical size={14} className="text-gray-600" />
@@ -449,8 +250,43 @@ const VehicleCard = React.memo(({ car }) => {
         </div>
       </div>
 
-      {/* ✅ STABLE PORTAL: Menu won't close on car data updates */}
-      {menuOpen && createPortal(MenuComponent, document.body)}
+      {/* Expanded options inside card */}
+      {expanded && (
+        <div className="mt-3 border-t pt-2 bg-blue-50 border-blue-200 shadow-lg rounded-b-xl animate-fadeIn">
+          <ul className="space-y-1">
+            <li>
+              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                Vehicle Info
+              </button>
+            </li>
+            <li>
+              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                Driver Info
+              </button>
+            </li>
+            <li>
+              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                Vehicle Dispatch
+              </button>
+            </li>
+            <li>
+              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                Replay
+              </button>
+            </li>
+            <li>
+              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                Service Info
+              </button>
+            </li>
+            <li>
+              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                History Report
+              </button>
+            </li>
+          </ul>
+        </div>
+      )}
     </>
   );
 }, (prevProps, nextProps) => {
