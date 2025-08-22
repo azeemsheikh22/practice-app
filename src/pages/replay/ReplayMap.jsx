@@ -79,9 +79,6 @@ const ReplayMap = forwardRef(
     // Add this ref at the top level, not inside useEffect
     const lastViewRef = useRef({ lat: null, lng: null, zoom: null });
 
-
-    console.log(replayData)
-
     // Invalidate map size when sidebar expands/collapses
     useEffect(() => {
       if (mapInstanceRef.current) {

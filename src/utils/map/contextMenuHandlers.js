@@ -134,8 +134,17 @@ export const handleZoomToLocation = (contextMenu, mapInstanceRef, setContextMenu
     switch (action) {
       case "findNearest":
         break;
-      case "viewReplay":
+      case "viewReplay": {
+        // Open /replay in a new tab with vehicle id as query param
+        const vehicleId = vehicleData.car_id || vehicleData.id || vehicleData.valueId;
+        if (vehicleId) {
+          const url = `/#/replay?vehicleId=${vehicleId}`;
+          window.open(url, '_blank', 'noopener,noreferrer');
+        } else {
+          alert('Vehicle ID not available');
+        }
         break;
+      }
       case "dailyReport":
         break;
       case "detailedReport":

@@ -1,5 +1,6 @@
 // (moved inside component)
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import ReplayDetailsTab from "./ReplayDetailsTab";
 import {
@@ -27,6 +28,10 @@ const ReplaySidebar = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({});
+  
+  // Get vehicleId from URL if present
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
 
   // Date/Time filters
   const [fromDate, setFromDate] = useState("");
@@ -46,6 +51,65 @@ const ReplaySidebar = ({
     setToDate(todayStr);
     toast("You can only get up to 7 days of replay data.", { icon: "ℹ️" });
   }, []);
+  
+  // Use a ref to track if we've already auto-fetched for this session
+  // Refs don't cause re-renders when they change
+  const autoFetchedRef = useRef(false);
+  
+  // Handle vehicleId from URL parameter - selection and one-time fetch
+  useEffect(() => {
+    const vehicleId = params.get("vehicleId");
+    
+    // Only proceed if we have a vehicleId and vehicles data
+    if (vehicleId && rawVehicles.length > 0) {
+      console.log("Found vehicleId in URL:", vehicleId);
+      
+      // Only continue if we haven't already auto-fetched
+      if (!autoFetchedRef.current) {
+        // Find the vehicle with matching id
+        const vehicle = rawVehicles.find(v => v.valueId === vehicleId || v.id === vehicleId);
+        
+        if (vehicle && vehicle.Type === "Vehicle") {
+          console.log("Auto-selecting vehicle from URL parameter:", vehicle.text);
+          
+          // Select the vehicle
+          setSelectedVehicle(vehicle);
+          
+          // Expand parent groups of this vehicle
+          const parentGroups = findParentGroups(vehicle.id, rawVehicles);
+          let newExpandedGroups = {...expandedGroups};
+          
+          parentGroups.forEach(groupId => {
+            newExpandedGroups[groupId] = true;
+          });
+          
+          setExpandedGroups(newExpandedGroups);
+          
+          // Mark that we've found the vehicle
+          console.log("Setting up auto-fetch with 1.5 second delay");
+          
+          // Add a timeout to allow the component to stabilize before fetching
+          const timer = setTimeout(() => {
+            console.log("Auto-fetching replay data for vehicle:", vehicle.text);
+            // Call handleGetReplay which will also switch to details tab
+            handleGetReplay();
+            
+            // Mark that we've fetched so we don't do it again
+            autoFetchedRef.current = true;
+            console.log("Auto-fetch complete, flagged to prevent repeat fetches");
+          }, 1500);
+          
+          // Clean up the timer if component unmounts
+          return () => clearTimeout(timer);
+        } else {
+          console.log("Vehicle not found for ID:", vehicleId);
+        }
+      } else {
+        console.log("Skipping auto-fetch as it was already done");
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawVehicles]);
 
   // Helper function
   const findParentGroups = (vehicleId, vehicles) => {
@@ -165,18 +229,31 @@ const ReplaySidebar = ({
   const handleGetReplay = () => {
     if (!selectedVehicle) {
       toast.error("Please select a vehicle first");
+      console.log("Replay data fetch failed: No vehicle selected");
       return;
     }
+    
+    console.log("Getting replay data for:", {
+      vehicle: selectedVehicle.text,
+      vehicleId: selectedVehicle.id,
+      vehicleValueId: selectedVehicle.valueId,
+      dateRange: `${fromDate}T${fromTime} to ${toDate}T${toTime}`
+    });
+    
     // 7-day range limit
     const from = new Date(`${fromDate}T${fromTime}`);
     const to = new Date(`${toDate}T${toTime}`);
     const diffMs = to - from;
     const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    
     if (diffDays > 7) {
       toast.error("You can only select up to 7 days. Please reduce the date range.");
+      console.log("Replay data fetch failed: Date range too large");
       return;
     }
+    
     if (onGetReplayData) {
+      console.log("Calling onGetReplayData");
       onGetReplayData({
         vehicle: selectedVehicle,
         fromDate,
@@ -185,8 +262,13 @@ const ReplaySidebar = ({
         toTime,
         quickFilter,
       });
+    } else {
+      console.log("ERROR: onGetReplayData function is not available!");
     }
+    
+    console.log("Switching to details tab");
     setActiveTab("details"); // Switch to details tab after getting data
+    
     // Close mobile menu after getting data on small screens
     if (window.innerWidth < 1024) {
       onMobileMenuToggle(false);

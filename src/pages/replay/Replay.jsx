@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import Navbar from "../../components/navber/Navbar";
 import ReplaySidebar from "./ReplaySidebar";
@@ -26,14 +27,44 @@ const Replay = () => {
   const replayApiData = useSelector(selectReplayData);
 
   // Handler to get replay data from sidebar
-  const handleGetReplayData = ({ vehicle, fromDate, toDate }) => {
-    // console.log(vehicle)
-    if (!vehicle || !fromDate || !toDate) return;
+  const handleGetReplayData = ({ vehicle, fromDate, toDate, fromTime, toTime }) => {
+    console.log("Replay.jsx: handleGetReplayData called with:", { 
+      vehicleId: vehicle?.id,
+      vehicleValueId: vehicle?.valueId,
+      vehicleName: vehicle?.text,
+      fromDate, 
+      toDate,
+      fromTime,
+      toTime
+    });
+    
+    if (!vehicle || !fromDate || !toDate) {
+      console.log("Replay.jsx: Missing required data for replay fetch");
+      return;
+    }
+    
     // Format dates for API (YYYY/MM/DD)
     const datefrom = fromDate.replace(/-/g, "/");
     const dateto = toDate.replace(/-/g, "/");
+    
+    console.log("Replay.jsx: Dispatching fetchReplayData with:", {
+      carId: vehicle.valueId,
+      datefrom,
+      dateto
+    });
+    
     dispatch(fetchReplayData({ carId: vehicle.valueId, datefrom, dateto }));
   };
+
+  // Log vehicleId from query param if present
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const vehicleId = params.get("vehicleId");
+    if (vehicleId) {
+      console.log("Replay page vehicleId from URL:", vehicleId);
+    }
+  }, [location.search]);
 
   const connectionStatus = useSelector(selectConnectionStatus);
 
@@ -97,7 +128,7 @@ const Replay = () => {
         {/* Sidebar - Always on left */}
         <div
           className={`
-          flex-shrink-0 transition-all duration-300 ease-in-out relative z-40
+          flex-shrink-0 transition-all duration-300 ease-in-out relative 
           ${isSidebarExpanded ? "w-0 lg:w-96" : "w-0 lg:w-16"}
         `}
         >

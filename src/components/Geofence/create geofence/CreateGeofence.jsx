@@ -127,7 +127,9 @@ const CreateGeofence = () => {
           }
         );
         setEditGeofenceData(response.data);
-        console.log(response.data)
+        console.log(response.data
+          
+        )
       } catch (error) {
         console.error("Error fetching geofence metrics:", error);
         setEditGeofenceData(null);
