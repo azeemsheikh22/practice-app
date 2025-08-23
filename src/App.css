@@ -43,7 +43,7 @@
 
 .border-dark {
   border-color: var(--text-color);
-}
+} 
 
 .accent-primary {
   accent-color: var(--primary-color);
@@ -138,6 +138,50 @@ input:-webkit-autofill:active {
   overflow: hidden;
 }
 
+/* Ensure consistent table layout */
+.table-container table {
+  table-layout: fixed;
+  border-spacing: 0;
+}
 
+/* Make sure truncated text shows ellipsis */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
 
+/* Custom alert row highlight animation */
+@keyframes alert-highlight {
+  0% {
+    background-color: rgba(254, 226, 226, 0.7); /* red-100 with opacity */
+  }
+  50% {
+    background-color: rgba(254, 202, 202, 0.7); /* red-200 with opacity */
+  }
+  100% {
+    background-color: rgba(254, 226, 226, 0.7); /* red-100 with opacity */
+  }
+}
 
+.alert-row-critical {
+  background-color: rgba(254, 226, 226, 0.7); /* red-100 with opacity as fallback */
+  animation: alert-highlight 2s ease-in-out infinite;
+  position: relative;
+}
+
+/* Left border indicator using pseudo-element */
+.alert-row-critical > td:first-child {
+  position: relative;
+}
+
+.alert-row-critical > td:first-child::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background-color: #ef4444; /* red-500 */
+}

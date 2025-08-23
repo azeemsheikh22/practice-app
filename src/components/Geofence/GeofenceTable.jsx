@@ -235,8 +235,6 @@ export default function GeofenceTable() {
     (state) => state.geofence
   );
 
-  console.log(geofences)
-
   const categories = useMemo(() => getAllCategories(geofences), [geofences]);
 
   const filteredData = useMemo(() => {
@@ -502,7 +500,7 @@ export default function GeofenceTable() {
 
           {/* Category Filter - Compact */}
           <div className="flex items-center gap-2 min-w-[180px]">
-            <div style={{ width: '220px', position: 'relative', zIndex: 1000 }}>
+            <div style={{ width: '220px', position: 'relative', zIndex: 400 }}>
               <Select
                 options={categories.map((cat) => ({ value: cat, label: cat }))}
                 value={{ value: categoryFilter, label: categoryFilter }}

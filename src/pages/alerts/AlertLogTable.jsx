@@ -1,5 +1,11 @@
-import React, { useState, useMemo, useEffect, useRef, useLayoutEffect } from "react";
-import { FixedSizeList as List } from 'react-window';
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useLayoutEffect,
+} from "react";
+import { FixedSizeList as List } from "react-window";
 import { useSelector, useDispatch } from "react-redux";
 import { setFilteredCount, resetExportType } from "../../features/alertSlice";
 import Select from "react-select";
@@ -13,7 +19,6 @@ export default function AlertLogTable({
   logError = null,
   alarmSound = false,
 }) {
-
   const onlyUnconfirmed = useSelector((state) => state.alert.onlyUnconfirmed);
   const searchQuery = useSelector((state) => state.alert.searchQuery);
   const exportType = useSelector((state) => state.alert.exportType);
@@ -46,9 +51,22 @@ export default function AlertLogTable({
     new Set(logsToShow.map((log) => log["Alarm_Status"] || log.status))
   ).map((v) => ({ value: v, label: v }));
 
+  // Helper function to check if a row is critical (priority=1 and status=Un-Confirmed)
+  const isRowCritical = (row) => {
+    if (!row) return false;
+
+    const status = row["Alarm_Status"] || row.status;
+    const priority = Number(
+      row["Priority"] || row["priority"] || row.priority || 0
+    );
+
+    // Critical alerts have priority=1 and status=Un-Confirmed
+    return status === "Un-Confirmed" && priority === 1;
+  };
+
   // Filtered data
   const filteredData = useMemo(() => {
-    return logsToShow.filter((log) => {
+    const filtered = logsToShow.filter((log) => {
       const vehicleVal = log["Vehicle Name"] || log.vehicle || "";
       const driverVal = log["Driver_Name"] || log.driver || "";
       const policyVal = log["policyName"] || log.policyName || "";
@@ -75,6 +93,24 @@ export default function AlertLogTable({
         (!onlyUnconfirmed || statusVal === "Un-Confirmed")
       );
     });
+
+    // Sort data to put critical items at the top
+    return filtered.sort((a, b) => {
+      const aIsCritical = isRowCritical(a);
+      const bIsCritical = isRowCritical(b);
+
+      // If a is critical and b is not, a comes first
+      if (aIsCritical && !bIsCritical) return -1;
+      // If b is critical and a is not, b comes first
+      if (bIsCritical && !aIsCritical) return 1;
+
+      // If both are critical or both are not critical, sort by timestamp (newest first)
+      const aTime = a["LastDateTime"] || a.alarmTriggered || "";
+      const bTime = b["LastDateTime"] || b.alarmTriggered || "";
+
+      // Reverse the comparison to get newest first
+      return bTime.localeCompare(aTime);
+    });
   }, [
     vehicleFilter,
     driverFilter,
@@ -84,10 +120,49 @@ export default function AlertLogTable({
     logsToShow,
     searchQuery,
     onlyUnconfirmed,
+    isRowCritical,
   ]);
 
-  const ROW_HEIGHT = 48; // px
+  const ROW_HEIGHT = 48; // px - more compact row height
   const TABLE_HEIGHT = 450; // px
+
+  // Compact select styles for filters
+  const compactSelectStyles = {
+    container: (base) => ({
+      ...base,
+      fontSize: "11px",
+      fontWeight: "normal",
+      cursor: "pointer",
+    }),
+    control: (base) => ({
+      ...base,
+      cursor: "pointer",
+      minHeight: "28px",
+      height: "28px",
+      padding: "0 0",
+    }),
+    valueContainer: (base) => ({
+      ...base,
+      padding: "0 6px",
+      marginTop: "-4px",
+    }),
+    indicatorsContainer: (base) => ({
+      ...base,
+      height: "28px",
+    }),
+    dropdownIndicator: (base) => ({
+      ...base,
+      padding: "0 4px",
+    }),
+    clearIndicator: (base) => ({
+      ...base,
+      padding: "0 4px",
+    }),
+    menu: (base) => ({
+      ...base,
+      fontSize: "11px",
+    }),
+  };
 
   // Responsive width for react-window List
   const tableContainerRef = useRef(null);
@@ -99,8 +174,8 @@ export default function AlertLogTable({
       }
     }
     updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
   }, []);
 
   // Sound ko repeat karne ke liye interval useEffect
@@ -108,14 +183,11 @@ export default function AlertLogTable({
     let intervalId = null;
     if (alarmSound) {
       intervalId = setInterval(() => {
-        const matchingRows = filteredData.filter((row) => {
-          const status = row["Alarm_Status"] || row.status;
-          const priority = row["priority"] ?? row.priority;
-          return status === "Un-Confirmed" && Number(priority) === 1;
-        });
+        const matchingRows = filteredData.filter(isRowCritical);
         if (matchingRows.length > 0) {
           if (typeof window !== "undefined") {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const ctx = new (window.AudioContext ||
+              window.webkitAudioContext)();
             const oscillator = ctx.createOscillator();
             oscillator.type = "sine";
             oscillator.frequency.setValueAtTime(880, ctx.currentTime); // 880 Hz
@@ -136,14 +208,10 @@ export default function AlertLogTable({
   const dispatch = useDispatch();
 
   // Sound bajanay ka logic (filteredData ke baad likhein)
-  React.useEffect(() => {
+  useEffect(() => {
     if (!alarmSound) return;
     // Check if koi row hai jisme Alarm_Status 'Un-Confirmed' aur priority 1 ho
-    const found = filteredData.some((row) => {
-      const status = row["Alarm_Status"] || row.status;
-      const priority = row["priority"] ?? row.priority;
-      return status === "Un-Confirmed" && Number(priority) === 1;
-    });
+    const found = filteredData.some(isRowCritical);
     if (found) {
       // Simple beep (browser default)
       if (typeof window !== "undefined") {
@@ -278,24 +346,59 @@ export default function AlertLogTable({
       <div
         className=" w-full"
         ref={tableContainerRef}
-        style={{ WebkitOverflowScrolling: 'touch' }}
+        style={{ WebkitOverflowScrolling: "touch" }}
       >
-        <div style={{ minWidth: '900px' }}>
-          <table className="w-full" style={{ tableLayout: 'fixed' }}>
+        <div style={{ minWidth: "900px" }} className="table-container">
+          <table
+            className="w-full border-collapse"
+            style={{ tableLayout: "fixed", borderSpacing: 0 }}
+          >
             <colgroup>
-              <col style={{ minWidth: '40px', width: '40px' }} className="sm:min-w-[48px] sm:w-[48px]" />
-              <col style={{ minWidth: '80px', width: '80px' }} className="sm:min-w-[120px] sm:w-auto" />
-              <col style={{ minWidth: '60px', width: '60px' }} className="sm:min-w-[100px] sm:w-auto" />
-              <col style={{ minWidth: '100px', width: '100px' }} className="sm:min-w-[180px] sm:w-auto" />
-              <col style={{ minWidth: '70px', width: '70px' }} className="sm:min-w-[120px] sm:w-auto" />
-              <col style={{ minWidth: '70px', width: '70px' }} className="sm:min-w-[120px] sm:w-auto" />
-              <col style={{ minWidth: '60px', width: '60px' }} className="sm:min-w-[100px] sm:w-auto" />
-              <col style={{ minWidth: '50px', width: '50px' }} className="sm:min-w-[90px] sm:w-auto" />
+              <col
+                style={{ minWidth: "40px", width: "40px" }}
+                className="sm:min-w-[48px] sm:w-[48px]"
+              />
+              <col
+                style={{ minWidth: "80px", width: "80px" }}
+                className="sm:min-w-[120px] sm:w-auto"
+              />
+              <col
+                style={{ minWidth: "60px", width: "60px" }}
+                className="sm:min-w-[100px] sm:w-auto"
+              />
+              <col
+                style={{ minWidth: "100px", width: "100px" }}
+                className="sm:min-w-[180px] sm:w-auto"
+              />
+              <col
+                style={{ minWidth: "70px", width: "70px" }}
+                className="sm:min-w-[120px] sm:w-auto"
+              />
+              <col
+                style={{ minWidth: "70px", width: "70px" }}
+                className="sm:min-w-[120px] sm:w-auto"
+              />
+              <col
+                style={{ minWidth: "60px", width: "60px" }}
+                className="sm:min-w-[100px] sm:w-auto"
+              />
+              <col
+                style={{ minWidth: "50px", width: "50px" }}
+                className="sm:min-w-[90px] sm:w-auto"
+              />
             </colgroup>
             {/* Table Header with Filters */}
-            <thead className="bg-gray-100" style={{ position: 'sticky', top: 0, zIndex: 2, tableLayout: 'fixed' }}>
+            <thead
+              className="bg-gray-100"
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 2,
+                tableLayout: "fixed",
+              }}
+            >
               <tr>
-                <th className="px-3 py-3 text-left min-w-[40px] w-[40px] sm:min-w-[48px] sm:w-[48px]">
+                <th className="px-2 py-2 text-left min-w-[40px] w-[40px] sm:min-w-[48px] sm:w-[48px]">
                   <input
                     type="checkbox"
                     checked={
@@ -307,8 +410,8 @@ export default function AlertLogTable({
                     disabled={filteredData.length === 0}
                   />
                 </th>
-                <th className="px-3 py-3 text-left min-w-[80px] w-[80px] sm:min-w-[120px] sm:w-auto">
-                  <div className="space-y-1">
+                <th className="px-2 py-2 text-left min-w-[80px] w-[80px] sm:min-w-[120px] sm:w-auto">
+                  <div className="space-y-0.5">
                     <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Vehicle
                     </div>
@@ -319,15 +422,7 @@ export default function AlertLogTable({
                       isClearable
                       placeholder="All Vehicles"
                       classNamePrefix="react-select"
-                      styles={{
-                        container: (base) => ({
-                          ...base,
-                          fontSize: "12px",
-                          fontWeight: "normal",
-                          cursor: "pointer",
-                        }),
-                        control: (base) => ({ ...base, cursor: "pointer" }),
-                      }}
+                      styles={compactSelectStyles}
                     />
                   </div>
                 </th>
@@ -343,20 +438,12 @@ export default function AlertLogTable({
                       isClearable
                       placeholder="All Drivers"
                       classNamePrefix="react-select"
-                      styles={{
-                        container: (base) => ({
-                          ...base,
-                          fontSize: "12px",
-                          fontWeight: "normal",
-                          cursor: "pointer",
-                        }),
-                        control: (base) => ({ ...base, cursor: "pointer" }),
-                      }}
+                      styles={compactSelectStyles}
                     />
                   </div>
                 </th>
-                <th className="px-3 py-3 text-left min-w-[100px] w-[100px] sm:min-w-[180px] sm:w-auto">
-                  <div className="space-y-1">
+                <th className="px-2 py-2 text-left min-w-[100px] w-[100px] sm:min-w-[180px] sm:w-auto">
+                  <div className="space-y-0.5">
                     <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Policy Name
                     </div>
@@ -367,20 +454,12 @@ export default function AlertLogTable({
                       isClearable
                       placeholder="All Policy"
                       classNamePrefix="react-select"
-                      styles={{
-                        container: (base) => ({
-                          ...base,
-                          fontSize: "12px",
-                          fontWeight: "normal",
-                          cursor: "pointer",
-                        }),
-                        control: (base) => ({ ...base, cursor: "pointer" }),
-                      }}
+                      styles={compactSelectStyles}
                     />
                   </div>
                 </th>
-                <th className="px-3 py-3 text-left min-w-[70px] w-[70px] sm:min-w-[120px] sm:w-auto">
-                  <div className="space-y-1">
+                <th className="px-2 py-2 text-left min-w-[70px] w-[70px] sm:min-w-[120px] sm:w-auto">
+                  <div className="space-y-0.5">
                     <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Alert Type
                     </div>
@@ -391,25 +470,17 @@ export default function AlertLogTable({
                       isClearable
                       placeholder="All Alerts"
                       classNamePrefix="react-select"
-                      styles={{
-                        container: (base) => ({
-                          ...base,
-                          fontSize: "12px",
-                          fontWeight: "normal",
-                          cursor: "pointer",
-                        }),
-                        control: (base) => ({ ...base, cursor: "pointer" }),
-                      }}
+                      styles={compactSelectStyles}
                     />
                   </div>
                 </th>
-                <th className="px-3 py-3 text-left min-w-[70px] w-[70px] sm:min-w-[120px] sm:w-auto">
+                <th className="px-2 py-2 text-left min-w-[70px] w-[70px] sm:min-w-[120px] sm:w-auto">
                   <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Alarm Triggered
                   </div>
                 </th>
-                <th className="px-3 py-3 text-left min-w-[60px] w-[60px] sm:min-w-[100px] sm:w-auto">
-                  <div className="space-y-1">
+                <th className="px-2 py-2 text-left min-w-[60px] w-[60px] sm:min-w-[100px] sm:w-auto">
+                  <div className="space-y-0.5">
                     <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Status
                     </div>
@@ -420,19 +491,11 @@ export default function AlertLogTable({
                       isClearable
                       placeholder="All Status"
                       classNamePrefix="react-select"
-                      styles={{
-                        container: (base) => ({
-                          ...base,
-                          fontSize: "12px",
-                          fontWeight: "normal",
-                          cursor: "pointer",
-                        }),
-                        control: (base) => ({ ...base, cursor: "pointer" }),
-                      }}
+                      styles={compactSelectStyles}
                     />
                   </div>
                 </th>
-                <th className="px-3 py-3 text-center min-w-[50px] w-[50px] sm:min-w-[90px] sm:w-auto">
+                <th className="px-2 py-2 text-center min-w-[50px] w-[50px] sm:min-w-[90px] sm:w-auto">
                   <div className="text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Actions
                   </div>
@@ -441,33 +504,70 @@ export default function AlertLogTable({
             </thead>
           </table>
           {/* Virtualized Table Body */}
-          <div style={{ width: '100%', height: `${TABLE_HEIGHT}px` }}>
+          <div
+            style={{ width: "100%", height: `${TABLE_HEIGHT}px` }}
+            className="scrollbar-stable"
+          >
             {listWidth > 0 && (
               <List
                 height={TABLE_HEIGHT}
                 itemCount={filteredData.length}
                 itemSize={ROW_HEIGHT}
                 width={listWidth}
+                className="scrollbar-stable"
               >
                 {({ index, style }) => {
                   const log = filteredData[index];
                   return (
-                    <table style={{ tableLayout: 'fixed', width: '100%', ...style }} key={log.id}>
+                    <table
+                      style={{ tableLayout: "fixed", width: "100%", ...style }}
+                      key={log.id}
+                    >
                       <colgroup>
-                        <col style={{ minWidth: '40px', width: '40px' }} className="sm:min-w-[48px] sm:w-[48px]" />
-                        <col style={{ minWidth: '80px', width: '80px' }} className="sm:min-w-[120px] sm:w-auto" />
-                        <col style={{ minWidth: '60px', width: '60px' }} className="sm:min-w-[100px] sm:w-auto" />
-                        <col style={{ minWidth: '100px', width: '100px' }} className="sm:min-w-[180px] sm:w-auto" />
-                        <col style={{ minWidth: '70px', width: '70px' }} className="sm:min-w-[120px] sm:w-auto" />
-                        <col style={{ minWidth: '70px', width: '70px' }} className="sm:min-w-[120px] sm:w-auto" />
-                        <col style={{ minWidth: '60px', width: '60px' }} className="sm:min-w-[100px] sm:w-auto" />
-                        <col style={{ minWidth: '50px', width: '50px' }} className="sm:min-w-[90px] sm:w-auto" />
+                        <col
+                          style={{ minWidth: "40px", width: "40px" }}
+                          className="sm:min-w-[48px] sm:w-[48px]"
+                        />
+                        <col
+                          style={{ minWidth: "80px", width: "80px" }}
+                          className="sm:min-w-[120px] sm:w-auto"
+                        />
+                        <col
+                          style={{ minWidth: "60px", width: "60px" }}
+                          className="sm:min-w-[100px] sm:w-auto"
+                        />
+                        <col
+                          style={{ minWidth: "100px", width: "100px" }}
+                          className="sm:min-w-[180px] sm:w-auto"
+                        />
+                        <col
+                          style={{ minWidth: "70px", width: "70px" }}
+                          className="sm:min-w-[120px] sm:w-auto"
+                        />
+                        <col
+                          style={{ minWidth: "70px", width: "70px" }}
+                          className="sm:min-w-[120px] sm:w-auto"
+                        />
+                        <col
+                          style={{ minWidth: "60px", width: "60px" }}
+                          className="sm:min-w-[100px] sm:w-auto"
+                        />
+                        <col
+                          style={{ minWidth: "50px", width: "50px" }}
+                          className="sm:min-w-[90px] sm:w-auto"
+                        />
                       </colgroup>
                       <tbody>
                         <tr
-                          className={`hover:bg-gray-50 transition-colors ${selectedRows[index] ? "bg-amber-50" : ""}`}
+                          className={`transition-colors border-b ${
+                            selectedRows[index]
+                              ? "bg-amber-50"
+                              : isRowCritical(log)
+                              ? "alert-row-critical"
+                              : "border-gray-200"
+                          }`}
                         >
-                          <td className="px-3 py-3 min-w-[40px] w-[40px] sm:min-w-[48px] sm:w-[48px]">
+                          <td className="px-3 py-3 min-w-[40px] w-[40px] sm:min-w-[48px] sm:w-[48px] align-middle h-[48px]">
                             <input
                               type="checkbox"
                               checked={selectedRows[index] || false}
@@ -475,52 +575,91 @@ export default function AlertLogTable({
                               className="rounded border-gray-300 w-4 h-4 text-amber-500 focus:ring-amber-500/30"
                             />
                           </td>
-                          <td className="px-3 py-3 min-w-[80px] w-[80px] sm:min-w-[120px] sm:w-auto">
+                          <td className="px-3 py-3 min-w-[80px] w-[80px] sm:min-w-[120px] sm:w-auto align-middle h-[48px]">
                             <div
-                              className="text-sm font-medium text-gray-900"
+                              className="text-sm font-medium text-gray-900 truncate"
                               title={log["Vehicle Name"] || log.vehicle}
                             >
-                              {truncateText(log["Vehicle Name"] || log.vehicle, 20)}
+                              {truncateText(
+                                log["Vehicle Name"] || log.vehicle,
+                                20
+                              )}
                             </div>
                           </td>
-                          <td className="px-3 py-3 min-w-[60px] w-[60px] sm:min-w-[100px] sm:w-auto">
-                            <div className="text-sm text-gray-600">
-                              {log["Driver_Name"] || log.driver}
-                            </div>
-                          </td>
-                          <td className="px-3 py-3 min-w-[100px] w-[100px] sm:min-w-[180px] sm:w-auto">
+                          <td className="px-3 py-3 min-w-[60px] w-[60px] sm:min-w-[100px] sm:w-auto align-middle h-[48px]">
                             <div
-                              className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                              className="text-sm text-gray-600 truncate"
+                              title={log["Driver_Name"] || log.driver}
+                            >
+                              {truncateText(
+                                log["Driver_Name"] || log.driver,
+                                20
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-3 py-3 min-w-[100px] w-[100px] sm:min-w-[180px] sm:w-auto align-middle h-[48px]">
+                            <div
+                              className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer truncate"
                               title={log["policyName"] || log.policyName}
                             >
-                              {truncateText(log["policyName"] || log.policyName, 25)}
+                              {truncateText(
+                                log["policyName"] || log.policyName,
+                                25
+                              )}
                             </div>
                           </td>
-                          <td className="px-3 py-3 min-w-[70px] w-[70px] sm:min-w-[120px] sm:w-auto">
+                          <td className="px-3 py-3 min-w-[70px] w-[70px] sm:min-w-[120px] sm:w-auto align-middle h-[48px]">
                             <div
-                              className="text-sm text-gray-600"
+                              className="text-sm text-gray-600 truncate"
                               title={log["ALARM_TYPE"] || log.alertType}
                             >
-                              {truncateText(log["ALARM_TYPE"] || log.alertType, 20)}
+                              {truncateText(
+                                log["ALARM_TYPE"] || log.alertType,
+                                20
+                              )}
                             </div>
                           </td>
-                          <td className="px-3 py-3 min-w-[70px] w-[70px] sm:min-w-[120px] sm:w-auto">
-                            <div className="text-sm text-gray-600">
+                          <td className="px-3 py-3 min-w-[70px] w-[70px] sm:min-w-[120px] sm:w-auto align-middle h-[48px]">
+                            <div
+                              className="text-sm text-gray-600 truncate"
+                              title={log["LastDateTime"] || log.alarmTriggered}
+                            >
                               {log["LastDateTime"] || log.alarmTriggered}
                             </div>
                           </td>
-                          <td className="px-3 py-3 min-w-[60px] w-[60px] sm:min-w-[100px] sm:w-auto">
+                          <td className="px-3 py-3 min-w-[60px] w-[60px] sm:min-w-[100px] sm:w-auto align-middle h-[48px]">
                             <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                (log["Alarm_Status"] || log.status) === "Un-Confirmed"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-green-100 text-green-800"
+                              className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-lg ${
+                                (log["Alarm_Status"] || log.status) ===
+                                "Un-Confirmed"
+                                  ? isRowCritical(log)
+                                    ? "bg-red-100 text-red-800 ring-1 ring-red-500"
+                                    : "bg-red-50 text-red-700"
+                                  : "bg-green-50 text-green-700"
                               }`}
                             >
-                              {log["Alarm_Status"] || log.status}
+                              {isRowCritical(log) && (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth="1.5"
+                                  stroke="currentColor"
+                                  className="w-3 h-3 flex-shrink-0"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                  />
+                                </svg>
+                              )}
+                              <span className="whitespace-nowrap">
+                                {log["Alarm_Status"] || log.status}
+                              </span>
                             </span>
                           </td>
-                          <td className="px-3 py-3 text-center min-w-[50px] w-[50px] sm:min-w-[90px] sm:w-auto">
+                          <td className="px-3 py-3 text-center min-w-[50px] w-[50px] sm:min-w-[90px] sm:w-auto align-middle h-[48px]">
                             <div className="flex items-center justify-center gap-1">
                               <motion.button
                                 whileHover={{ scale: 1.1 }}
