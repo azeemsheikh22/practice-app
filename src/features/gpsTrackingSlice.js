@@ -24,6 +24,10 @@ const initialState = {
   loading: false,
   dataThrottleTime: 1000, // Default throttle time in ms
 
+  // ✅ NEW: Alert data from ReceiveAlarmData
+  alertData: [],
+  lastAlertUpdate: null,
+
   // ✅ NEW: Cache system for tree data
   treeDataCache: {
     scope1: null, // Vehicle data
@@ -171,6 +175,12 @@ export const initializeConnection = createAsyncThunk(
         // console.log("📩 Server Message:", message);
       });
 
+      // ✅ NEW: Handler for ReceiveAlarmData
+      newConnection.on("ReceiveAlarmData", (alarmData) => {
+        console.log(alarmData);
+        dispatch(updateAlertData(alarmData));
+      });
+
       newConnection.on("FilterUpdated", () => {
         console.log(
           // `✅ Server confirmed filter update: ${vehicleIds.join(", ")}`
@@ -253,7 +263,6 @@ export const updateVehicleFilter = createAsyncThunk(
       connection &&
       connection.state === signalR.HubConnectionState.Connected
     ) {
-
       await connection.invoke("UpdateVehicleFilter", vehicleIds);
       return vehicleIds;
     } else {
@@ -317,6 +326,19 @@ const gpsTrackingSlice = createSlice({
       state.cacheTimestamps[cacheKey] = 0;
 
       // console.log(`🔄 Forced refresh for scope ${scope}`);
+    },
+
+    // ✅ NEW: Update alert data from ReceiveAlarmData
+    updateAlertData: (state, action) => {
+      if (!Array.isArray(action.payload)) {
+        return;
+      }
+
+      // Update the alert data array
+      state.alertData = action.payload;
+
+      // Update last alert update timestamp
+      state.lastAlertUpdate = new Date().toISOString();
     },
 
     updateCarData: (state, action) => {
@@ -653,6 +675,8 @@ export const {
   clearConnection,
   setMovingStatusFilter,
   setConnectionStatus,
+  // ✅ NEW: Export alert-related actions
+  updateAlertData,
   // ✅ NEW: Export cache-related actions
   cacheTreeData,
   setCurrentScope,
@@ -673,6 +697,11 @@ export const selectConnectionStatus = (state) =>
   state.gpsTracking.connectionStatus;
 export const selectMovingStatusFilter = (state) =>
   state.gpsTracking.movingStatusFilter;
+
+// ✅ NEW: Alert data selectors
+export const selectAlertData = (state) => state.gpsTracking.alertData;
+export const selectLastAlertUpdate = (state) =>
+  state.gpsTracking.lastAlertUpdate;
 
 // ✅ NEW: Cache-related selectors
 export const selectTreeDataCache = (state) => state.gpsTracking.treeDataCache;
@@ -724,6 +753,29 @@ export const selectFilteredCarData = createSelector(
     }
 
     return filteredData;
+  }
+);
+
+// ✅ NEW: Add a memoized selector for filtered alert data
+export const selectFilteredAlertData = createSelector(
+  [selectAlertData, selectSelectedVehicles],
+  (alertData, selectedVehicles) => {
+    // If no alerts, return empty array
+    if (!alertData || alertData.length === 0) return [];
+
+    // If no vehicles selected, return all alerts
+    if (!selectedVehicles || selectedVehicles.length === 0) return alertData;
+
+    // Create a Set for faster lookups
+    const selectedVehiclesSet = new Set(
+      selectedVehicles.map((id) => String(id))
+    );
+
+    // Filter alerts for selected vehicles only
+    return alertData.filter(
+      (alert) =>
+        alert && alert.car_id && selectedVehiclesSet.has(String(alert.car_id))
+    );
   }
 );
 

@@ -16,9 +16,14 @@ import LocationSearch from "../../components/map/LocationSearch";
 import { MapPin, Table, ChevronUp, Settings } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setGlobalSearchQuery } from "../../features/locationSearchSlice";
+import AlertPopup from "../../components/alerts/AlertPopup";
+import AlertDetailModal from "../../components/alerts/AlertDetailModal";
 import NetworkStatus from "../../components/map/NetworkStatus";
-import { initializeConnection, selectConnectionStatus } from "../../features/gpsTrackingSlice";
-
+import {
+  initializeConnection,
+  selectConnectionStatus,
+  selectAlertData,
+} from "../../features/gpsTrackingSlice";
 
 // ✅ PERFORMANCE: Lazy load heavy components
 const MapContainer = lazy(() => import("./MapContainer"));
@@ -45,12 +50,99 @@ const LiveMap = () => {
     isMapOptionsOpen: false,
   });
 
-
   const [searchQuery, setSearchQuery] = useState("");
   const dispatch = useDispatch();
   const searchInputRef = useRef(null);
   const mapContainerRef = useRef(null);
   const connectionStatus = useSelector(selectConnectionStatus);
+
+
+  // Get alert data from redux
+  const alertData = useSelector(selectAlertData);
+
+
+  // Manage visible alerts (show up to 4 at a time, auto-dismiss after 7s, pause on hover)
+  const [visibleAlerts, setVisibleAlerts] = useState([]);
+  const alertTimers = useRef({});
+  const [hoveredAlertId, setHoveredAlertId] = useState(null);
+
+  // Modal state for alert details
+  const [modalAlert, setModalAlert] = useState(null);
+
+  // Alert queue system: always show oldest 4 visible, never miss any alert
+  useEffect(() => {
+    if (!alertData || alertData.length === 0) {
+      setVisibleAlerts([]);
+      return;
+    }
+    setVisibleAlerts((prev) => {
+      // Remove any that are no longer in alertData
+      const stillValid = prev.filter((a) => alertData.some((b) => b.alm_id === a.alm_id));
+      // Add new alerts (in order), skip duplicates
+      const prevIds = stillValid.map((a) => a.alm_id);
+      const newToAdd = alertData.filter((a) => !prevIds.includes(a.alm_id));
+      const queue = [...stillValid, ...newToAdd];
+      // Only show first 4 in the queue
+      return queue.slice(0, 4);
+    });
+  }, [alertData]);
+
+  // Set up auto-dismiss for each alert, pause timer if hovered
+  useEffect(() => {
+    visibleAlerts.forEach((alert) => {
+      // If alert is hovered, don't set or clear timer
+      if (hoveredAlertId === alert.alm_id) {
+        if (alertTimers.current[alert.alm_id]) {
+          clearTimeout(alertTimers.current[alert.alm_id]);
+          delete alertTimers.current[alert.alm_id];
+        }
+        return;
+      }
+      // If not hovered, set timer if not already set
+      if (!alertTimers.current[alert.alm_id]) {
+        alertTimers.current[alert.alm_id] = setTimeout(() => {
+          setVisibleAlerts((prev) => prev.filter((a) => a.alm_id !== alert.alm_id));
+          delete alertTimers.current[alert.alm_id];
+        }, 7000);
+      }
+    });
+    // Clean up timers for removed alerts
+    Object.keys(alertTimers.current).forEach((id) => {
+      if (!visibleAlerts.find((a) => a.alm_id === Number(id))) {
+        clearTimeout(alertTimers.current[id]);
+        delete alertTimers.current[id];
+      }
+    });
+    return () => {
+      Object.values(alertTimers.current).forEach(clearTimeout);
+      alertTimers.current = {};
+    };
+  }, [visibleAlerts, hoveredAlertId]);
+
+  // Handler to close a single alert or all
+  const handleCloseAlert = useCallback((id) => {
+    if (id === "all") {
+      setVisibleAlerts([]);
+      Object.values(alertTimers.current).forEach(clearTimeout);
+      alertTimers.current = {};
+    } else {
+      setVisibleAlerts((prev) => {
+        const filtered = prev.filter((a) => a.alm_id !== id);
+        // After removing, check if there are more alerts in alertData not currently shown
+        const shownIds = filtered.map((a) => a.alm_id);
+        const notShown = alertData.filter((a) => !shownIds.includes(a.alm_id) && !prev.some((p) => p.alm_id === a.alm_id));
+        // Add the next alert in the queue if available
+        if (notShown.length > 0) {
+          return [...filtered, notShown[0]].slice(0, 4);
+        }
+        return filtered;
+      });
+      if (alertTimers.current[id]) {
+        clearTimeout(alertTimers.current[id]);
+        delete alertTimers.current[id];
+      }
+    }
+  }, [alertData]);
 
   useEffect(() => {
     // Only initialize if not already connected
@@ -58,7 +150,6 @@ const LiveMap = () => {
       dispatch(initializeConnection(3));
     }
   }, []);
-
 
   // ✅ PERFORMANCE: Memoized state updaters
   const updateUiState = useCallback((updates) => {
@@ -76,7 +167,7 @@ const LiveMap = () => {
     setTimeout(() => {
       if (mapContainerRef.current) {
         // Trigger resize event to update map
-        window.dispatchEvent(new Event('resize'));
+        window.dispatchEvent(new Event("resize"));
 
         // Force map invalidation and redraw
         if (mapContainerRef.current.invalidateSize) {
@@ -85,7 +176,6 @@ const LiveMap = () => {
       }
     }, 300); // Small delay to allow DOM to update
   }, []);
-
 
   // ✅ Add mobile height calculation function
   const calculateMobileHeight = useCallback(() => {
@@ -195,7 +285,6 @@ const LiveMap = () => {
     updateUiState({ isMobileSidebarOpen: false });
   }, [updateUiState]);
 
-
   const handleSearchQueryChange = useCallback((query) => {
     setSearchQuery(query);
   }, []);
@@ -270,15 +359,11 @@ const LiveMap = () => {
     ]
   );
 
-
-
-
   // ✅ Update mobile controls to pass height
   const MobileControls = useMemo(
     () => (
       <div className="fixed bottom-6 left-0 right-0 flex justify-center items-center z-20 xl:hidden">
         <div className="bg-white rounded-full shadow-lg flex overflow-hidden">
-
           <button
             onClick={toggleDataTable}
             className="px-5 py-3 border-r border-gray-200 hover:bg-gray-50 transition-all duration-200 active:scale-95"
@@ -286,8 +371,9 @@ const LiveMap = () => {
           >
             <Table
               size={24}
-              className={`${uiState.isDataTableOpen ? "text-primary" : "text-dark"
-                }`}
+              className={`${
+                uiState.isDataTableOpen ? "text-primary" : "text-dark"
+              }`}
             />
           </button>
 
@@ -322,6 +408,17 @@ const LiveMap = () => {
 
   return (
     <div className="h-screen w-full overflow-hidden bg-white">
+      {/* Alert Popups - always on top */}
+      <AlertPopup
+        alerts={visibleAlerts}
+        onClose={handleCloseAlert}
+        zIndex={99999}
+        onAlertHover={setHoveredAlertId}
+        onViewAlert={setModalAlert}
+      />
+
+      {/* Alert Detail Modal */}
+      <AlertDetailModal alert={modalAlert} open={!!modalAlert} onClose={() => setModalAlert(null)} />
       {/* Navigation Bar */}
       <div className="h-[9vh] overflow-hidden z-50">
         <Navbar />
@@ -332,12 +429,9 @@ const LiveMap = () => {
           <MapSidebar onWidthChange={handleSidebarWidthChange} />
         </div>
 
-
         <div className="w-[100%] flex flex-col">
           {/* Desktop Controls with heading and buttons - Fixed 45px height */}
           <div className="hidden xl:block">{DesktopControls}</div>
-
-
 
           <div className="h-full w-[100%]">
             <Suspense fallback={<LoadingSpinner message="Loading map..." />}>
@@ -349,7 +443,6 @@ const LiveMap = () => {
             </Suspense>
           </div>
 
-
           {/* Data Table - Optimized */}
           <Suspense fallback={null}>
             <MapDataTable
@@ -358,7 +451,6 @@ const LiveMap = () => {
               sidebarWidth={sidebarWidth} // ✅ CHANGED: Dynamic width instead of fixed 340
             />
           </Suspense>
-
         </div>
       </div>
 
@@ -457,7 +549,6 @@ const LiveMap = () => {
       <AnimatePresence mode="wait">
         {uiState.isMobile && uiState.isMobileSidebarOpen && (
           <>
-
             <motion.div
               className="fixed inset-y-0 right-0 w-[100%] bg-white z-[800] shadow-xl"
               variants={slideVariants}
@@ -466,7 +557,9 @@ const LiveMap = () => {
               exit="exit"
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
-              <Suspense fallback={<LoadingSpinner message="Loading sidebar..." />}>
+              <Suspense
+                fallback={<LoadingSpinner message="Loading sidebar..." />}
+              >
                 <MobileSidebar
                   onClose={closeMobileSidebar}
                   mobileHeight={mobileTreeHeight}
@@ -481,4 +574,3 @@ const LiveMap = () => {
 };
 
 export default LiveMap;
-

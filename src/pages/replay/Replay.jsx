@@ -5,13 +5,12 @@ import Navbar from "../../components/navber/Navbar";
 import ReplaySidebar from "./ReplaySidebar";
 import ReplayMap from "./ReplayMap";
 import ReplayControls from "./ReplayControls";
-
 import { useDispatch, useSelector } from "react-redux";
 import {
   initializeConnection,
   selectConnectionStatus,
 } from "../../features/gpsTrackingSlice";
-import { fetchReplayData, selectReplayData } from "../../features/replaySlice";
+import { fetchReplayData, selectReplayData, fetchReplayTrips, selectReplayTrips } from "../../features/replaySlice";
 
 const Replay = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
@@ -25,45 +24,33 @@ const Replay = () => {
 
   const dispatch = useDispatch();
   const replayApiData = useSelector(selectReplayData);
+  const replayTrips = useSelector(selectReplayTrips);
 
   // Handler to get replay data from sidebar
   const handleGetReplayData = ({ vehicle, fromDate, toDate, fromTime, toTime }) => {
-    console.log("Replay.jsx: handleGetReplayData called with:", { 
-      vehicleId: vehicle?.id,
-      vehicleValueId: vehicle?.valueId,
-      vehicleName: vehicle?.text,
-      fromDate, 
-      toDate,
-      fromTime,
-      toTime
-    });
-    
     if (!vehicle || !fromDate || !toDate) {
       console.log("Replay.jsx: Missing required data for replay fetch");
       return;
     }
-    
     // Format dates for API (YYYY/MM/DD)
     const datefrom = fromDate.replace(/-/g, "/");
     const dateto = toDate.replace(/-/g, "/");
-    
-    console.log("Replay.jsx: Dispatching fetchReplayData with:", {
-      carId: vehicle.valueId,
-      datefrom,
-      dateto
-    });
-    
-    dispatch(fetchReplayData({ carId: vehicle.valueId, datefrom, dateto }));
+    // Pass fromTime and toTime to thunks
+    dispatch(fetchReplayData({ carId: vehicle.valueId, datefrom, dateto, fromTime, toTime }));
+    dispatch(fetchReplayTrips({ carId: vehicle.valueId, datefrom, dateto, fromTime, toTime }));
   };
+  // Log trips data to console when it changes
+  useEffect(() => {
+    if (replayTrips) {
+      console.log("Trips data", replayTrips);
+    }
+  }, [replayTrips]);
 
   // Log vehicleId from query param if present
   const location = useLocation();
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const vehicleId = params.get("vehicleId");
-    if (vehicleId) {
-      console.log("Replay page vehicleId from URL:", vehicleId);
-    }
   }, [location.search]);
 
   const connectionStatus = useSelector(selectConnectionStatus);

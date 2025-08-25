@@ -130,11 +130,50 @@ const ReplayMap = forwardRef(
     const [autoZoomEnabled, setAutoZoomEnabled] = useState(true);
 
 
-    // Jab bhi replayData aaye ya displayMode change ho, drawTrack ko call karein
+    // Helper: Clear all map layers related to previous track/markers
+    const clearMapLayers = () => {
+      if (!mapInstanceRef.current) return;
+      // Remove route polyline
+      if (routeLayer) {
+        mapInstanceRef.current.removeLayer(routeLayer);
+        setRouteLayer(null);
+      }
+      // Remove all vehicle markers
+      if (mapInstanceRef.current._vehicleMarkers) {
+        mapInstanceRef.current._vehicleMarkers.forEach((m) => {
+          mapInstanceRef.current.removeLayer(m);
+        });
+        mapInstanceRef.current._vehicleMarkers = [];
+      }
+      // Remove current animated marker
+      if (currentMarker) {
+        mapInstanceRef.current.removeLayer(currentMarker);
+        setCurrentMarker(null);
+      }
+      // Remove all start/end markers (className based or icon html)
+      mapInstanceRef.current.eachLayer(layer => {
+        // Remove by options.className
+        if (layer.options && layer.options.className && (layer.options.className === 'start-marker' || layer.options.className === 'end-marker')) {
+          mapInstanceRef.current.removeLayer(layer);
+        }
+        // Remove by _icon html class (for divIcon markers)
+        if (layer._icon && layer._icon.classList) {
+          if (layer._icon.classList.contains('start-marker') || layer._icon.classList.contains('end-marker')) {
+            mapInstanceRef.current.removeLayer(layer);
+          }
+        }
+      });
+    };
+
+    // Jab bhi replayData aaye ya displayMode change ho, clear all and drawTrack
     useEffect(() => {
       if (replayData && replayData.length > 0) {
+        clearMapLayers();
         drawTrack();
         setAutoZoomEnabled(true); // Naya data aaya ya displayMode change hua to auto-zoom allow
+      } else if (mapInstanceRef.current) {
+        // If no data, clear all layers
+        clearMapLayers();
       }
       // eslint-disable-next-line
     }, [displayMode, replayData ? replayData.length : 0]);

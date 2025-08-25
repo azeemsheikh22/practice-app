@@ -1,4 +1,4 @@
-// (moved inside component)
+
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { toast } from "react-hot-toast";
@@ -12,6 +12,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useSelector } from "react-redux";
+import ReplayTripsTab from "./ReplayTripsTab";
 import ReplayTreeView from "./ReplayTreeView";
 
 const ReplaySidebar = ({
@@ -28,7 +29,7 @@ const ReplaySidebar = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [expandedGroups, setExpandedGroups] = useState({});
-  
+
   // Get vehicleId from URL if present
   const location = useLocation();
   const params = new URLSearchParams(location.search);
@@ -51,54 +52,46 @@ const ReplaySidebar = ({
     setToDate(todayStr);
     toast("You can only get up to 7 days of replay data.", { icon: "ℹ️" });
   }, []);
-  
+
   // Use a ref to track if we've already auto-fetched for this session
   // Refs don't cause re-renders when they change
   const autoFetchedRef = useRef(false);
-  
+
   // Handle vehicleId from URL parameter - selection and one-time fetch
   useEffect(() => {
     const vehicleId = params.get("vehicleId");
-    
+
     // Only proceed if we have a vehicleId and vehicles data
     if (vehicleId && rawVehicles.length > 0) {
-      console.log("Found vehicleId in URL:", vehicleId);
-      
       // Only continue if we haven't already auto-fetched
       if (!autoFetchedRef.current) {
         // Find the vehicle with matching id
-        const vehicle = rawVehicles.find(v => v.valueId === vehicleId || v.id === vehicleId);
-        
+        const vehicle = rawVehicles.find(
+          (v) => v.valueId === vehicleId || v.id === vehicleId
+        );
+
         if (vehicle && vehicle.Type === "Vehicle") {
-          console.log("Auto-selecting vehicle from URL parameter:", vehicle.text);
-          
           // Select the vehicle
           setSelectedVehicle(vehicle);
-          
+
           // Expand parent groups of this vehicle
           const parentGroups = findParentGroups(vehicle.id, rawVehicles);
-          let newExpandedGroups = {...expandedGroups};
-          
-          parentGroups.forEach(groupId => {
+          let newExpandedGroups = { ...expandedGroups };
+
+          parentGroups.forEach((groupId) => {
             newExpandedGroups[groupId] = true;
           });
-          
+
           setExpandedGroups(newExpandedGroups);
-          
-          // Mark that we've found the vehicle
-          console.log("Setting up auto-fetch with 1.5 second delay");
-          
+
           // Add a timeout to allow the component to stabilize before fetching
           const timer = setTimeout(() => {
-            console.log("Auto-fetching replay data for vehicle:", vehicle.text);
-            // Call handleGetReplay which will also switch to details tab
             handleGetReplay();
-            
+
             // Mark that we've fetched so we don't do it again
             autoFetchedRef.current = true;
-            console.log("Auto-fetch complete, flagged to prevent repeat fetches");
           }, 1500);
-          
+
           // Clean up the timer if component unmounts
           return () => clearTimeout(timer);
         } else {
@@ -108,7 +101,7 @@ const ReplaySidebar = ({
         console.log("Skipping auto-fetch as it was already done");
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rawVehicles]);
 
   // Helper function
@@ -229,31 +222,23 @@ const ReplaySidebar = ({
   const handleGetReplay = () => {
     if (!selectedVehicle) {
       toast.error("Please select a vehicle first");
-      console.log("Replay data fetch failed: No vehicle selected");
       return;
     }
-    
-    console.log("Getting replay data for:", {
-      vehicle: selectedVehicle.text,
-      vehicleId: selectedVehicle.id,
-      vehicleValueId: selectedVehicle.valueId,
-      dateRange: `${fromDate}T${fromTime} to ${toDate}T${toTime}`
-    });
-    
+
     // 7-day range limit
     const from = new Date(`${fromDate}T${fromTime}`);
     const to = new Date(`${toDate}T${toTime}`);
     const diffMs = to - from;
     const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    
+
     if (diffDays > 7) {
-      toast.error("You can only select up to 7 days. Please reduce the date range.");
-      console.log("Replay data fetch failed: Date range too large");
+      toast.error(
+        "You can only select up to 7 days. Please reduce the date range."
+      );
       return;
     }
-    
+
     if (onGetReplayData) {
-      console.log("Calling onGetReplayData");
       onGetReplayData({
         vehicle: selectedVehicle,
         fromDate,
@@ -265,10 +250,8 @@ const ReplaySidebar = ({
     } else {
       console.log("ERROR: onGetReplayData function is not available!");
     }
-    
-    console.log("Switching to details tab");
     setActiveTab("details"); // Switch to details tab after getting data
-    
+
     // Close mobile menu after getting data on small screens
     if (window.innerWidth < 1024) {
       onMobileMenuToggle(false);
@@ -374,7 +357,11 @@ const ReplaySidebar = ({
 
         {/* Content - Only show when expanded or mobile menu open */}
         {(isExpanded || isMobileMenuOpen) && (
-          <div className={`flex flex-col h-[75vh] ${activeTab === 'details' ? '' : 'overflow-auto'}`}>
+          <div
+            className={`flex flex-col h-[75vh] ${
+              activeTab === "details" ? "" : "overflow-auto"
+            }`}
+          >
             {/* Tabs */}
             {/* Main Content Area with Scrolling */}
             <div className="flex-1 flex flex-col">
@@ -407,7 +394,10 @@ const ReplaySidebar = ({
                   </div>
 
                   {/* Tree View with Scrolling */}
-                  <div className="px-2 pb-2 h-auto lg:h-[255px] 2xl:h-[340px] 3xl:h-[600px] overflow-y-auto" style={{flexShrink: 0 }}>
+                  <div
+                    className="px-2 pb-2 h-auto lg:h-[255px] 2xl:h-[340px] 3xl:h-[600px] overflow-y-auto"
+                    style={{ flexShrink: 0 }}
+                  >
                     <ReplayTreeView
                       vehicles={rawVehicles}
                       searchQuery={searchQuery}
@@ -428,7 +418,9 @@ const ReplaySidebar = ({
                       <div className="relative">
                         <select
                           value={quickFilter}
-                          onChange={(e) => handleQuickFilterChange(e.target.value)}
+                          onChange={(e) =>
+                            handleQuickFilterChange(e.target.value)
+                          }
                           className="w-full py-1.5 px-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#25689f] focus:border-[#25689f] text-xs appearance-none bg-white cursor-pointer"
                         >
                           {quickFilterOptions.map((option) => (
@@ -466,11 +458,15 @@ const ReplaySidebar = ({
                               toT = time;
                             }
                             // Enforce 7-day max
-                            const maxToDT = new Date(fromDT.getTime() + 7 * 24 * 60 * 60 * 1000);
+                            const maxToDT = new Date(
+                              fromDT.getTime() + 7 * 24 * 60 * 60 * 1000
+                            );
                             if (toDT > maxToDT) {
                               to = maxToDT.toISOString().slice(0, 10);
                               toT = maxToDT.toTimeString().slice(0, 5);
-                              toast.error("You can only select up to 7 days. 'To' date adjusted.");
+                              toast.error(
+                                "You can only select up to 7 days. 'To' date adjusted."
+                              );
                             }
                             setFromDate(newFrom);
                             setFromTime(newFromTime);
@@ -501,11 +497,15 @@ const ReplaySidebar = ({
                               fromT = time;
                             }
                             // Enforce 7-day max
-                            const maxFromDT = new Date(toDT.getTime() - 7 * 24 * 60 * 60 * 1000);
+                            const maxFromDT = new Date(
+                              toDT.getTime() - 7 * 24 * 60 * 60 * 1000
+                            );
                             if (fromDT < maxFromDT) {
                               from = maxFromDT.toISOString().slice(0, 10);
                               fromT = maxFromDT.toTimeString().slice(0, 5);
-                              toast.error("You can only select up to 7 days. 'From' date adjusted.");
+                              toast.error(
+                                "You can only select up to 7 days. 'From' date adjusted."
+                              );
                             }
                             setToDate(newTo);
                             setToTime(newToTime);
@@ -565,24 +565,15 @@ const ReplaySidebar = ({
 
               {/* Details Tab */}
               {activeTab === "details" && (
-                <ReplayDetailsTab replayLoading={replayLoading} replayData={replayData} />
+                <ReplayDetailsTab
+                  replayLoading={replayLoading}
+                  replayData={replayData}
+                />
               )}
 
               {/* Trips Tab */}
               {activeTab === "trips" && (
-                <div className="flex-1 p-6 overflow-y-auto">
-                  <div className="text-center text-gray-500 py-12">
-                    <div className="text-6xl mb-4">🛣️</div>
-                    <div className="text-lg font-medium mb-2 text-gray-700">
-                      Trip History
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {selectedVehicle
-                        ? `Trip history and routes for ${selectedVehicle.text}`
-                        : "Select a vehicle to view trip history"}
-                    </div>
-                  </div>
-                </div>
+                <ReplayTripsTab selectedVehicle={selectedVehicle} />
               )}
             </div>
           </div>
