@@ -1,14 +1,58 @@
 import React, { useState, memo, useCallback } from "react";
-import VehicleCard from "./VehicleCard";
-import { Car, ChevronDown } from "lucide-react";
+import {
+  Car,
+  ChevronDown,
+  MapPin,
+  Clock,
+  Gauge,
+  MoreVertical,
+  Battery,
+  Wifi,
+} from "lucide-react";
 import "../../styles/performance.css";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { selectCarData } from "../../features/gpsTrackingSlice";
+import { setSelectedVehicle } from "../../features/mapInteractionSlice";
+import movingIcon from "../../assets/moving-vehicle.png";
+import stoppedIcon from "../../assets/stopped-vehicle.png";
+import idleIcon from "../../assets/idle-vehicle.png";
+import { useEffect, useRef } from "react";
 
 const VehicleList = memo(() => {
   const [sortOption, setSortOption] = useState("nameAZ");
-  const carData = useSelector(selectCarData);
+  const carData = useSelector(selectCarData) || [];
 
+  // --- Merging/Updating Data logic ---
+  // Keep a stable list, only update vehicles present in new carData, keep others as is
+  const [mergedCarData, setMergedCarData] = useState([]);
+  const prevCarDataRef = React.useRef([]);
+  useEffect(() => {
+    if (!Array.isArray(carData) || carData.length === 0) return;
+    // Build a map of incoming vehicles by car_id
+    const incomingMap = new Map();
+    carData.forEach((car) => {
+      if (car && car.car_id) incomingMap.set(String(car.car_id), car);
+    });
+    // Build a map of previous vehicles by car_id
+    const prevMap = new Map();
+    prevCarDataRef.current.forEach((car) => {
+      if (car && car.car_id) prevMap.set(String(car.car_id), car);
+    });
+    // Update or keep previous vehicles
+    incomingMap.forEach((car, car_id) => {
+      prevMap.set(car_id, car);
+    });
+    const mergedArr = Array.from(prevMap.values());
+    setMergedCarData(mergedArr);
+    prevCarDataRef.current = mergedArr;
+  }, [carData]);
+  // On first mount, initialize mergedCarData if carData is present
+  useEffect(() => {
+    if (mergedCarData.length === 0 && carData.length > 0) {
+      setMergedCarData(carData);
+      prevCarDataRef.current = carData;
+    }
+  }, []);
   // Sort options
   const sortOptions = [
     { value: "nameAZ", label: "Sort A to Z" },
@@ -18,12 +62,10 @@ const VehicleList = memo(() => {
     { value: "lastUpdate", label: "Sort by Last Update" },
   ];
 
-  // Sort vehicles based on selected option
+  // Sort vehicles based on selected option (now on mergedCarData)
   const sortedVehicles = React.useMemo(() => {
-    if (!carData || carData.length === 0) return [];
-
-    let sorted = [...carData];
-
+    if (!mergedCarData || mergedCarData.length === 0) return [];
+    let sorted = [...mergedCarData];
     switch (sortOption) {
       case "nameAZ":
         sorted.sort((a, b) => {
@@ -32,47 +74,38 @@ const VehicleList = memo(() => {
           return nameA.localeCompare(nameB);
         });
         break;
-
       case "driver":
-        // Since driver info is not in the data structure, we'll sort by carname as fallback
         sorted.sort((a, b) => {
           const nameA = (a.carname || "").toLowerCase();
           const nameB = (b.carname || "").toLowerCase();
           return nameA.localeCompare(nameB);
         });
         break;
-
       case "group":
-        // Since group info is not in the data structure, we'll sort by carname as fallback
         sorted.sort((a, b) => {
           const nameA = (a.carname || "").toLowerCase();
           const nameB = (b.carname || "").toLowerCase();
           return nameA.localeCompare(nameB);
         });
         break;
-
       case "status":
         sorted.sort((a, b) => {
           const statusA = (a.movingstatus || "").toLowerCase();
           const statusB = (b.movingstatus || "").toLowerCase();
-          // Priority: Moving > Idle > Stop > Others
           const statusPriority = { moving: 1, idle: 2, stop: 3 };
           const priorityA = statusPriority[statusA] || 4;
           const priorityB = statusPriority[statusB] || 4;
           return priorityA - priorityB;
         });
         break;
-
       case "lastUpdate":
         sorted.sort((a, b) => {
           const timeA = new Date(a.gps_time || 0);
           const timeB = new Date(b.gps_time || 0);
-          return timeB - timeA; // Most recent first
+          return timeB - timeA;
         });
         break;
-
       default:
-        // Default to A-Z sorting
         sorted.sort((a, b) => {
           const nameA = (a.carname || "").toLowerCase();
           const nameB = (b.carname || "").toLowerCase();
@@ -80,13 +113,134 @@ const VehicleList = memo(() => {
         });
         break;
     }
-
     return sorted;
-  }, [carData, sortOption]);
+  }, [mergedCarData, sortOption]);
+
+  // --- Virtual Scrolling Logic ---
+  const ROW_HEIGHT = 165; // px, adjust to match card height
+  const BUFFER_SIZE = 3;
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(600);
+  const scrollContainerRef = useRef(null);
+  useEffect(() => {
+    const updateHeight = () => {
+      if (scrollContainerRef.current) {
+        setContainerHeight(scrollContainerRef.current.clientHeight);
+      }
+    };
+    updateHeight();
+    window.addEventListener("resize", updateHeight);
+    return () => window.removeEventListener("resize", updateHeight);
+  }, []);
+  const handleScroll = useCallback((e) => {
+    setScrollTop(e.target.scrollTop);
+  }, []);
+  const visibleRows = React.useMemo(() => {
+    const total = sortedVehicles.length;
+    const startIndex = Math.floor(scrollTop / ROW_HEIGHT);
+    const endIndex = Math.min(
+      startIndex + Math.ceil(containerHeight / ROW_HEIGHT) + BUFFER_SIZE,
+      total
+    );
+    const actualStartIndex = Math.max(0, startIndex - BUFFER_SIZE);
+    return {
+      startIndex: actualStartIndex,
+      endIndex,
+      visibleData: sortedVehicles.slice(actualStartIndex, endIndex),
+      offsetY: actualStartIndex * ROW_HEIGHT,
+      total,
+    };
+  }, [sortedVehicles, scrollTop, containerHeight]);
 
   const handleSortChange = useCallback((e) => {
     setSortOption(e.target.value);
   }, []);
+
+  // For expanded state per vehicle
+  const [expandedMap, setExpandedMap] = useState({});
+  const dispatch = useDispatch();
+  const selectedVehicleId = useSelector(
+    (state) => state.mapInteraction.selectedVehicleId
+  );
+
+  // Helper functions from VehicleCard
+  const getStatusColor = (status) => {
+    if (!status) return "bg-blue-500";
+    switch (status.toLowerCase()) {
+      case "moving":
+      case "run":
+        return "bg-green-500";
+      case "idle":
+        return "bg-yellow-500";
+      case "stop":
+        return "bg-red-500";
+      case "offline":
+        return "bg-gray-500";
+      default:
+        return "bg-blue-500";
+    }
+  };
+  const getVehicleIcon = (status) => {
+    switch (status?.toLowerCase()) {
+      case "moving":
+        return movingIcon;
+      case "idle":
+        return idleIcon;
+      case "stop":
+      default:
+        return stoppedIcon;
+    }
+  };
+  const formatDateTime = (timeString) => {
+    if (!timeString) return "N/A";
+    try {
+      const date = new Date(timeString);
+      const formattedDate = date.toLocaleDateString([], {
+        month: "short",
+        day: "numeric",
+      });
+      const formattedTime = date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      return `${formattedDate}, ${formattedTime}`;
+    } catch (e) {
+      return "N/A";
+    }
+  };
+  const getSignalStrengthIcon = (strength) => {
+    const signalValue = parseInt(strength) || 0;
+    if (signalValue >= 5) return "text-green-500";
+    if (signalValue >= 3) return "text-yellow-500";
+    return "text-red-500";
+  };
+  const formatVoltage = (voltage) => {
+    if (voltage === null || voltage === undefined) return "N/A";
+    if (typeof voltage === "string" && voltage.includes(",")) {
+      const parts = voltage.split(",");
+      return (
+        (parts[1]
+          ? parseFloat(parts[1]).toFixed(2)
+          : parseFloat(parts[0]).toFixed(2)) + " V"
+      );
+    }
+    if (voltage !== "N/A") {
+      return parseFloat(voltage).toFixed(2) + " V";
+    }
+    return "N/A";
+  };
+
+  // Card click handler
+  const handleCardClick = (car, expanded) => {
+    if (!expanded) {
+      dispatch(setSelectedVehicle(car.car_id));
+    }
+  };
+  // Expand/collapse handler
+  const handleExpandToggle = (e, car_id) => {
+    e.stopPropagation();
+    setExpandedMap((prev) => ({ ...prev, [car_id]: !prev[car_id] }));
+  };
 
   return (
     <div className="px-2 py-3 transition-opacity duration-300 opacity-100 h-full flex flex-col">
@@ -98,7 +252,7 @@ const VehicleList = memo(() => {
           {sortedVehicles.length}
         </span>
       </div>
- 
+
       {/* Sort Dropdown */}
       <div className="relative mb-3 transition-all duration-200 transform translate-y-0 opacity-100">
         <div className="relative">
@@ -120,24 +274,194 @@ const VehicleList = memo(() => {
         </div>
       </div>
 
-      {/* Vehicle List - Simplified without react-window */}
-      <div className="flex-1 overflow-y-auto">
-        {sortedVehicles.length > 0 ? (
-          <div className="space-y-2.5">
-            {sortedVehicles.map((car, index) => (
-              <VehicleCard key={car.car_id || index} car={car} />
-            ))}
+      {/* Vehicle List - Virtual Scrolling */}
+      <div
+        className="flex-1 overflow-y-auto relative"
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        style={{ willChange: "transform" }}
+      >
+        <div style={{ height: visibleRows.total * ROW_HEIGHT, position: "relative" }}>
+          <div
+            style={{
+              transform: `translateY(${visibleRows.offsetY}px)`,
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+            }}
+          >
+            {visibleRows.visibleData.length > 0 ? (
+              <div className="space-y-2.5">
+                {visibleRows.visibleData.map((car, index) => {
+                  const isSelected = selectedVehicleId === car.car_id;
+                  const expanded = expandedMap[car.car_id] || false;
+                  const stableCarData = {
+                    car_id: car.car_id,
+                    carname: car.carname,
+                    movingstatus: car.movingstatus,
+                    location: car.location,
+                    speed: car.speed,
+                    gps_time: car.gps_time,
+                    head: car.head,
+                    signalstrength: car.signalstrength,
+                    mileage: car.mileage,
+                    voltage: car.voltage,
+                    engine: car.engine,
+                  };
+                  return (
+                    <React.Fragment key={car.car_id || index}>
+                      <div
+                        className={`vehicle-card-container relative border rounded-lg cursor-pointer transition-all duration-300 hover:shadow-md ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-50 shadow-md"
+                            : "border-gray-300 bg-white hover:border-blue-300"
+                        }`}
+                        onClick={() => handleCardClick(stableCarData, expanded)}
+                        style={{ marginBottom: "10px", height: ROW_HEIGHT - 10, minHeight: "155px" }}
+                      >
+                        <div className="p-4">
+                          {/* Header with vehicle name and status */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center">
+                              <div className="mr-3 flex-shrink-0">
+                                <img
+                                  src={getVehicleIcon(stableCarData.movingstatus)}
+                                  alt="Vehicle"
+                                  className="w-5 h-5 transition-transform duration-200"
+                                  style={
+                                    stableCarData.movingstatus?.toLowerCase() === "moving"
+                                      ? {
+                                          transform: `rotate(${(stableCarData.head || 0) - 140}deg)`,
+                                        }
+                                      : {}
+                                  }
+                                />
+                              </div>
+                              <div className="font-semibold text-gray-900 text-sm truncate max-w-[150px]">
+                                {stableCarData.carname || `Vehicle ${stableCarData.car_id}`}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center">
+                              <div
+                                className={`px-2 py-0.4 rounded-full text-white text-xs mr-2 ${getStatusColor(
+                                  stableCarData.movingstatus
+                                )}`}
+                              >
+                                {stableCarData.movingstatus || "Unknown"}
+                              </div>
+                              {/* 3-dot menu button: expands card */}
+                              <button
+                                onClick={(e) => handleExpandToggle(e, stableCarData.car_id)}
+                                className="menu-button p-1.5 rounded-full hover:bg-gray-100 cursor-pointer transition-colors duration-200"
+                                title="Show Options"
+                                type="button"
+                              >
+                                <MoreVertical size={14} className="text-gray-600" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Location */}
+                          <div className="flex mb-2.5 text-xs text-gray-800">
+                            <MapPin size={14} className="mr-2 flex-shrink-0 mt-0.5" />
+                            <div className="line-clamp-2 leading-tight">
+                              {stableCarData.location || "Unknown location"}
+                            </div>
+                          </div>
+
+                          {/* Speed and Time */}
+                          <div className="flex items-center justify-between text-xs text-gray-800 mb-2">
+                            <div className="flex items-center">
+                              <Gauge size={14} className="mr-2 flex-shrink-0" />
+                              <span>{stableCarData.speed || "0"} km/h</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Clock size={14} className="mr-2 flex-shrink-0" />
+                              <span>{formatDateTime(stableCarData.gps_time)}</span>
+                            </div>
+                          </div>
+
+                          {/* New fields: Signal Strength, Mileage, Voltage */}
+                          <div className="grid grid-cols-3 gap-2 text-xs text-gray-800 border-t border-gray-100 pt-2">
+                            {/* Signal Strength */}
+                            <div className="flex items-center">
+                              <Wifi size={14} className={`mr-1.5 flex-shrink-0 ${getSignalStrengthIcon(stableCarData.signalstrength)}`} />
+                              <span title="Signal Strength">
+                                {stableCarData.signalstrength || "0"}
+                              </span>
+                            </div>
+                            {/* Duration */}
+                            <div className="flex items-center">
+                              <Clock size={14} className="mr-1.5 flex-shrink-0 text-blue-500" />
+                              <span title="Duration">
+                                {car.duration && car.duration !== "N/A" ? car.duration : "-"}
+                              </span>
+                            </div>
+                            {/* Voltage */}
+                            <div className="flex items-center">
+                              <Battery size={14} className="mr-1.5 flex-shrink-0 text-green-500" />
+                              <span title="Battery Voltage">
+                                {formatVoltage(stableCarData.voltage)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {/* Expanded options inside card */}
+                      {expanded && (
+                        <div className="mt-3 border-t pt-2 bg-blue-50 border-blue-200 shadow-lg rounded-b-xl animate-fadeIn">
+                          <ul className="space-y-1">
+                            <li>
+                              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                                Vehicle Info
+                              </button>
+                            </li>
+                            <li>
+                              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                                Driver Info
+                              </button>
+                            </li>
+                            <li>
+                              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                                Vehicle Dispatch
+                              </button>
+                            </li>
+                            <li>
+                              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                                Replay
+                              </button>
+                            </li>
+                            <li>
+                              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                                Service Info
+                              </button>
+                            </li>
+                            <li>
+                              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                                History Report
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center transition-opacity duration-500 opacity-100">
+                <div className="transition-transform duration-500 transform scale-100">
+                  <Car size={40} className="text-gray-300 mb-3" />
+                </div>
+                <div className="text-gray-500 mb-2 transition-all duration-300 transform translate-y-0 opacity-100">
+                  No vehicle data available
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-8 text-center transition-opacity duration-500 opacity-100">
-            <div className="transition-transform duration-500 transform scale-100">
-              <Car size={40} className="text-gray-300 mb-3" />
-            </div>
-            <div className="text-gray-500 mb-2 transition-all duration-300 transform translate-y-0 opacity-100">
-              No vehicle data available
-            </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );
