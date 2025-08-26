@@ -65,7 +65,6 @@ const MobileSidebar = memo(({ onClose, mobileHeight }) => {
 
   // ✅ OPTIMIZATION 2: Debounced search query
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-
   const dispatch = useDispatch();
 
   // ✅ OPTIMIZATION 3: Memoized selectors
@@ -85,11 +84,6 @@ const MobileSidebar = memo(({ onClose, mobileHeight }) => {
     }
     return mobileHeight || 'calc(100vh - 144px)';
   }, [mobileHeight]);
-
-  // ✅ OPTIMIZATION 4: Memoized car data
-  const carData = useMemo(() => {
-    return rawCarData || [];
-  }, [rawCarData]);
 
   // ✅ OPTIMIZATION 5: Memoized loading state
   const isLoading = useMemo(() => {
@@ -558,7 +552,6 @@ const MobileSidebar = memo(({ onClose, mobileHeight }) => {
               </div>
             }>
               <VehicleList
-                carData={carData}
                 isMobile={true}
               />
             </Suspense>

@@ -2,9 +2,12 @@ import React, { useState, memo, useCallback } from "react";
 import VehicleCard from "./VehicleCard";
 import { Car, ChevronDown } from "lucide-react";
 import "../../styles/performance.css";
+import { useSelector } from "react-redux";
+import { selectCarData } from "../../features/gpsTrackingSlice";
 
-const VehicleList = memo(({ carData, sidebarHeight }) => {
+const VehicleList = memo(() => {
   const [sortOption, setSortOption] = useState("nameAZ");
+  const carData = useSelector(selectCarData);
 
   // Sort options
   const sortOptions = [

@@ -56,11 +56,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
   });
 
   const dispatch = useDispatch();
-
-  // Restore carData selector (fix ReferenceError)
   const carData = useSelector(selectCarData) || [];
-
-  // --- Merge/Update logic: keep previous vehicles, update only those present in new carData ---
   const [mergedCarData, setMergedCarData] = useState([]);
   const prevCarDataRef = useRef([]);
 

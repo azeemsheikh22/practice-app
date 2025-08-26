@@ -617,7 +617,6 @@ const MapSidebar = memo(({ onWidthChange }) => {
                   </div>
                 }>
                   <VehicleList
-                    carData={carData}
                     isExpanded={isExpanded}
                     sidebarHeight={sidebarHeight}
                   />
