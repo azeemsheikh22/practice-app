@@ -177,7 +177,7 @@ export const initializeConnection = createAsyncThunk(
 
       // ✅ NEW: Handler for ReceiveAlarmData
       newConnection.on("ReceiveAlarmData", (alarmData) => {
-        console.log(alarmData);
+        // console.log(alarmData);
         dispatch(updateAlertData(alarmData));
       });
 

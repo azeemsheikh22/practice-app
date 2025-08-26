@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+  useEffect,
+} from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   ChevronUp,
@@ -12,7 +18,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { selectCarData } from "../../features/gpsTrackingSlice";
+import { selectCarData, selectSelectedVehicles } from "../../features/gpsTrackingSlice";
 import { setSelectedVehicle } from "../../features/mapInteractionSlice";
 
 const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
@@ -26,6 +32,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(400);
   const scrollContainerRef = useRef(null);
+  const selectedVehiclesFromSlice = useSelector(selectSelectedVehicles);
 
   // ✅ Column visibility state
   const [showColumnDropdown, setShowColumnDropdown] = useState(false);
@@ -49,7 +56,42 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
   });
 
   const dispatch = useDispatch();
+
+  // Restore carData selector (fix ReferenceError)
   const carData = useSelector(selectCarData) || [];
+
+  // --- Merge/Update logic: keep previous vehicles, update only those present in new carData ---
+  const [mergedCarData, setMergedCarData] = useState([]);
+  const prevCarDataRef = useRef([]);
+
+  useEffect(() => {
+    if (!Array.isArray(carData) || carData.length === 0) return;
+    // Build a map of incoming vehicles by car_id
+    const incomingMap = new Map();
+    carData.forEach((car) => {
+      if (car && car.car_id) incomingMap.set(String(car.car_id), car);
+    });
+    // Build a map of previous vehicles by car_id
+    const prevMap = new Map();
+    prevCarDataRef.current.forEach((car) => {
+      if (car && car.car_id) prevMap.set(String(car.car_id), car);
+    });
+    // Update or keep previous vehicles
+    incomingMap.forEach((car, car_id) => {
+      prevMap.set(car_id, car);
+    });
+    const mergedArr = Array.from(prevMap.values());
+    setMergedCarData(mergedArr);
+    prevCarDataRef.current = mergedArr;
+  }, [carData]);
+
+  // On first mount, initialize mergedCarData if carData is present
+  useEffect(() => {
+    if (mergedCarData.length === 0 && carData.length > 0) {
+      setMergedCarData(carData);
+      prevCarDataRef.current = carData;
+    }
+  }, []);
 
   // ✅ Column definitions
   const columnDefinitions = [
@@ -84,7 +126,9 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
   }, []);
 
   const toggleAllColumns = useCallback(() => {
-    const allVisible = Object.values(visibleColumns).every(visible => visible);
+    const allVisible = Object.values(visibleColumns).every(
+      (visible) => visible
+    );
     const newState = {};
     Object.keys(visibleColumns).forEach((key) => {
       newState[key] = !allVisible;
@@ -93,13 +137,24 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
   }, [visibleColumns]);
 
   // ✅ Location Display Component
-  const LocationDisplay = ({ location,status }) => {
+  const LocationDisplay = ({ location, status }) => {
     const [showFull, setShowFull] = useState(false);
     const maxLength = 25;
 
     if (!location || location.length <= maxLength) {
       return (
-        <span className={`text-xs ${status === "Moving"?"text-[#00C951]":status === "Stop"?"text-[#FB2C36]":status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} title={location}>
+        <span
+          className={`text-xs ${
+            status === "Moving"
+              ? "text-[#00C951]"
+              : status === "Stop"
+              ? "text-[#FB2C36]"
+              : status === "Idle"
+              ? "text-[#F0B100]"
+              : "text-gray-500"
+          }`}
+          title={location}
+        >
           {location || "N/A"}
         </span>
       );
@@ -108,7 +163,15 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
     return (
       <div className="flex items-center space-x-1">
         <span
-          className={`text-xs ${status === "Moving"?"text-[#00C951]":status === "Stop"?"text-[#FB2C36]":status === "Idle"?"text-[#F0B100]":"text-gray-500"} cursor-pointer`}
+          className={`text-xs ${
+            status === "Moving"
+              ? "text-[#00C951]"
+              : status === "Stop"
+              ? "text-[#FB2C36]"
+              : status === "Idle"
+              ? "text-[#F0B100]"
+              : "text-gray-500"
+          } cursor-pointer`}
           title={location}
           onClick={() => setShowFull(!showFull)}
         >
@@ -116,7 +179,15 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
         </span>
         <button
           onClick={() => setShowFull(!showFull)}
-          className={`text-xs ${status === "Moving"?"text-[#00C951]":status === "Stop"?"text-[#FB2C36]":status === "Idle"?"text-[#F0B100]":"text-gray-500"} font-medium flex-shrink-0`}
+          className={`text-xs ${
+            status === "Moving"
+              ? "text-[#00C951]"
+              : status === "Stop"
+              ? "text-[#FB2C36]"
+              : status === "Idle"
+              ? "text-[#F0B100]"
+              : "text-gray-500"
+          } font-medium flex-shrink-0`}
         >
           {showFull ? "Less" : "More"}
         </button>
@@ -126,27 +197,34 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
 
   // ✅ Data transformation
   const transformedData = useMemo(() => {
-    return carData.map((car, index) => ({
-      id: car?.car_id ?? index + 1,
-      name: car?.carname ?? `Vehicle ${car?.car_id ?? index + 1}`,
-      status: car?.movingstatus ?? "Unknown",
-      location: car?.location ?? "Unknown",
-      lastUpdate: car?.gps_time ? new Date(car.gps_time).toLocaleString() : "N/A",
-      speed: typeof car?.speed === "number" ? `${car.speed} km/h` : "0 km/h",
-      mileage: typeof car?.mileage === "number" ? `${car.mileage} km` : "N/A",
-      signalStrength: car?.signalstrength ?? "N/A",
-      latitude: car?.latitude ?? "N/A",
-      longitude: car?.longitude ?? "N/A",
-      acc: typeof car?.acc === "number" ? (car.acc === 1 ? "On" : "Off") : "N/A",
-      engine: car?.engine === "1" ? "On" : car?.engine === "0" ? "Off" : "N/A",
-      head: car?.head ?? "N/A",
-      terminalKey: car?.terminalkey ?? "N/A",
-      voltage: car?.voltage ?? "N/A",
-      duration: car?.duration ?? "N/A",
-      trend: car?.trend ?? "N/A",
-      originalData: car,
-    }));
-  }, [carData]);
+    // Only show vehicles whose car_id is in selectedVehiclesFromSlice
+    const selectedSet = new Set((selectedVehiclesFromSlice || []).map(String));
+    return mergedCarData
+      .filter(car => car && car.car_id && selectedSet.has(String(car.car_id)))
+      .map((car, index) => ({
+        id: car?.car_id ?? index + 1,
+        name: car?.carname ?? `Vehicle ${car?.car_id ?? index + 1}`,
+        status: car?.movingstatus ?? "Unknown",
+        location: car?.location ?? "Unknown",
+        lastUpdate: car?.gps_time
+          ? new Date(car.gps_time).toLocaleString()
+          : "N/A",
+        speed: typeof car?.speed === "number" ? `${car.speed} km/h` : "0 km/h",
+        mileage: typeof car?.mileage === "number" ? `${car.mileage} km` : "N/A",
+        signalStrength: car?.signalstrength ?? "N/A",
+        latitude: car?.latitude ?? "N/A",
+        longitude: car?.longitude ?? "N/A",
+        acc:
+          typeof car?.acc === "number" ? (car.acc === 1 ? "On" : "Off") : "N/A",
+        engine: car?.engine === "1" ? "On" : car?.engine === "0" ? "Off" : "N/A",
+        head: car?.head ?? "N/A",
+        terminalKey: car?.terminalkey ?? "N/A",
+        voltage: car?.voltage ?? "N/A",
+        duration: car?.duration ?? "N/A",
+        trend: car?.trend ?? "N/A",
+        originalData: car,
+      }));
+  }, [mergedCarData, selectedVehiclesFromSlice]);
 
   // ✅ Filtering and sorting
   const sortedData = useMemo(() => {
@@ -166,8 +244,12 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
         const aValue = a[sortField];
         const bValue = b[sortField];
         return sortDirection === "asc"
-          ? aValue > bValue ? 1 : -1
-          : aValue < bValue ? 1 : -1;
+          ? aValue > bValue
+            ? 1
+            : -1
+          : aValue < bValue
+          ? 1
+          : -1;
       });
     }
 
@@ -181,9 +263,9 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
       startIndex + Math.ceil(containerHeight / ROW_HEIGHT) + BUFFER_SIZE,
       sortedData.length
     );
-    
+
     const actualStartIndex = Math.max(0, startIndex - BUFFER_SIZE);
-    
+
     return {
       startIndex: actualStartIndex,
       endIndex,
@@ -206,33 +288,39 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
     };
 
     updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
+    window.addEventListener("resize", updateHeight);
+    return () => window.removeEventListener("resize", updateHeight);
   }, [isFullyOpen]);
 
   // ✅ Event handlers
-  const handleRowClick = useCallback((row, event) => {
-    if (event.target.tagName === "BUTTON" || event.target.closest("button")) {
-      return;
-    }
+  const handleRowClick = useCallback(
+    (row, event) => {
+      if (event.target.tagName === "BUTTON" || event.target.closest("button")) {
+        return;
+      }
 
-    if (selectedRowId === row.id) {
-      setSelectedRowId(null);
-      dispatch(setSelectedVehicle(null));
-    } else {
-      setSelectedRowId(row.id);
-      dispatch(setSelectedVehicle(row.id));
-    }
-  }, [selectedRowId, dispatch]);
+      if (selectedRowId === row.id) {
+        setSelectedRowId(null);
+        dispatch(setSelectedVehicle(null));
+      } else {
+        setSelectedRowId(row.id);
+        dispatch(setSelectedVehicle(row.id));
+      }
+    },
+    [selectedRowId, dispatch]
+  );
 
-  const handleSort = useCallback((field) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  }, [sortField, sortDirection]);
+  const handleSort = useCallback(
+    (field) => {
+      if (sortField === field) {
+        setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      } else {
+        setSortField(field);
+        setSortDirection("asc");
+      }
+    },
+    [sortField, sortDirection]
+  );
 
   const getStatusColor = useCallback((status) => {
     switch (status.toLowerCase()) {
@@ -250,25 +338,28 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
     }
   }, []);
 
-  const getRowBackgroundColor = useCallback((status, rowId) => {
-    if (selectedRowId === rowId) {
-      return "bg-blue-100 border-l-4 border-blue-500";
-    }
+  const getRowBackgroundColor = useCallback(
+    (status, rowId) => {
+      if (selectedRowId === rowId) {
+        return "bg-blue-100 border-l-4 border-blue-500";
+      }
 
-    switch (status.toLowerCase()) {
-      case "moving":
-      case "run":
-        return "bg-white";
-      case "idle":
-        return "bg-white";
-      case "stop":
-        return "bg-white";
-      case "offline":
-        return "bg-white";
-      default:
-        return "";
-    }
-  }, [selectedRowId]);
+      switch (status.toLowerCase()) {
+        case "moving":
+        case "run":
+          return "bg-white";
+        case "idle":
+          return "bg-white";
+        case "stop":
+          return "bg-white";
+        case "offline":
+          return "bg-white";
+        default:
+          return "";
+      }
+    },
+    [selectedRowId]
+  );
 
   const toggleFullOpen = () => setIsFullyOpen(!isFullyOpen);
 
@@ -279,110 +370,258 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
   };
 
   // ✅ Render table cell
-  const renderTableCell = useCallback((row, columnKey, style = {}) => {
-    if (!visibleColumns[columnKey]) return null;
+  const renderTableCell = useCallback(
+    (row, columnKey, style = {}) => {
+      if (!visibleColumns[columnKey]) return null;
 
-    const cellContent = {
-      name: (
-        <td
-          className="px-3 py-2 text-xs font-medium text-gray-900 bg-white sticky left-0 z-10 shadow-md truncate"
-          style={style}
-        >
-          {row.name}
-        </td>
-      ),
-      status: (
-        <td className="px-3 py-2 whitespace-nowrap" style={style}>
-          <span
-            className={`px-1.5 inline-flex text-xs leading-4 font-semibold rounded-full ${getStatusColor(
-              row.status
-            )} text-white`}
+      const cellContent = {
+        name: (
+          <td
+            className="px-3 py-2 text-xs font-medium text-gray-900 bg-white sticky left-0 z-10 shadow-md truncate"
+            style={style}
           >
-            {row.status}
-          </span>
-        </td>
-      ),
-      location: (
-        <td className="px-3 py-2 text-xs text-gray-500" style={style}>
-          <div className="w-full overflow-hidden">
-            <LocationDisplay location={row.location} status={row?.status} />
-          </div>
-        </td>
-      ),
-      lastUpdate: (
-        <td className={`px-3 py-2 text-xs ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"} truncate`} style={style}>
-          {row.lastUpdate}
-        </td>
-      ),
-      speed: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
-          {row.speed}
-        </td>
-      ),
-      mileage: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
-          {row.mileage}
-        </td>
-      ),
-      signalStrength: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
-          {row.signalStrength}
-        </td>
-      ),
-      latitude: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"} truncate`} style={style}>
-          {row.latitude}
-        </td>
-      ),
-      longitude: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"} truncate`} style={style}>
-          {row.longitude}
-        </td>
-      ),
-      acc: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
-          {row.acc}
-        </td>
-      ),
-      engine: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
-          {row.engine}
-        </td>
-      ),
-      head: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
-          {row.head}
-        </td>
-      ),
-      terminalKey: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"} truncate`} style={style}>
-          {row.terminalKey}
-        </td>
-      ),
-      voltage: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs  ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
-          {row.voltage}
-        </td>
-      ),
-      duration: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
-          {row.duration}
-        </td>
-      ),
-      trend: (
-        <td className={`px-3 py-2 whitespace-nowrap text-xs ${row?.status === "Moving"?"text-[#00C951]":row?.status === "Stop"?"text-[#FB2C36]":row?.status === "Idle"?"text-[#F0B100]":"text-gray-500"}`} style={style}>
-          {row.trend && row.trend !== "N/A" ? row.trend : "-"}
-        </td>
-      ),
-    };
+            {row.name}
+          </td>
+        ),
+        status: (
+          <td className="px-3 py-2 whitespace-nowrap" style={style}>
+            <span
+              className={`px-1.5 inline-flex text-xs leading-4 font-semibold rounded-full ${getStatusColor(
+                row.status
+              )} text-white`}
+            >
+              {row.status}
+            </span>
+          </td>
+        ),
+        location: (
+          <td className="px-3 py-2 text-xs text-gray-500" style={style}>
+            <div className="w-full overflow-hidden">
+              <LocationDisplay location={row.location} status={row?.status} />
+            </div>
+          </td>
+        ),
+        lastUpdate: (
+          <td
+            className={`px-3 py-2 text-xs ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            } truncate`}
+            style={style}
+          >
+            {row.lastUpdate}
+          </td>
+        ),
+        speed: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs  ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            }`}
+            style={style}
+          >
+            {row.speed}
+          </td>
+        ),
+        mileage: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs  ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            }`}
+            style={style}
+          >
+            {row.mileage}
+          </td>
+        ),
+        signalStrength: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs  ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            }`}
+            style={style}
+          >
+            {row.signalStrength}
+          </td>
+        ),
+        latitude: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs  ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            } truncate`}
+            style={style}
+          >
+            {row.latitude}
+          </td>
+        ),
+        longitude: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs  ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            } truncate`}
+            style={style}
+          >
+            {row.longitude}
+          </td>
+        ),
+        acc: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs  ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            }`}
+            style={style}
+          >
+            {row.acc}
+          </td>
+        ),
+        engine: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs  ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            }`}
+            style={style}
+          >
+            {row.engine}
+          </td>
+        ),
+        head: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs  ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            }`}
+            style={style}
+          >
+            {row.head}
+          </td>
+        ),
+        terminalKey: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs  ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            } truncate`}
+            style={style}
+          >
+            {row.terminalKey}
+          </td>
+        ),
+        voltage: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs  ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            }`}
+            style={style}
+          >
+            {row.voltage}
+          </td>
+        ),
+        duration: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            }`}
+            style={style}
+          >
+            {row.duration}
+          </td>
+        ),
+        trend: (
+          <td
+            className={`px-3 py-2 whitespace-nowrap text-xs ${
+              row?.status === "Moving"
+                ? "text-[#00C951]"
+                : row?.status === "Stop"
+                ? "text-[#FB2C36]"
+                : row?.status === "Idle"
+                ? "text-[#F0B100]"
+                : "text-gray-500"
+            }`}
+            style={style}
+          >
+            {row.trend && row.trend !== "N/A" ? row.trend : "-"}
+          </td>
+        ),
+      };
 
-    return cellContent[columnKey];
-  }, [visibleColumns, getStatusColor]);
+      return cellContent[columnKey];
+    },
+    [visibleColumns, getStatusColor]
+  );
 
   return (
     <div
       className={`fixed bottom-0 left-0 right-0 transition-all duration-300 ease-in-out z-[720] 
-        ${isOpen ? (isFullyOpen ? "h-[75vh]" : "h-[45vh]") : "h-0"} bg-transparent`}
+        ${
+          isOpen ? (isFullyOpen ? "h-[75vh]" : "h-[45vh]") : "h-0"
+        } bg-transparent`}
     >
       <div className="h-full flex bg-transparent">
         <div
@@ -573,7 +812,7 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
             onClick={() => setShowColumnDropdown(false)}
           >
             {sortedData.length > 0 ? (
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: "relative" }}>
                 {/* ✅ STICKY HEADER */}
                 <table className="w-full min-w-full table-fixed divide-y divide-gray-200">
                   <thead className="bg-gray-50 sticky top-0 z-20">
@@ -586,9 +825,14 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
                             key={index}
                             scope="col"
                             className={`px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer whitespace-nowrap bg-gray-50 ${
-                              column.isSticky ? "sticky left-0 z-30 shadow-md" : ""
+                              column.isSticky
+                                ? "sticky left-0 z-30 shadow-md"
+                                : ""
                             }`}
-                            style={{ width: column.width, minWidth: column.width }}
+                            style={{
+                              width: column.width,
+                              minWidth: column.width,
+                            }}
                             onClick={() => handleSort(column.key)}
                           >
                             <div className="flex items-center">
@@ -611,13 +855,13 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
                 <div
                   style={{
                     height: sortedData.length * ROW_HEIGHT,
-                    position: 'relative',
+                    position: "relative",
                   }}
                 >
                   <div
                     style={{
                       transform: `translateY(${visibleRows.offsetY}px)`,
-                      position: 'absolute',
+                      position: "absolute",
                       top: 0,
                       left: 0,
                       right: 0,
@@ -636,15 +880,17 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
                             onClick={(e) => handleRowClick(row, e)}
                             title="Click to select and zoom to vehicle"
                           >
-                            {columnDefinitions.map((column, colIndex) =>
-                              renderTableCell(row, column.key, {
-                                width: column.width,
-                              }) && React.cloneElement(
+                            {columnDefinitions.map(
+                              (column, colIndex) =>
                                 renderTableCell(row, column.key, {
                                   width: column.width,
-                                }),
-                                { key: `${row.id}-${column.key}` }
-                              )
+                                }) &&
+                                React.cloneElement(
+                                  renderTableCell(row, column.key, {
+                                    width: column.width,
+                                  }),
+                                  { key: `${row.id}-${column.key}` }
+                                )
                             )}
                           </tr>
                         ))}
@@ -684,4 +930,3 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
 };
 
 export default MapDataTable;
-

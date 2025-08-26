@@ -456,7 +456,7 @@ const LiveMap = () => {
 
       {/* Desktop Data Table Toggle Button - HIDE WHEN OPEN */}
       {!uiState.isDataTableOpen && (
-        <div className="fixed bottom-6 right-20 z-20 hidden xl:block">
+        <div className="fixed bottom-70 right-4 z-20 hidden xl:block">
           <button
             onClick={toggleDataTable}
             className="flex items-center justify-center rounded-full shadow-lg transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 bg-white text-gray-700 p-3 hover:bg-gray-50"

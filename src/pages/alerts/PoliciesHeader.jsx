@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchPolicyTypeList } from "../../features/alertpolicySlice";
 import { setExportType } from "../../features/alertSlice";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -27,10 +28,15 @@ export default function PolicyManagementHeader({
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showUserPoliciesOnly, setShowUserPoliciesOnly] = useState(false);
   const [showCreatePolicyModal, setShowCreatePolicyModal] = useState(false);
+
+  // Get policyTypeList from alertpolicy slice
+  const policyTypeList = useSelector(state => state.alertpolicy?.policyTypeList);
+
+  console.log("PolicyManagementHeader: policyTypeList from Redux:", policyTypeList);
   
   // Form state for the modal
   const [formData, setFormData] = useState({
-    alertType: "Accident Incident",
+    alertType: "",
     highPriority: false,
     policyName: ""
   });
@@ -45,6 +51,8 @@ export default function PolicyManagementHeader({
   };
 
   const handleCreateNewPolicy = () => {
+    // Dispatch API call to fetch policy type list
+    dispatch(fetchPolicyTypeList())
     setShowCreatePolicyModal(true);
   };
 
@@ -316,10 +324,10 @@ export default function PolicyManagementHeader({
                         e.target.style.boxShadow = 'none';
                       }}
                     >
-                      <option value="Accident Incident">Accident Incident</option>
-                      <option value="Speed Violation">Speed Violation</option>
-                      <option value="Geofence Alert">Geofence Alert</option>
-                      <option value="Maintenance Alert">Maintenance Alert</option>
+                      <option value="">Select Alert Type</option>
+                      {Array.isArray(policyTypeList) && policyTypeList.map((item) => (
+                        <option key={item.alm_id} value={item.alm_type}>{item.alm_type}</option>
+                      ))}
                     </select>
                   </div>
 

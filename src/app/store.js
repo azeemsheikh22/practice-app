@@ -8,6 +8,7 @@ import locationSearchReducer from '../features/locationSearchSlice';
 import routeReducer from '../features/routeSlice'; // ✅ NEW IMPORT
 import replayReducer from '../features/replaySlice'; // ✅ REPLAY IMPORT
 import alertReducer from '../features/alertSlice'; // ✅ ALERT IMPORT
+import alertpolicyReducer from '../features/alertpolicySlice'; // ✅ ALERTPOLICY IMPORT
 
 export const store = configureStore({
   reducer: {
@@ -19,6 +20,7 @@ export const store = configureStore({
     locationSearch: locationSearchReducer,
     route: routeReducer, // ✅ NEW REDUCER
     alert: alertReducer, // ✅ ALERT REDUCER
+    alertpolicy: alertpolicyReducer, // ✅ ALERTPOLICY REDUCER
     replay: replayReducer, // ✅ REPLAY REDUCER
   },
   middleware: (getDefaultMiddleware) =>
