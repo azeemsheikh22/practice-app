@@ -98,7 +98,7 @@ const VehicleList = memo(() => {
           {sortedVehicles.length}
         </span>
       </div>
-
+ 
       {/* Sort Dropdown */}
       <div className="relative mb-3 transition-all duration-200 transform translate-y-0 opacity-100">
         <div className="relative">
