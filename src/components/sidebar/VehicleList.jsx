@@ -11,7 +11,10 @@ import {
 } from "lucide-react";
 import "../../styles/performance.css";
 import { useSelector, useDispatch } from "react-redux";
-import { selectCarData } from "../../features/gpsTrackingSlice";
+import {
+  selectCarData,
+  selectSelectedVehicles,
+} from "../../features/gpsTrackingSlice";
 import { setSelectedVehicle } from "../../features/mapInteractionSlice";
 import movingIcon from "../../assets/moving-vehicle.png";
 import stoppedIcon from "../../assets/stopped-vehicle.png";
@@ -21,38 +24,125 @@ import { useEffect, useRef } from "react";
 const VehicleList = memo(() => {
   const [sortOption, setSortOption] = useState("nameAZ");
   const carData = useSelector(selectCarData) || [];
+  const selectedVehiclesFromSlice = useSelector(selectSelectedVehicles);
 
-  // --- Merging/Updating Data logic ---
-  // Keep a stable list, only update vehicles present in new carData, keep others as is
+  
+
+  // --- Redux-based Persistent Vehicle Data Management ---
+  // Use global reference to ensure data persistence across tab switches
+  const vehicleMapRef = useRef(window.__PERSISTENT_VEHICLE_MAP || new Map());
   const [mergedCarData, setMergedCarData] = useState([]);
-  const prevCarDataRef = React.useRef([]);
+  // Separate state for filtered data based on selection
+  const [filteredVehicleData, setFilteredVehicleData] = useState([]);
+
+  // Make sure reference is saved globally to persist across component unmounts
   useEffect(() => {
-    if (!Array.isArray(carData) || carData.length === 0) return;
-    // Build a map of incoming vehicles by car_id
-    const incomingMap = new Map();
-    carData.forEach((car) => {
-      if (car && car.car_id) incomingMap.set(String(car.car_id), car);
-    });
-    // Build a map of previous vehicles by car_id
-    const prevMap = new Map();
-    prevCarDataRef.current.forEach((car) => {
-      if (car && car.car_id) prevMap.set(String(car.car_id), car);
-    });
-    // Update or keep previous vehicles
-    incomingMap.forEach((car, car_id) => {
-      prevMap.set(car_id, car);
-    });
-    const mergedArr = Array.from(prevMap.values());
-    setMergedCarData(mergedArr);
-    prevCarDataRef.current = mergedArr;
-  }, [carData]);
-  // On first mount, initialize mergedCarData if carData is present
-  useEffect(() => {
-    if (mergedCarData.length === 0 && carData.length > 0) {
-      setMergedCarData(carData);
-      prevCarDataRef.current = carData;
+    // Create global reference if it doesn't exist
+    if (!window.__PERSISTENT_VEHICLE_MAP) {
+      window.__PERSISTENT_VEHICLE_MAP = vehicleMapRef.current;
+    }
+
+    // Initialize with data if available
+    if (window.__PERSISTENT_VEHICLE_MAP.size > 0) {
+      setMergedCarData(Array.from(window.__PERSISTENT_VEHICLE_MAP.values()));
     }
   }, []);
+
+  // When new data comes from socket, merge with existing data
+  useEffect(() => {
+    if (!Array.isArray(carData)) return;
+
+    // Skip if empty data and we already have vehicles
+    if (carData.length === 0 && vehicleMapRef.current.size > 0) return;
+
+    let updatedCount = 0;
+    let newCount = 0;
+    let updatedCarIds = new Set();
+
+    // Update map with new data
+    carData.forEach((car) => {
+      if (car && car.car_id) {
+        const carId = String(car.car_id);
+        const isNew = !vehicleMapRef.current.has(carId);
+
+        if (isNew) newCount++;
+        else updatedCount++;
+
+        updatedCarIds.add(carId); // Track which cars were updated
+        vehicleMapRef.current.set(carId, car);
+      }
+    });
+
+    // Update global reference for persistence
+    window.__PERSISTENT_VEHICLE_MAP = vehicleMapRef.current;
+
+    // Only update state if we have changes or it's the first load
+    if (updatedCount > 0 || newCount > 0 || mergedCarData.length === 0) {
+      const updatedVehicles = Array.from(vehicleMapRef.current.values());
+      setMergedCarData(updatedVehicles);
+      
+      // Also update filtered data if we're filtering by selection
+      if (Array.isArray(selectedVehiclesFromSlice) && selectedVehiclesFromSlice.length > 0) {
+        const selectedIdsSet = new Set(selectedVehiclesFromSlice.map(id => String(id)));
+        
+        // Update filtered data by mapping existing filtered data to updated versions
+        setFilteredVehicleData(current => {
+          // If filtered data exists, update each car with its new version
+          if (current && current.length > 0) {
+            return current.map(vehicle => {
+              if (vehicle && vehicle.car_id && updatedCarIds.has(String(vehicle.car_id))) {
+                // Replace with updated vehicle data
+                return vehicleMapRef.current.get(String(vehicle.car_id));
+              }
+              return vehicle;
+            });
+          } 
+          // Otherwise, create freshly filtered data from the map
+          else {
+            return Array.from(vehicleMapRef.current.values())
+              .filter(car => car && car.car_id && selectedIdsSet.has(String(car.car_id)));
+          }
+        });
+      }
+      // If not filtering, filtered data is the same as merged data
+      else if (!Array.isArray(selectedVehiclesFromSlice) || selectedVehiclesFromSlice.length === 0) {
+        setFilteredVehicleData(selectedVehiclesFromSlice?.length === 0 ? [] : updatedVehicles);
+      }
+    }
+  }, [carData, selectedVehiclesFromSlice]);
+
+  // Handle filtering based on selected vehicles from redux
+  useEffect(() => {
+
+    
+    // Check if selectedVehiclesFromSlice exists and is an array
+    if (Array.isArray(selectedVehiclesFromSlice)) {
+      // If we have selected vehicles, filter our data to show only those
+      if (selectedVehiclesFromSlice.length > 0) {
+        // Convert selectedVehiclesFromSlice to a Set for O(1) lookups
+        const selectedIdsSet = new Set(
+          selectedVehiclesFromSlice.map((id) => String(id))
+        );
+
+        // Get all vehicles that match the selected IDs
+        const filteredVehicles = Array.from(vehicleMapRef.current.values())
+          .filter(car => car && car.car_id && selectedIdsSet.has(String(car.car_id)));
+
+ 
+        
+        // Update filtered state only - keep raw data intact
+        setFilteredVehicleData(filteredVehicles);
+      }
+      // If array is empty, clear filtered data and show nothing
+      else {
+        setFilteredVehicleData([]);
+      }
+    }
+    // If selectedVehiclesFromSlice is not properly defined (null or undefined)
+    else if (vehicleMapRef.current.size > 0) {
+      setFilteredVehicleData(Array.from(vehicleMapRef.current.values()));
+    }
+  }, [selectedVehiclesFromSlice]);
   // Sort options
   const sortOptions = [
     { value: "nameAZ", label: "Sort A to Z" },
@@ -62,10 +152,11 @@ const VehicleList = memo(() => {
     { value: "lastUpdate", label: "Sort by Last Update" },
   ];
 
-  // Sort vehicles based on selected option (now on mergedCarData)
+  // Sort vehicles based on selected option (now on filteredVehicleData)
   const sortedVehicles = React.useMemo(() => {
-    if (!mergedCarData || mergedCarData.length === 0) return [];
-    let sorted = [...mergedCarData];
+    // Use filteredVehicleData instead of mergedCarData for display
+    if (!filteredVehicleData || filteredVehicleData.length === 0) return [];
+    let sorted = [...filteredVehicleData];
     switch (sortOption) {
       case "nameAZ":
         sorted.sort((a, b) => {
@@ -114,7 +205,7 @@ const VehicleList = memo(() => {
         break;
     }
     return sorted;
-  }, [mergedCarData, sortOption]);
+  }, [filteredVehicleData, sortOption]);
 
   // --- Virtual Scrolling Logic ---
   const ROW_HEIGHT = 165; // px, adjust to match card height
@@ -281,7 +372,12 @@ const VehicleList = memo(() => {
         onScroll={handleScroll}
         style={{ willChange: "transform" }}
       >
-        <div style={{ height: visibleRows.total * ROW_HEIGHT, position: "relative" }}>
+        <div
+          style={{
+            height: visibleRows.total * ROW_HEIGHT,
+            position: "relative",
+          }}
+        >
           <div
             style={{
               transform: `translateY(${visibleRows.offsetY}px)`,
@@ -318,7 +414,11 @@ const VehicleList = memo(() => {
                             : "border-gray-300 bg-white hover:border-blue-300"
                         }`}
                         onClick={() => handleCardClick(stableCarData, expanded)}
-                        style={{ marginBottom: "10px", height: ROW_HEIGHT - 10, minHeight: "155px" }}
+                        style={{
+                          marginBottom: "10px",
+                          height: ROW_HEIGHT - 10,
+                          minHeight: "155px",
+                        }}
                       >
                         <div className="p-4">
                           {/* Header with vehicle name and status */}
@@ -326,20 +426,26 @@ const VehicleList = memo(() => {
                             <div className="flex items-center">
                               <div className="mr-3 flex-shrink-0">
                                 <img
-                                  src={getVehicleIcon(stableCarData.movingstatus)}
+                                  src={getVehicleIcon(
+                                    stableCarData.movingstatus
+                                  )}
                                   alt="Vehicle"
                                   className="w-5 h-5 transition-transform duration-200"
                                   style={
-                                    stableCarData.movingstatus?.toLowerCase() === "moving"
+                                    stableCarData.movingstatus?.toLowerCase() ===
+                                    "moving"
                                       ? {
-                                          transform: `rotate(${(stableCarData.head || 0) - 140}deg)`,
+                                          transform: `rotate(${
+                                            (stableCarData.head || 0) - 140
+                                          }deg)`,
                                         }
                                       : {}
                                   }
                                 />
                               </div>
                               <div className="font-semibold text-gray-900 text-sm truncate max-w-[150px]">
-                                {stableCarData.carname || `Vehicle ${stableCarData.car_id}`}
+                                {stableCarData.carname ||
+                                  `Vehicle ${stableCarData.car_id}`}
                               </div>
                             </div>
 
@@ -353,19 +459,27 @@ const VehicleList = memo(() => {
                               </div>
                               {/* 3-dot menu button: expands card */}
                               <button
-                                onClick={(e) => handleExpandToggle(e, stableCarData.car_id)}
+                                onClick={(e) =>
+                                  handleExpandToggle(e, stableCarData.car_id)
+                                }
                                 className="menu-button p-1.5 rounded-full hover:bg-gray-100 cursor-pointer transition-colors duration-200"
                                 title="Show Options"
                                 type="button"
                               >
-                                <MoreVertical size={14} className="text-gray-600" />
+                                <MoreVertical
+                                  size={14}
+                                  className="text-gray-600"
+                                />
                               </button>
                             </div>
                           </div>
 
                           {/* Location */}
                           <div className="flex mb-2.5 text-xs text-gray-800">
-                            <MapPin size={14} className="mr-2 flex-shrink-0 mt-0.5" />
+                            <MapPin
+                              size={14}
+                              className="mr-2 flex-shrink-0 mt-0.5"
+                            />
                             <div className="line-clamp-2 leading-tight">
                               {stableCarData.location || "Unknown location"}
                             </div>
@@ -379,7 +493,9 @@ const VehicleList = memo(() => {
                             </div>
                             <div className="flex items-center">
                               <Clock size={14} className="mr-2 flex-shrink-0" />
-                              <span>{formatDateTime(stableCarData.gps_time)}</span>
+                              <span>
+                                {formatDateTime(stableCarData.gps_time)}
+                              </span>
                             </div>
                           </div>
 
@@ -387,21 +503,34 @@ const VehicleList = memo(() => {
                           <div className="grid grid-cols-3 gap-2 text-xs text-gray-800 border-t border-gray-100 pt-2">
                             {/* Signal Strength */}
                             <div className="flex items-center">
-                              <Wifi size={14} className={`mr-1.5 flex-shrink-0 ${getSignalStrengthIcon(stableCarData.signalstrength)}`} />
+                              <Wifi
+                                size={14}
+                                className={`mr-1.5 flex-shrink-0 ${getSignalStrengthIcon(
+                                  stableCarData.signalstrength
+                                )}`}
+                              />
                               <span title="Signal Strength">
                                 {stableCarData.signalstrength || "0"}
                               </span>
                             </div>
                             {/* Duration */}
                             <div className="flex items-center">
-                              <Clock size={14} className="mr-1.5 flex-shrink-0 text-blue-500" />
+                              <Clock
+                                size={14}
+                                className="mr-1.5 flex-shrink-0 text-blue-500"
+                              />
                               <span title="Duration">
-                                {car.duration && car.duration !== "N/A" ? car.duration : "-"}
+                                {car.duration && car.duration !== "N/A"
+                                  ? car.duration
+                                  : "-"}
                               </span>
                             </div>
                             {/* Voltage */}
                             <div className="flex items-center">
-                              <Battery size={14} className="mr-1.5 flex-shrink-0 text-green-500" />
+                              <Battery
+                                size={14}
+                                className="mr-1.5 flex-shrink-0 text-green-500"
+                              />
                               <span title="Battery Voltage">
                                 {formatVoltage(stableCarData.voltage)}
                               </span>

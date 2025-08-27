@@ -14,14 +14,6 @@ import { motion } from "framer-motion";
 import ReplayProgressBar from "../../components/replay/ReplayProgressBar";
 import ReplaySpeedControl from "../../components/replay/ReplaySpeedControl";
 
-const getStatusColor = (status) => {
-    if (!status) return '';
-    const s = String(status).toLowerCase();
-    if (s.includes('moving')) return 'text-green-600';
-    if (s.includes('idle')) return 'text-yellow-600';
-    if (s.includes('stop') || s.includes('ign_off')) return 'text-red-600';
-    return '';
-};
 
 function formatDuration(seconds) {
     const d = Math.floor(seconds / 86400);

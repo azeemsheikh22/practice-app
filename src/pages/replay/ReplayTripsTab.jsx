@@ -60,10 +60,20 @@ const ReplayTripsTab = ({ selectedVehicle }) => {
                 {tripFields.map(field => (
                   <div key={field.key} className="flex flex-col min-w-[160px] max-w-[260px]">
                     <span className="text-[11px] text-gray-500 font-medium">{field.label}</span>
-                    <span className="text-[13px] font-semibold text-gray-800 truncate" title={trip[field.key] ? String(trip[field.key]) : "-"}>
+                    <span className="text-[13px] font-semibold text-gray-800 truncate" title={
+                      trip[field.key] && typeof trip[field.key] === 'object'
+                        ? JSON.stringify(trip[field.key])
+                        : (trip[field.key] ? String(trip[field.key]) : "-")
+                    }>
                       {field.type === "datetime" && trip[field.key]
                         ? new Date(trip[field.key]).toLocaleString()
-                        : (trip[field.key] ?? "-")}
+                        : (
+                            trip[field.key] == null
+                              ? "-"
+                              : typeof trip[field.key] === 'object'
+                                ? JSON.stringify(trip[field.key])
+                                : trip[field.key]
+                          )}
                     </span>
                   </div>
                 ))}

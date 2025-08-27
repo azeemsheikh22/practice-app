@@ -57,37 +57,52 @@ const MapDataTable = ({ isOpen, onToggle, sidebarWidth = 346 }) => {
 
   const dispatch = useDispatch();
   const carData = useSelector(selectCarData) || [];
+  // Use the same global persistent storage as VehicleList
+  const vehicleMapRef = useRef(window.__PERSISTENT_VEHICLE_MAP || new Map());
   const [mergedCarData, setMergedCarData] = useState([]);
-  const prevCarDataRef = useRef([]);
 
+  // Ensure our data persists across component re-renders
   useEffect(() => {
-    if (!Array.isArray(carData) || carData.length === 0) return;
-    // Build a map of incoming vehicles by car_id
-    const incomingMap = new Map();
-    carData.forEach((car) => {
-      if (car && car.car_id) incomingMap.set(String(car.car_id), car);
-    });
-    // Build a map of previous vehicles by car_id
-    const prevMap = new Map();
-    prevCarDataRef.current.forEach((car) => {
-      if (car && car.car_id) prevMap.set(String(car.car_id), car);
-    });
-    // Update or keep previous vehicles
-    incomingMap.forEach((car, car_id) => {
-      prevMap.set(car_id, car);
-    });
-    const mergedArr = Array.from(prevMap.values());
-    setMergedCarData(mergedArr);
-    prevCarDataRef.current = mergedArr;
-  }, [carData]);
+    // Create or use global reference
+    if (!window.__PERSISTENT_VEHICLE_MAP) {
+      window.__PERSISTENT_VEHICLE_MAP = vehicleMapRef.current;
+    }
 
-  // On first mount, initialize mergedCarData if carData is present
-  useEffect(() => {
-    if (mergedCarData.length === 0 && carData.length > 0) {
-      setMergedCarData(carData);
-      prevCarDataRef.current = carData;
+    // Initialize with data if available
+    if (window.__PERSISTENT_VEHICLE_MAP.size > 0) {
+      setMergedCarData(Array.from(window.__PERSISTENT_VEHICLE_MAP.values()));
     }
   }, []);
+
+  // Update when new data arrives
+  useEffect(() => {
+    if (!Array.isArray(carData)) return;
+    
+    // Skip if empty data and we already have vehicles
+    if (carData.length === 0 && vehicleMapRef.current.size > 0) return;
+
+    let updatedCount = 0;
+    let newCount = 0;
+
+    // Update map with new data
+    carData.forEach((car) => {
+      if (car && car.car_id) {
+        const carId = String(car.car_id);
+        const isNew = !vehicleMapRef.current.has(carId);
+
+        if (isNew) newCount++;
+        else updatedCount++;
+
+        vehicleMapRef.current.set(carId, car);
+      }
+    });
+
+    // Only update state if we have changes or it's the first load
+    if (updatedCount > 0 || newCount > 0 || mergedCarData.length === 0) {
+      const updatedVehicles = Array.from(vehicleMapRef.current.values());
+      setMergedCarData(updatedVehicles);
+    }
+  }, [carData]);
 
   // ✅ Column definitions
   const columnDefinitions = [

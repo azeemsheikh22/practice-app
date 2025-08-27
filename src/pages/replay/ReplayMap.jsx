@@ -36,6 +36,29 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
+
+// Custom context menu for animated marker
+const AnimatedMarkerContextMenu = ({ visible, x, y, onCreateGeofence, onClose }) => {
+  if (!visible) return null;
+  return (
+    <div
+      className="fixed z-[2000] bg-white border border-gray-200 rounded-lg shadow-lg min-w-40"
+      style={{ left: x, top: y, cursor: 'pointer' }}
+      onContextMenu={e => e.preventDefault()}
+    >
+      <button
+        onClick={onCreateGeofence}
+        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer"
+      >
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+        Create Geofence
+      </button>
+    </div>
+  );
+};
 import { useSelector, useDispatch } from "react-redux";
 import { setCurrentReplayIndex, selectCurrentReplayIndex } from "../../features/replaySlice";
 import L from "leaflet";
@@ -446,7 +469,8 @@ const ReplayMap = forwardRef(
       }
     }, [isPlaying, displayMode]);
 
-    // Smooth animated vehicle marker (for animation)
+    // Smooth animated vehicle marker (for animation) + right-click context menu
+    const [markerMenu, setMarkerMenu] = useState({ visible: false, x: 0, y: 0, lat: null, lng: null });
     useEffect(() => {
       if (replayData && replayData.length > 0 && currentTime !== null) {
         const total = replayData.length - 1;
@@ -489,6 +513,19 @@ const ReplayMap = forwardRef(
           );
           marker.addTo(mapInstanceRef.current);
           setCurrentMarker(marker);
+
+          // Add right-click context menu to marker
+          marker.on('contextmenu', function (e) {
+            // e.originalEvent is the browser event
+            setMarkerMenu({
+              visible: true,
+              x: e.originalEvent.clientX,
+              y: e.originalEvent.clientY,
+              lat,
+              lng,
+            });
+          });
+
           // Center map if needed
           if (mapInstanceRef.current) {
             const map = mapInstanceRef.current;
@@ -502,6 +539,18 @@ const ReplayMap = forwardRef(
         }
       }
     }, [currentTime, replayData, dispatch]);
+
+    // Hide marker context menu on map click or ESC
+    useEffect(() => {
+      if (!markerMenu.visible) return;
+      const handle = (e) => setMarkerMenu(m => ({ ...m, visible: false }));
+      window.addEventListener('click', handle);
+      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') handle(); });
+      return () => {
+        window.removeEventListener('click', handle);
+        window.removeEventListener('keydown', (e) => { if (e.key === 'Escape') handle(); });
+      };
+    }, [markerMenu.visible]);
 
     // Table row select: move vehicle to selected point (no double marker)
     useEffect(() => {
@@ -526,6 +575,16 @@ const ReplayMap = forwardRef(
           marker.bindPopup(
             `<div style=\"min-width:120px\"><b>${point.car_name || ''}</b><br/>${point.gps_time || ''}<br/>Status: ${point.status || point.status1 || ''}<br/>Speed: ${point.speed ?? '-'} km/h</div>`
           );
+          // Attach right-click context menu for Create Geofence (pause state)
+          marker.on('contextmenu', function (e) {
+            setMarkerMenu({
+              visible: true,
+              x: e.originalEvent.clientX,
+              y: e.originalEvent.clientY,
+              lat: point.latitude,
+              lng: point.longitude,
+            });
+          });
           marker.addTo(mapInstanceRef.current);
           setCurrentMarker(marker);
           // Center map on this point
@@ -555,6 +614,21 @@ const ReplayMap = forwardRef(
     return (
       <div className="relative h-full w-full">
         <div ref={mapRef} className="w-full h-full" />
+
+        {/* Animated Marker Context Menu */}
+        <AnimatedMarkerContextMenu
+          visible={markerMenu.visible}
+          x={markerMenu.x}
+          y={markerMenu.y}
+          onCreateGeofence={() => {
+            setMarkerMenu(m => ({ ...m, visible: false }));
+            if (markerMenu.lat && markerMenu.lng) {
+              const url = `/#/create-geofence?lat=${markerMenu.lat}&lng=${markerMenu.lng}`;
+              window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no');
+            }
+          }}
+          onClose={() => setMarkerMenu(m => ({ ...m, visible: false }))}
+        />
 
         {/* Map Controls - Adjust z-index based on mobile menu state */}
         <div
