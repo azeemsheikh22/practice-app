@@ -1,14 +1,27 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { Edit2, Truck, Users, Search, ChevronDown } from "lucide-react";
-import SelectVehiclesModal from "./SelectVehiclesModal";  
+import SelectVehiclesModal from "./SelectVehiclesModal";
+import { 
+  fetchPolicyUserList, 
+  selectPolicyUserList, 
+  selectPolicyUsersLoading, 
+  selectPolicyUsersError 
+} from "../../../features/alertpolicySlice";  
 
 
 export default function PolicySetupForm() {
+  const dispatch = useDispatch();
+  const policyUserList = useSelector(selectPolicyUserList);
+  const policyUsersLoading = useSelector(selectPolicyUsersLoading);
+  const policyUsersError = useSelector(selectPolicyUsersError);
+
   const [activeTab, setActiveTab] = useState("vehicle");
   const [entireFleetEnabled, setEntireFleetEnabled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState(new Set());
+  const [userSelections, setUserSelections] = useState({}); // Track individual user selections
   const [additionalEmails, setAdditionalEmails] = useState("");
   const [smsDeliveryOption, setSmsDeliveryOption] = useState("none");
   const [customizeEmailIntro, setCustomizeEmailIntro] = useState(false);
@@ -19,20 +32,26 @@ export default function PolicySetupForm() {
 
   const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
 
+  // Fetch policy users on component mount
+  useEffect(() => {
+    dispatch(fetchPolicyUserList());
+  }, [dispatch]);
+
+  // Log error if any
+  useEffect(() => {
+    if (policyUsersError) {
+      console.error("Policy Users Error:", policyUsersError);
+    }
+  }, [policyUsersError]);
+
   const tabs = [
     { id: "vehicle", label: "Vehicle & Alert Options" },
     { id: "time", label: "Time & Frequency" },
     { id: "recipients", label: "Alert Recipients" }
   ];
 
-  // Sample user data
-  const users = [
-    { id: 1, name: "Ahtsham" },
-    { id: 2, name: "Al Razzaq Filling Station" },
-    { id: 3, name: "Altaf Hussain" },
-    { id: 4, name: "Base Operator" },
-    { id: 5, name: "Cararaj River View Filling Station Amphary Gilgit" }
-  ];
+  // Use API data, no fallback to dummy data
+  const users = policyUserList || [];
 
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);
@@ -44,6 +63,100 @@ export default function PolicySetupForm() {
 
   const handleCancel = () => {
     console.log("Cancel clicked");
+  };
+
+  // Handle individual user selection
+  const handleUserSelection = (userId, type) => {
+    setUserSelections(prev => {
+      const newSelections = { ...prev };
+      if (!newSelections[userId]) {
+        newSelections[userId] = { all: false, display: false, email: false };
+      }
+
+      if (type === 'all') {
+        // If "All" is checked, check or uncheck both display and email
+        const newAllState = !newSelections[userId].all;
+        newSelections[userId] = {
+          all: newAllState,
+          display: newAllState,
+          email: newAllState
+        };
+      } else {
+        // Individual checkbox toggle
+        newSelections[userId][type] = !newSelections[userId][type];
+        
+        // Update "All" state based on display and email
+        newSelections[userId].all = newSelections[userId].display && newSelections[userId].email;
+      }
+
+      return newSelections;
+    });
+  };
+
+  // Handle select all for a column
+  const handleSelectAll = (type) => {
+    setUserSelections(prev => {
+      const newSelections = { ...prev };
+      
+      // Get filtered users (those that match search query)
+      const filteredUsers = users.filter(user => 
+        searchQuery.trim() === '' || 
+        (user.fullName && user.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+      
+      // Check if all filtered users are selected for the specified type
+      const allUsersSelected = filteredUsers.length > 0 && filteredUsers.every(user => {
+        if (!newSelections[user.USER_ID]) return false;
+        return newSelections[user.USER_ID][type] === true;
+      });
+
+      // New state is the opposite of current state
+      const newState = !allUsersSelected;
+      
+      // Only update selections for filtered users
+      filteredUsers.forEach(user => {
+        if (!newSelections[user.USER_ID]) {
+          newSelections[user.USER_ID] = { all: false, display: false, email: false };
+        }
+
+        if (type === 'all') {
+          // Select/deselect all columns
+          newSelections[user.USER_ID] = {
+            all: newState,
+            display: newState,
+            email: newState
+          };
+        } else {
+          // Select/deselect specific column
+          newSelections[user.USER_ID][type] = newState;
+          
+          // Update "All" state based on display and email
+          newSelections[user.USER_ID].all = 
+            newSelections[user.USER_ID].display && newSelections[user.USER_ID].email;
+        }
+      });
+
+      return newSelections;
+    });
+  };
+
+  // Handle deselect all
+  const handleDeselectAll = () => {
+    // Create a new object with all checkboxes unchecked instead of empty object
+    const clearedSelections = {...userSelections};
+    
+    // Only deselect filtered users that match the search query
+    const filteredUsers = users.filter(user => 
+      searchQuery.trim() === '' || 
+      (user.fullName && user.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+    
+    filteredUsers.forEach(user => {
+      clearedSelections[user.USER_ID] = { all: false, display: false, email: false };
+    });
+    
+    setUserSelections(clearedSelections);
+    setSelectedUsers(new Set());
   };
 
   const renderVehicleAndAlertOptions = () => (
@@ -292,9 +405,9 @@ export default function PolicySetupForm() {
 
         {/* Users Table */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" style={{ maxHeight: '300px', overflowY: 'auto' }}>
             <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 sticky top-0">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Name
@@ -326,46 +439,90 @@ export default function PolicySetupForm() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-color)' }}>
-                      {user.name}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 focus:ring-2 transition-colors"
-                        style={{
-                          accentColor: 'var(--primary-color)',
-                          '--tw-ring-color': 'var(--primary-color)'
-                        }}
-                        onChange={() => handleUserSelection(user.id, 'all')}
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 focus:ring-2 transition-colors"
-                        style={{
-                          accentColor: 'var(--primary-color)',
-                          '--tw-ring-color': 'var(--primary-color)'
-                        }}
-                        onChange={() => handleUserSelection(user.id, 'display')}
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 focus:ring-2 transition-colors"
-                        style={{
-                          accentColor: 'var(--primary-color)',
-                          '--tw-ring-color': 'var(--primary-color)'
-                        }}
-                        onChange={() => handleUserSelection(user.id, 'email')}
-                      />
+                {policyUsersLoading ? (
+                  <tr>
+                    <td colSpan="4" className="px-4 py-8 text-center text-gray-500">
+                      <div className="flex items-center justify-center">
+                        <svg className="animate-spin h-5 w-5 mr-2 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        Loading users...
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : policyUsersError ? (
+                  <tr>
+                    <td colSpan="4" className="px-4 py-8 text-center text-red-500">
+                      <div className="flex flex-col items-center">
+                        <svg className="h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Error loading users: {policyUsersError}
+                      </div>
+                    </td>
+                  </tr>
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" className="px-4 py-8 text-center text-gray-500">
+                      <div className="flex flex-col items-center">
+                        <svg className="h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 0a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                        </svg>
+                        No users found
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  users
+                    .filter(user => 
+                      searchQuery.trim() === '' || 
+                      (user.fullName && user.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
+                    )
+                    .map((user) => (
+                    <tr key={user.USER_ID} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-color)' }}>
+                        {user.fullName}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={userSelections[user.USER_ID]?.all || false}
+                          className="h-4 w-4 rounded border-gray-300 focus:ring-2 transition-colors"
+                          style={{
+                            accentColor: 'var(--primary-color)',
+                            '--tw-ring-color': 'var(--primary-color)'
+                          }}
+                          onChange={() => handleUserSelection(user.USER_ID, 'all')}
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={userSelections[user.USER_ID]?.display || false}
+                          className="h-4 w-4 rounded border-gray-300 focus:ring-2 transition-colors"
+                          style={{
+                            accentColor: 'var(--primary-color)',
+                            '--tw-ring-color': 'var(--primary-color)'
+                          }}
+                          onChange={() => handleUserSelection(user.USER_ID, 'display')}
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={userSelections[user.USER_ID]?.email || false}
+                          className="h-4 w-4 rounded border-gray-300 focus:ring-2 transition-colors"
+                          style={{
+                            accentColor: 'var(--primary-color)',
+                            '--tw-ring-color': 'var(--primary-color)'
+                          }}
+                          onChange={() => handleUserSelection(user.USER_ID, 'email')}
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -374,10 +531,10 @@ export default function PolicySetupForm() {
         {/* Selection Count and Deselect All */}
         <div className="flex items-center justify-between text-sm mt-3">
           <span style={{ color: 'var(--text-color)' }}>
-            {selectedUsers.size} Selected
+            {Object.keys(userSelections).filter(userId => userSelections[userId].all).length} Selected
           </span>
           <button
-            // onClick={handleDeselectAll}
+            onClick={handleDeselectAll}
             className="font-medium transition-colors hover:opacity-80 cursor-pointer"
             style={{ color: 'var(--primary-color)' }}
           >

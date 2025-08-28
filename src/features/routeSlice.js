@@ -1,3 +1,4 @@
+
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -33,6 +34,59 @@ export const fetchRouteListForUser = createAsyncThunk(
   }
 );
 
+// Async thunk for fetching route plan list
+export const fetchRoutePlanList = createAsyncThunk(
+  "route/fetchRoutePlanList",
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const usertype = localStorage.getItem("userTypeId");
+      const userid = localStorage.getItem("clientId");
+
+      const apiUrl = `${API_BASE_URL}api/geofence/RoutePlanList?UserId=${userid}&usertype=${usertype}`;
+
+
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        // Try alternative endpoint if this fails
+        if (response.status === 404) {
+          const altApiUrl = `${API_BASE_URL}api/geofence/RoutePlanList?UserId=${userid}&usertype=${usertype}`;
+          const altResponse = await fetch(altApiUrl, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          
+          if (!altResponse.ok) {
+            throw new Error(`HTTP error! status: ${response.status} (original), ${altResponse.status} (alternative)`);
+          }
+          
+          const altData = await altResponse.json();
+
+          return altData;
+        }
+        
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("RoutePlanList API Error:", error);
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const routeSlice = createSlice({
   name: "route",
   initialState: {
@@ -48,6 +102,10 @@ const routeSlice = createSlice({
     currentRoute: null, // Add this for current route being created
     routeCalculationData: null, // Add this for route calculation results
     searchQuery: "", // <-- Add search query to state
+    // Route Plan List
+    routePlans: [],
+    routePlansLoading: false,
+    routePlansError: null,
   },
   reducers: {
     clearRoutes: (state) => {
@@ -149,6 +207,19 @@ const routeSlice = createSlice({
         // ✅ Don't change showRoutes on error
         state.routemap = [];
         state.selectedRouteNames = [];
+      })
+      // fetchRoutePlanList cases
+      .addCase(fetchRoutePlanList.pending, (state) => {
+        state.routePlansLoading = true;
+        state.routePlansError = null;
+      })
+      .addCase(fetchRoutePlanList.fulfilled, (state, action) => {
+        state.routePlansLoading = false;
+        state.routePlans = action.payload;
+      })
+      .addCase(fetchRoutePlanList.rejected, (state, action) => {
+        state.routePlansLoading = false;
+        state.routePlansError = action.payload;
       });
   },
 });
@@ -184,6 +255,9 @@ export const selectRouteCalculationData = (state) => state.route.routeCalculatio
 export const selectRouteWaypoints = (state) => state.route.currentRoute?.waypoints || [];
 export const selectRouteDistance = (state) => state.route.routeCalculationData?.distance;
 export const selectRouteDuration = (state) => state.route.routeCalculationData?.duration;
+export const selectRoutePlans = (state) => state.route.routePlans;
+export const selectRoutePlansLoading = (state) => state.route.routePlansLoading;
+export const selectRoutePlansError = (state) => state.route.routePlansError;
 
 export default routeSlice.reducer;
 

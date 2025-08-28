@@ -271,11 +271,13 @@ const ReplaySidebar = ({
       {/* Sidebar Container */}
       <div
         className={`
-          fixed inset-y-0 transition-all duration-300 ease-in-out bg-white border-r border-gray-200 shadow-lg overflow-hidden z-[9995]
+          fixed inset-y-0 transition-all duration-300 ease-in-out bg-white h-full border-r border-gray-200 shadow-lg overflow-hidden z-[9995]
           ${isMobileMenuOpen ? "left-0 w-[85%] sm:w-[350px]" : "-left-full"}
           lg:static lg:shadow-none lg:z-20
           ${isExpanded ? "lg:w-96" : "lg:w-16"}
+          flex flex-col
         `}
+        style={{ minHeight: 0 }}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-gradient-to-r from-[#25689f]/10 to-[#1F557F]/10 flex-shrink-0">
@@ -357,16 +359,12 @@ const ReplaySidebar = ({
 
         {/* Content - Only show when expanded or mobile menu open */}
         {(isExpanded || isMobileMenuOpen) && (
-          <div
-            className={`flex flex-col h-[75vh] ${
-              activeTab === "details" ? "" : "overflow-auto"
-            }`}
-          >
+          <div className="flex-1 flex flex-col min-h-0">
             {/* Tabs */}
             {/* Main Content Area with Scrolling */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-h-0">
               {activeTab === "selection" && (
-                <div className="flex-1 flex flex-col">
+                <div className="flex-1 flex flex-col min-h-0">
                   {/* Search Input */}
                   <div className="px-3 pt-2 flex-shrink-0">
                     <div className="relative">
@@ -394,10 +392,7 @@ const ReplaySidebar = ({
                   </div>
 
                   {/* Tree View with Scrolling */}
-                  <div
-                    className="px-2 pb-2 h-auto lg:h-[255px] 2xl:h-[340px] 3xl:h-[600px] overflow-y-auto"
-                    style={{ flexShrink: 0 }}
-                  >
+                  <div className="flex-1 min-h-0 px-2 pb-2 overflow-y-auto">
                     <ReplayTreeView
                       vehicles={rawVehicles}
                       searchQuery={searchQuery}

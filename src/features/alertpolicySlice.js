@@ -32,12 +32,47 @@ export const fetchPolicyTypeList = createAsyncThunk(
   }
 );
 
+// Fetch policy user list async thunk
+export const fetchPolicyUserList = createAsyncThunk(
+  "alertpolicy/fetchPolicyUserList",
+  async (_, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const userid = localStorage.getItem("clientId");
+      const apiUrl = `${API_BASE_URL}api/Alerts/PolicyUserList?UserId=${userid}`;
+
+
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("PolicyUserList API Error:", error);
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const alertpolicySlice = createSlice({
   name: "alertpolicy",
   initialState: {
     policyTypeList: [],
     loading: false,
     error: null,
+    // Policy User List
+    policyUserList: [],
+    policyUsersLoading: false,
+    policyUsersError: null,
   },
   reducers: {
     clearPolicyTypeList: (state) => {
@@ -46,6 +81,10 @@ const alertpolicySlice = createSlice({
     },
     clearError: (state) => {
       state.error = null;
+    },
+    clearPolicyUserList: (state) => {
+      state.policyUserList = [];
+      state.policyUsersError = null;
     },
   },
   extraReducers: (builder) => {
@@ -63,9 +102,34 @@ const alertpolicySlice = createSlice({
         state.loading = false;
         state.error = action.payload || "Failed to fetch policy type list";
         state.policyTypeList = [];
+      })
+      // fetchPolicyUserList cases
+      .addCase(fetchPolicyUserList.pending, (state) => {
+        state.policyUsersLoading = true;
+        state.policyUsersError = null;
+      })
+      .addCase(fetchPolicyUserList.fulfilled, (state, action) => {
+        state.policyUsersLoading = false;
+        state.policyUserList = action.payload || [];
+        state.policyUsersError = null;
+      })
+      .addCase(fetchPolicyUserList.rejected, (state, action) => {
+        state.policyUsersLoading = false;
+        state.policyUsersError = action.payload || "Failed to fetch policy user list";
+        state.policyUserList = [];
       });
   },
 });
 
-export const { clearPolicyTypeList, clearError } = alertpolicySlice.actions;
+export const { clearPolicyTypeList, clearError, clearPolicyUserList } = alertpolicySlice.actions;
+
+// Selectors
+export const selectPolicyTypeList = (state) => state.alertpolicy.policyTypeList;
+export const selectPolicyTypeListLoading = (state) => state.alertpolicy.loading;
+export const selectPolicyTypeListError = (state) => state.alertpolicy.error;
+
+export const selectPolicyUserList = (state) => state.alertpolicy.policyUserList;
+export const selectPolicyUsersLoading = (state) => state.alertpolicy.policyUsersLoading;
+export const selectPolicyUsersError = (state) => state.alertpolicy.policyUsersError;
+
 export default alertpolicySlice.reducer;

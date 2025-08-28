@@ -24,7 +24,6 @@ const Replay = () => {
 
   const dispatch = useDispatch();
   const replayApiData = useSelector(selectReplayData);
-  const replayTrips = useSelector(selectReplayTrips);
 
   // Handler to get replay data from sidebar
   const handleGetReplayData = ({ vehicle, fromDate, toDate, fromTime, toTime }) => {
@@ -39,12 +38,6 @@ const Replay = () => {
     dispatch(fetchReplayData({ carId: vehicle.valueId, datefrom, dateto, fromTime, toTime }));
     dispatch(fetchReplayTrips({ carId: vehicle.valueId, datefrom, dateto, fromTime, toTime }));
   };
-  // Log trips data to console when it changes
-  useEffect(() => {
-    if (replayTrips) {
-      console.log("Trips data", replayTrips);
-    }
-  }, [replayTrips]);
 
   // Log vehicleId from query param if present
   const location = useLocation();

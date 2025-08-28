@@ -1,37 +1,25 @@
-import React from "react";
-
-const planningData = [
-  {
-    planName: "JQ-1264-48KL to ...",
-    scheduleDate: "15/02/2025",
-    stops: 0,
-    distance: "0 km",
-    duration: "00h 00m 00s",
-    vehicle: "JQ-1264-48KL",
-    status: "InProcess",
-  },
-  {
-    planName: "TMG-534 30Jan24",
-    scheduleDate: "30/01/2025",
-    stops: 0,
-    distance: "0 km",
-    duration: "00h 00m 00s",
-    vehicle: "TMG-534",
-    status: "Completed",
-  },
-  {
-    planName: "KHI-NAIMAT",
-    scheduleDate: "20/01/2025",
-    stops: 0,
-    distance: "0 km",
-    duration: "00h 00m 00s",
-    vehicle: "TMG-534",
-    status: "Completed",
-  },
-  // ...more sample rows as needed
-];
+import React, { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { 
+  fetchRoutePlanList, 
+  selectRoutePlans, 
+  selectRoutePlansLoading, 
+  selectRoutePlansError 
+} from "../../features/routeSlice";
 
 export default function PlanningPage() {
+  const dispatch = useDispatch();
+  const routePlans = useSelector(selectRoutePlans);
+  const routePlansLoading = useSelector(selectRoutePlansLoading);
+  const routePlansError = useSelector(selectRoutePlansError);
+
+  useEffect(() => {
+    dispatch(fetchRoutePlanList());
+  }, [dispatch]);
+
+
+  // Use API data, no fallback to dummy data
+  const planningData = routePlans || [];
   return (
     <div className="w-full">
       {/* Header - styled like RouteHeader */}
@@ -64,7 +52,11 @@ export default function PlanningPage() {
               <div className="flex items-center space-x-1.5 flex-shrink-0">
                 <div className="w-1.5 h-1.5 bg-[#25689f] rounded-full animate-pulse"></div>
                 <span className="text-xs text-gray-600">
-                  Showing <span className="font-semibold text-[#25689f]">344</span> Route Plans
+                  {routePlansLoading ? (
+                    "Loading..."
+                  ) : (
+                    <>Showing <span className="font-semibold text-[#25689f]">{planningData.length}</span> Route Plans</>
+                  )}
                 </span>
               </div>
             </div>
@@ -101,21 +93,71 @@ export default function PlanningPage() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {planningData.map((row, idx) => (
-                <tr key={idx}>
-                  <td className="px-3 py-2">
-                    <input type="checkbox" />
+              {routePlansLoading ? (
+                <tr>
+                  <td colSpan="9" className="px-3 py-8 text-center text-gray-500">
+                    <div className="flex items-center justify-center">
+                      <svg className="animate-spin h-5 w-5 mr-2 text-[#25689f]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                      </svg>
+                      Loading route plans...
+                    </div>
                   </td>
-                  <td className="px-3 py-2 text-sm font-medium text-gray-900" title={row.planName}>{row.planName}</td>
-                  <td className="px-3 py-2 text-sm text-gray-700">{row.scheduleDate}</td>
-                  <td className="px-3 py-2 text-sm text-gray-700">{row.stops}</td>
-                  <td className="px-3 py-2 text-sm text-gray-700">{row.distance}</td>
-                  <td className="px-3 py-2 text-sm text-gray-700">{row.duration}</td>
-                  <td className="px-3 py-2 text-sm text-gray-700">{row.vehicle}</td>
-                  <td className="px-3 py-2 text-sm text-gray-700">{row.status}</td>
-                  <td className="px-3 py-2 text-sm text-gray-700"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 hover:text-[#25689f] cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 11l6 6M3 21h18" /></svg></td>
                 </tr>
-              ))}
+              ) : routePlansError ? (
+                <tr>
+                  <td colSpan="9" className="px-3 py-8 text-center text-red-500">
+                    <div className="flex flex-col items-center">
+                      <svg className="h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Error loading route plans: {routePlansError}
+                    </div>
+                  </td>
+                </tr>
+              ) : planningData.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="px-3 py-8 text-center text-gray-500">
+                    <div className="flex flex-col items-center">
+                      <svg className="h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      No route plans found
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                planningData.map((row, idx) => (
+                  <tr key={row.idx || idx}>
+                    <td className="px-3 py-2">
+                      <input type="checkbox" />
+                    </td>
+                    <td className="px-3 py-2 text-sm font-medium text-gray-900" title={row.planName}>{row.planName}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{row.PlanDate}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{row.TotalStops}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{row.TotalDistance}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{row.TotalDuration}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{row.RouteVehicles}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        row.status === 'Completed' 
+                          ? 'bg-green-100 text-green-800' 
+                          : row.status === 'InProcess'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-700">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 hover:text-[#25689f] cursor-pointer" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 11l6 6M3 21h18" />
+                      </svg>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

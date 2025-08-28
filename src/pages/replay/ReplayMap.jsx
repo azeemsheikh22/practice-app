@@ -36,6 +36,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
+import ReplayAdvancedOptionsModal from "./ReplayAdvancedOptionsModal";
 
 // Custom context menu for animated marker
 const AnimatedMarkerContextMenu = ({ visible, x, y, onCreateGeofence, onClose }) => {
@@ -71,6 +72,7 @@ import {
   Maximize,
   Minimize,
   Navigation,
+  Settings,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -507,7 +509,7 @@ const ReplayMap = forwardRef(
               title: p1.car_name || "",
               zIndexOffset: 4000,
             }
-          );
+          ); 
           marker.bindPopup(
             `<div style=\"min-width:120px\"><b>${p1.car_name || ''}</b><br/>${p1.gps_time || ''}<br/>Status: ${status || ''}<br/>Speed: ${p1.speed ?? '-'} km/h</div>`
           );
@@ -608,8 +610,21 @@ const ReplayMap = forwardRef(
       printMap: handlePrintMap,
     }));
 
-    // Adjust z-index for map controls based on mobile menu state
+    // Add to Map popover state
+    const [showAddToMapMenu, setShowAddToMapMenu] = useState(false);
+    const [showGeofence, setShowGeofence] = useState(false);
+    const [showAdvancedModal, setShowAdvancedModal] = useState(false);
     const controlsZIndex = isMobileMenuOpen ? 10 : 1000;
+
+    // Close popover on outside click
+    useEffect(() => {
+      if (!showAddToMapMenu) return;
+      const handler = (e) => {
+        if (!e.target.closest(".add-to-map-popover")) setShowAddToMapMenu(false);
+      };
+      window.addEventListener("mousedown", handler);
+      return () => window.removeEventListener("mousedown", handler);
+    }, [showAddToMapMenu]);
 
     return (
       <div className="relative h-full w-full">
@@ -635,7 +650,7 @@ const ReplayMap = forwardRef(
           className={`absolute top-2 left-4 z-[${controlsZIndex}]`}
           style={{ zIndex: controlsZIndex }}
         >
-          <div className="flex items-center space-x-1 bg-white/95 backdrop-blur-sm rounded-lg p-1 shadow-lg border border-gray-200">
+          <div className="flex items-center space-x-1 bg-white/95 backdrop-blur-sm rounded-lg p-1 shadow-lg border border-gray-200 relative">
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -662,6 +677,38 @@ const ReplayMap = forwardRef(
               <Satellite size={14} className="mr-1.5" />
               <span className="hidden sm:inline">Satellite</span>
             </motion.button>
+            {/* Add to Map Button */}
+            <button
+              className="flex items-center px-3 py-1.5 rounded-md text-xs font-medium bg-blue-600 text-white ml-2 hover:bg-blue-700 transition-colors relative"
+              onClick={() => setShowAddToMapMenu((v) => !v)}
+              type="button"
+            >
+              Add to Map
+            </button>
+            {/* Add to Map Popover */}
+            {showAddToMapMenu && (
+              <div className="add-to-map-popover absolute left-0 top-12 bg-white border border-gray-200 rounded-lg shadow-lg p-4 min-w-[220px] z-50">
+                <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showGeofence}
+                      onChange={e => setShowGeofence(e.target.checked)}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-800">Show Geofence</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-gray-100 transition-colors text-[#25689f] text-sm font-medium"
+                    onClick={() => { setShowAdvancedModal(true); setShowAddToMapMenu(false); }}
+                  >
+                    <Settings size={18} /> 
+                    <span>Advanced Options</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -725,6 +772,11 @@ const ReplayMap = forwardRef(
         </motion.button> */}
           </div>
         </div>
+        {/* Advanced Options Modal */}
+        <ReplayAdvancedOptionsModal
+          isOpen={showAdvancedModal}
+          onClose={() => setShowAdvancedModal(false)}
+        />
       </div>
     );
   }
