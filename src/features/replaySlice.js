@@ -1,10 +1,14 @@
+
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 // Async thunk for fetching replay trips
 export const fetchReplayTrips = createAsyncThunk(
   "replay/fetchReplayTrips",
-  async ({ carId, datefrom, dateto, fromTime, toTime }, { rejectWithValue }) => {
+  async (
+    { carId, datefrom, dateto, fromTime, toTime },
+    { rejectWithValue }
+  ) => {
     try {
       const token = localStorage.getItem("token");
       const fromT = fromTime || "00:00:00";
@@ -33,7 +37,10 @@ export const fetchReplayTrips = createAsyncThunk(
 
 export const fetchReplayData = createAsyncThunk(
   "replay/fetchReplayData",
-  async ({ carId, datefrom, dateto, fromTime, toTime }, { rejectWithValue }) => {
+  async (
+    { carId, datefrom, dateto, fromTime, toTime },
+    { rejectWithValue }
+  ) => {
     try {
       const token = localStorage.getItem("token");
       const fromT = fromTime || "00:00:00";
@@ -60,6 +67,32 @@ export const fetchReplayData = createAsyncThunk(
   }
 );
 
+export const fetchReplayGeofenceForUser = createAsyncThunk(
+  "replay/fetchReplayGeofenceForUser",
+  async ({ rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const userid = localStorage.getItem("clientId");
+      const apiUrl = `${API_BASE_URL}api/Geofence/GeofenceForUser?userid=${userid}`;
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("GeofenceForUser API Error:", error);
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const replaySlice = createSlice({
   name: "replay",
   initialState: {
@@ -70,9 +103,13 @@ const replaySlice = createSlice({
     replayTrips: null,
     tripsLoading: false,
     tripsError: null,
+    // Geofence state
+    geofences: null,
+    geofencesLoading: false,
+    geofencesError: null,
     filters: {
-      displayMode: 'line', // 'line' | 'marker' | 'all'
-      stopDuration: 'all',
+      displayMode: "line", // 'line' | 'marker' | 'all'
+      stopDuration: "all",
       showAlarms: true,
       showStops: true,
       showSummary: false,
@@ -124,19 +161,38 @@ const replaySlice = createSlice({
         state.tripsLoading = false;
         state.tripsError = action.payload || "Failed to fetch replay trips";
         state.replayTrips = null;
+      })
+      // Geofence For User
+      .addCase(fetchReplayGeofenceForUser.pending, (state) => {
+        state.geofencesLoading = true;
+        state.geofencesError = null;
+      })
+      .addCase(fetchReplayGeofenceForUser.fulfilled, (state, action) => {
+        state.geofencesLoading = false;
+        state.geofences = action.payload;
+        state.geofencesError = null;
+      })
+      .addCase(fetchReplayGeofenceForUser.rejected, (state, action) => {
+        state.geofencesLoading = false;
+        state.geofencesError = action.payload || "Failed to fetch geofences";
+        state.geofences = null;
       });
   },
 });
 
-export const { setFilters, setCurrentReplayIndex, setReplayPaused } = replaySlice.actions;
+export const { setFilters, setCurrentReplayIndex, setReplayPaused } =
+  replaySlice.actions;
 export default replaySlice.reducer;
 export const selectReplayData = (state) => state.replay.replayData;
 export const selectReplayLoading = (state) => state.replay.loading;
 export const selectReplayError = (state) => state.replay.error;
 export const selectReplayFilters = (state) => state.replay.filters;
 export const selectReplayPaused = (state) => state.replay.isReplayPaused;
-export const selectCurrentReplayIndex = (state) => state.replay.currentReplayIndex;
+export const selectCurrentReplayIndex = (state) =>
+  state.replay.currentReplayIndex;
 // Trips selectors
 export const selectReplayTrips = (state) => state.replay.replayTrips;
 export const selectReplayTripsLoading = (state) => state.replay.tripsLoading;
 export const selectReplayTripsError = (state) => state.replay.tripsError;
+
+const userid = localStorage.getItem("clientId");

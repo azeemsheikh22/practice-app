@@ -163,7 +163,7 @@ export const fetchGeofenceForUser = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem("token");
-      const userid = localStorage.getItem("clientId") || "6571";
+      const userid = localStorage.getItem("clientId");
 
       const apiUrl = `${API_BASE_URL}api/Geofence/GeofenceForUser?userid=${userid}`;
 

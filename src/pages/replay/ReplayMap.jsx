@@ -1,8 +1,37 @@
 import movingIcon from "../../assets/moving-vehicle.png";
 import stoppedIcon from "../../assets/stopped-vehicle.png";
 import idleIcon from "../../assets/idle-vehicle.png";
-// Helper: get icon by status
-// Vehicle icon with rotation for moving, no rotation for idle/stop
+import {
+  useRef,
+  useEffect,
+  useState,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
+import ReplayAdvancedOptionsModal from "./ReplayAdvancedOptionsModal";
+import { useSelector, useDispatch } from "react-redux";
+import {
+  setCurrentReplayIndex,
+  selectCurrentReplayIndex,
+  fetchReplayGeofenceForUser,
+} from "../../features/replaySlice";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import {
+  Plus,
+  Minus,
+  Globe,
+  Satellite,
+  Maximize,
+  Minimize,
+  Navigation,
+  Settings,
+} from "lucide-react";
+import { motion } from "framer-motion";
+import icon from "leaflet/dist/images/marker-icon.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
+
+
 const getVehicleIcon = (status, head = 0) => {
   let iconImg = stoppedIcon;
   let statusKey = "stop";
@@ -29,56 +58,6 @@ const getVehicleIcon = (status, head = 0) => {
     popupAnchor: [0, -14],
   });
 };
-import React, {
-  useRef,
-  useEffect,
-  useState,
-  forwardRef,
-  useImperativeHandle,
-} from "react";
-import ReplayAdvancedOptionsModal from "./ReplayAdvancedOptionsModal";
-
-// Custom context menu for animated marker
-const AnimatedMarkerContextMenu = ({ visible, x, y, onCreateGeofence, onClose }) => {
-  if (!visible) return null;
-  return (
-    <div
-      className="fixed z-[2000] bg-white border border-gray-200 rounded-lg shadow-lg min-w-40"
-      style={{ left: x, top: y, cursor: 'pointer' }}
-      onContextMenu={e => e.preventDefault()}
-    >
-      <button
-        onClick={onCreateGeofence}
-        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer"
-      >
-        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
-          <circle cx="12" cy="10" r="3"></circle>
-        </svg>
-        Create Geofence
-      </button>
-    </div>
-  );
-};
-import { useSelector, useDispatch } from "react-redux";
-import { setCurrentReplayIndex, selectCurrentReplayIndex } from "../../features/replaySlice";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import {
-  Plus,
-  Minus,
-  Globe,
-  Satellite,
-  Maximize,
-  Minimize,
-  Navigation,
-  Settings,
-} from "lucide-react";
-import { motion } from "framer-motion";
-
-// Fix Leaflet default markers
-import icon from "leaflet/dist/images/marker-icon.png";
-import iconShadow from "leaflet/dist/images/marker-shadow.png";
 
 let DefaultIcon = L.icon({
   iconUrl: icon,
@@ -89,19 +68,42 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
+const AnimatedMarkerContextMenu = ({ visible, x, y, onCreateGeofence }) => {
+  if (!visible) return null;
+  return (
+    <div
+      className="fixed z-[2000] bg-white border border-gray-200 rounded-lg shadow-lg min-w-40"
+      style={{ left: x, top: y, cursor: "pointer" }}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <button
+        onClick={onCreateGeofence}
+        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 cursor-pointer"
+      >
+        <svg
+          className="w-4 h-4 flex-shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"></path>
+          <circle cx="12" cy="10" r="3"></circle>
+        </svg>
+        Create Geofence
+      </button>
+    </div>
+  );
+};
+
 const ReplayMap = forwardRef(
   (
     { replayData, isPlaying, currentTime, isMobileMenuOpen, sidebarExpanded },
     ref
   ) => {
-    // Redux: get displayMode and followVehicle from replaySlice
-    const filters = useSelector(state => state.replay.filters || {});
-    const displayMode = filters.displayMode || 'line';
+    const filters = useSelector((state) => state.replay.filters || {});
+    const displayMode = filters.displayMode || "line";
     const dispatch = useDispatch();
-    // Redux: get currentReplayIndex for table row selection
     const currentReplayIndex = useSelector(selectCurrentReplayIndex);
-
-    // Add this ref at the top level, not inside useEffect
     const lastViewRef = useRef({ lat: null, lng: null, zoom: null });
 
     // Invalidate map size when sidebar expands/collapses
@@ -154,7 +156,6 @@ const ReplayMap = forwardRef(
     // Auto zoom state
     const [autoZoomEnabled, setAutoZoomEnabled] = useState(true);
 
-
     // Helper: Clear all map layers related to previous track/markers
     const clearMapLayers = () => {
       if (!mapInstanceRef.current) return;
@@ -176,14 +177,22 @@ const ReplayMap = forwardRef(
         setCurrentMarker(null);
       }
       // Remove all start/end markers (className based or icon html)
-      mapInstanceRef.current.eachLayer(layer => {
+      mapInstanceRef.current.eachLayer((layer) => {
         // Remove by options.className
-        if (layer.options && layer.options.className && (layer.options.className === 'start-marker' || layer.options.className === 'end-marker')) {
+        if (
+          layer.options &&
+          layer.options.className &&
+          (layer.options.className === "start-marker" ||
+            layer.options.className === "end-marker")
+        ) {
           mapInstanceRef.current.removeLayer(layer);
         }
         // Remove by _icon html class (for divIcon markers)
         if (layer._icon && layer._icon.classList) {
-          if (layer._icon.classList.contains('start-marker') || layer._icon.classList.contains('end-marker')) {
+          if (
+            layer._icon.classList.contains("start-marker") ||
+            layer._icon.classList.contains("end-marker")
+          ) {
             mapInstanceRef.current.removeLayer(layer);
           }
         }
@@ -217,11 +226,11 @@ const ReplayMap = forwardRef(
       if (!mapInstanceRef.current) return;
       const map = mapInstanceRef.current;
       const disableAutoZoom = () => setAutoZoomEnabled(false);
-      map.on('zoomstart', disableAutoZoom);
-      map.on('dragstart', disableAutoZoom);
+      map.on("zoomstart", disableAutoZoom);
+      map.on("dragstart", disableAutoZoom);
       return () => {
-        map.off('zoomstart', disableAutoZoom);
-        map.off('dragstart', disableAutoZoom);
+        map.off("zoomstart", disableAutoZoom);
+        map.off("dragstart", disableAutoZoom);
       };
     }, []);
 
@@ -311,7 +320,7 @@ const ReplayMap = forwardRef(
       }
 
       // --- DisplayMode: marker ---
-      if (displayMode === 'marker') {
+      if (displayMode === "marker") {
         // Har data point par marker banao (moving, idle, stop sab)
         const allMarkers = [];
         replayData.forEach((point) => {
@@ -323,21 +332,25 @@ const ReplayMap = forwardRef(
               zIndexOffset: 1500,
             });
             marker.bindPopup(
-              `<div style=\"min-width:120px\"><b>${point.car_name || ''}</b><br/>${point.gps_time || ''}<br/>Status: ${status || ''}<br/>Speed: ${point.speed ?? '-'} km/h</div>`
+              `<div style=\"min-width:120px\"><b>${
+                point.car_name || ""
+              }</b><br/>${point.gps_time || ""}<br/>Status: ${
+                status || ""
+              }<br/>Speed: ${point.speed ?? "-"} km/h</div>`
             );
             allMarkers.push(marker);
           }
         });
         mapInstanceRef.current._vehicleMarkers = allMarkers;
         if (!isPlaying) {
-          allMarkers.forEach(marker => marker.addTo(mapInstanceRef.current));
+          allMarkers.forEach((marker) => marker.addTo(mapInstanceRef.current));
         }
         // Polyline, S/E marker kuch bhi na banao
         return;
       }
 
       // --- DisplayMode: line ---
-      if (displayMode === 'line') {
+      if (displayMode === "line") {
         // Sirf polyline aur start/end par marker
         const coordinates = replayData.map((point) => [
           point.latitude,
@@ -362,7 +375,11 @@ const ReplayMap = forwardRef(
                 zIndexOffset: 1500, // Status icon bhi upar
               });
               marker.bindPopup(
-                `<div style=\"min-width:120px\"><b>${point.car_name || ''}</b><br/>${point.gps_time || ''}<br/>Status: ${status || ''}<br/>Speed: ${point.speed ?? '-'} km/h</div>`
+                `<div style=\"min-width:120px\"><b>${
+                  point.car_name || ""
+                }</b><br/>${point.gps_time || ""}<br/>Status: ${
+                  status || ""
+                }<br/>Speed: ${point.speed ?? "-"} km/h</div>`
               );
               statusMarkers.push(marker);
             }
@@ -370,7 +387,9 @@ const ReplayMap = forwardRef(
         });
         mapInstanceRef.current._vehicleMarkers = statusMarkers;
         if (!isPlaying) {
-          statusMarkers.forEach(marker => marker.addTo(mapInstanceRef.current));
+          statusMarkers.forEach((marker) =>
+            marker.addTo(mapInstanceRef.current)
+          );
         }
 
         // Add start and end markers (sab se upar)
@@ -387,18 +406,18 @@ const ReplayMap = forwardRef(
             iconSize: [26, 26],
             iconAnchor: [13, 13],
           });
-          L.marker(coordinates[0], { icon: startIcon, zIndexOffset: 5000 }).addTo(
-            mapInstanceRef.current
-          );
-          L.marker(coordinates[coordinates.length - 1], { icon: endIcon, zIndexOffset: 5000 }).addTo(
-            mapInstanceRef.current
-          );
+          L.marker(coordinates[0], {
+            icon: startIcon,
+            zIndexOffset: 5000,
+          }).addTo(mapInstanceRef.current);
+          L.marker(coordinates[coordinates.length - 1], {
+            icon: endIcon,
+            zIndexOffset: 5000,
+          }).addTo(mapInstanceRef.current);
         }
         return;
       }
 
-      // --- DisplayMode: all ---
-      // Polyline + all data point markers
       const coordinates = replayData.map((point) => [
         point.latitude,
         point.longitude,
@@ -410,7 +429,6 @@ const ReplayMap = forwardRef(
       }).addTo(mapInstanceRef.current);
       setRouteLayer(polyline);
 
-      // All data point markers (moving, idle, stop sab)
       const allMarkers = [];
       replayData.forEach((point) => {
         if (point.latitude && point.longitude) {
@@ -421,17 +439,20 @@ const ReplayMap = forwardRef(
             zIndexOffset: 1500,
           });
           marker.bindPopup(
-            `<div style=\"min-width:120px\"><b>${point.car_name || ''}</b><br/>${point.gps_time || ''}<br/>Status: ${status || ''}<br/>Speed: ${point.speed ?? '-'} km/h</div>`
+            `<div style=\"min-width:120px\"><b>${
+              point.car_name || ""
+            }</b><br/>${point.gps_time || ""}<br/>Status: ${
+              status || ""
+            }<br/>Speed: ${point.speed ?? "-"} km/h</div>`
           );
           allMarkers.push(marker);
         }
       });
       mapInstanceRef.current._vehicleMarkers = allMarkers;
       if (!isPlaying) {
-        allMarkers.forEach(marker => marker.addTo(mapInstanceRef.current));
+        allMarkers.forEach((marker) => marker.addTo(mapInstanceRef.current));
       }
 
-      // Add start and end markers (sab se upar)
       if (coordinates.length > 0) {
         const startIcon = L.divIcon({
           className: "start-marker",
@@ -448,22 +469,24 @@ const ReplayMap = forwardRef(
         L.marker(coordinates[0], { icon: startIcon, zIndexOffset: 5000 }).addTo(
           mapInstanceRef.current
         );
-        L.marker(coordinates[coordinates.length - 1], { icon: endIcon, zIndexOffset: 5000 }).addTo(
-          mapInstanceRef.current
-        );
+        L.marker(coordinates[coordinates.length - 1], {
+          icon: endIcon,
+          zIndexOffset: 5000,
+        }).addTo(mapInstanceRef.current);
       }
     };
     // Jab play ho ya displayMode change ho to status markers hide/show karo
     useEffect(() => {
-      if (!mapInstanceRef.current || !mapInstanceRef.current._vehicleMarkers) return;
-      if (isPlaying || displayMode !== 'marker') {
-        mapInstanceRef.current._vehicleMarkers.forEach(marker => {
+      if (!mapInstanceRef.current || !mapInstanceRef.current._vehicleMarkers)
+        return;
+      if (isPlaying || displayMode !== "marker") {
+        mapInstanceRef.current._vehicleMarkers.forEach((marker) => {
           if (mapInstanceRef.current.hasLayer(marker)) {
             mapInstanceRef.current.removeLayer(marker);
           }
         });
       } else {
-        mapInstanceRef.current._vehicleMarkers.forEach(marker => {
+        mapInstanceRef.current._vehicleMarkers.forEach((marker) => {
           if (!mapInstanceRef.current.hasLayer(marker)) {
             marker.addTo(mapInstanceRef.current);
           }
@@ -472,7 +495,13 @@ const ReplayMap = forwardRef(
     }, [isPlaying, displayMode]);
 
     // Smooth animated vehicle marker (for animation) + right-click context menu
-    const [markerMenu, setMarkerMenu] = useState({ visible: false, x: 0, y: 0, lat: null, lng: null });
+    const [markerMenu, setMarkerMenu] = useState({
+      visible: false,
+      x: 0,
+      y: 0,
+      lat: null,
+      lng: null,
+    });
     useEffect(() => {
       if (replayData && replayData.length > 0 && currentTime !== null) {
         const total = replayData.length - 1;
@@ -497,27 +526,33 @@ const ReplayMap = forwardRef(
         }
         if (lat && lng) {
           // Remove all vehicle markers before adding new
-          mapInstanceRef.current.eachLayer(layer => {
-            if (layer.options && layer.options.icon && layer.options.icon.options && layer.options.icon.options.className === 'vehicle-marker') {
+          mapInstanceRef.current.eachLayer((layer) => {
+            if (
+              layer.options &&
+              layer.options.icon &&
+              layer.options.icon.options &&
+              layer.options.icon.options.className === "vehicle-marker"
+            ) {
               mapInstanceRef.current.removeLayer(layer);
             }
           });
-          const marker = L.marker(
-            [lat, lng],
-            {
-              icon: getVehicleIcon(status, head),
-              title: p1.car_name || "",
-              zIndexOffset: 4000,
-            }
-          ); 
+          const marker = L.marker([lat, lng], {
+            icon: getVehicleIcon(status, head),
+            title: p1.car_name || "",
+            zIndexOffset: 4000,
+          });
           marker.bindPopup(
-            `<div style=\"min-width:120px\"><b>${p1.car_name || ''}</b><br/>${p1.gps_time || ''}<br/>Status: ${status || ''}<br/>Speed: ${p1.speed ?? '-'} km/h</div>`
+            `<div style=\"min-width:120px\"><b>${p1.car_name || ""}</b><br/>${
+              p1.gps_time || ""
+            }<br/>Status: ${status || ""}<br/>Speed: ${
+              p1.speed ?? "-"
+            } km/h</div>`
           );
           marker.addTo(mapInstanceRef.current);
           setCurrentMarker(marker);
 
           // Add right-click context menu to marker
-          marker.on('contextmenu', function (e) {
+          marker.on("contextmenu", function (e) {
             // e.originalEvent is the browser event
             setMarkerMenu({
               visible: true,
@@ -533,7 +568,11 @@ const ReplayMap = forwardRef(
             const map = mapInstanceRef.current;
             const currentZoom = map.getZoom();
             const last = lastViewRef.current;
-            if (last.lat !== lat || last.lng !== lng || last.zoom !== currentZoom) {
+            if (
+              last.lat !== lat ||
+              last.lng !== lng ||
+              last.zoom !== currentZoom
+            ) {
               map.setView([lat, lng], currentZoom, { animate: true });
               lastViewRef.current = { lat, lng, zoom: currentZoom };
             }
@@ -545,40 +584,55 @@ const ReplayMap = forwardRef(
     // Hide marker context menu on map click or ESC
     useEffect(() => {
       if (!markerMenu.visible) return;
-      const handle = (e) => setMarkerMenu(m => ({ ...m, visible: false }));
-      window.addEventListener('click', handle);
-      window.addEventListener('keydown', (e) => { if (e.key === 'Escape') handle(); });
+      const handle = (e) => setMarkerMenu((m) => ({ ...m, visible: false }));
+      window.addEventListener("click", handle);
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") handle();
+      });
       return () => {
-        window.removeEventListener('click', handle);
-        window.removeEventListener('keydown', (e) => { if (e.key === 'Escape') handle(); });
+        window.removeEventListener("click", handle);
+        window.removeEventListener("keydown", (e) => {
+          if (e.key === "Escape") handle();
+        });
       };
     }, [markerMenu.visible]);
 
     // Table row select: move vehicle to selected point (no double marker)
     useEffect(() => {
       // Only add marker on row select if replay is paused
-      if (!isPlaying && replayData && replayData.length > 0 && currentReplayIndex != null) {
+      if (
+        !isPlaying &&
+        replayData &&
+        replayData.length > 0 &&
+        currentReplayIndex != null
+      ) {
         const point = replayData[currentReplayIndex];
         if (point && point.latitude && point.longitude) {
           // Remove all vehicle markers before adding new
-          mapInstanceRef.current.eachLayer(layer => {
-            if (layer.options && layer.options.icon && layer.options.icon.options && layer.options.icon.options.className === 'vehicle-marker') {
+          mapInstanceRef.current.eachLayer((layer) => {
+            if (
+              layer.options &&
+              layer.options.icon &&
+              layer.options.icon.options &&
+              layer.options.icon.options.className === "vehicle-marker"
+            ) {
               mapInstanceRef.current.removeLayer(layer);
             }
           });
-          const marker = L.marker(
-            [point.latitude, point.longitude],
-            {
-              icon: getVehicleIcon(point.status || point.status1, point.head),
-              title: point.car_name || "",
-              zIndexOffset: 4000,
-            }
-          );
+          const marker = L.marker([point.latitude, point.longitude], {
+            icon: getVehicleIcon(point.status || point.status1, point.head),
+            title: point.car_name || "",
+            zIndexOffset: 4000,
+          });
           marker.bindPopup(
-            `<div style=\"min-width:120px\"><b>${point.car_name || ''}</b><br/>${point.gps_time || ''}<br/>Status: ${point.status || point.status1 || ''}<br/>Speed: ${point.speed ?? '-'} km/h</div>`
+            `<div style=\"min-width:120px\"><b>${
+              point.car_name || ""
+            }</b><br/>${point.gps_time || ""}<br/>Status: ${
+              point.status || point.status1 || ""
+            }<br/>Speed: ${point.speed ?? "-"} km/h</div>`
           );
           // Attach right-click context menu for Create Geofence (pause state)
-          marker.on('contextmenu', function (e) {
+          marker.on("contextmenu", function (e) {
             setMarkerMenu({
               visible: true,
               x: e.originalEvent.clientX,
@@ -594,9 +648,19 @@ const ReplayMap = forwardRef(
             const map = mapInstanceRef.current;
             const currentZoom = map.getZoom();
             const last = lastViewRef.current;
-            if (last.lat !== point.latitude || last.lng !== point.longitude || last.zoom !== currentZoom) {
-              map.setView([point.latitude, point.longitude], currentZoom, { animate: true });
-              lastViewRef.current = { lat: point.latitude, lng: point.longitude, zoom: currentZoom };
+            if (
+              last.lat !== point.latitude ||
+              last.lng !== point.longitude ||
+              last.zoom !== currentZoom
+            ) {
+              map.setView([point.latitude, point.longitude], currentZoom, {
+                animate: true,
+              });
+              lastViewRef.current = {
+                lat: point.latitude,
+                lng: point.longitude,
+                zoom: currentZoom,
+              };
             }
           }
         }
@@ -614,13 +678,21 @@ const ReplayMap = forwardRef(
     const [showAddToMapMenu, setShowAddToMapMenu] = useState(false);
     const [showGeofence, setShowGeofence] = useState(false);
     const [showAdvancedModal, setShowAdvancedModal] = useState(false);
+
+    // Helper: Dispatch fetchReplayGeofenceForUser
+    const handleFetchGeofence = () => {
+      console.log("hello")
+      // User will add import for fetchReplayGeofenceForUser
+      dispatch(fetchReplayGeofenceForUser());
+    };
     const controlsZIndex = isMobileMenuOpen ? 10 : 1000;
 
     // Close popover on outside click
     useEffect(() => {
       if (!showAddToMapMenu) return;
       const handler = (e) => {
-        if (!e.target.closest(".add-to-map-popover")) setShowAddToMapMenu(false);
+        if (!e.target.closest(".add-to-map-popover"))
+          setShowAddToMapMenu(false);
       };
       window.addEventListener("mousedown", handler);
       return () => window.removeEventListener("mousedown", handler);
@@ -636,13 +708,17 @@ const ReplayMap = forwardRef(
           x={markerMenu.x}
           y={markerMenu.y}
           onCreateGeofence={() => {
-            setMarkerMenu(m => ({ ...m, visible: false }));
+            setMarkerMenu((m) => ({ ...m, visible: false }));
             if (markerMenu.lat && markerMenu.lng) {
               const url = `/#/create-geofence?lat=${markerMenu.lat}&lng=${markerMenu.lng}`;
-              window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no');
+              window.open(
+                url,
+                "_blank",
+                "width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no"
+              );
             }
           }}
-          onClose={() => setMarkerMenu(m => ({ ...m, visible: false }))}
+          onClose={() => setMarkerMenu((m) => ({ ...m, visible: false }))}
         />
 
         {/* Map Controls - Adjust z-index based on mobile menu state */}
@@ -693,7 +769,10 @@ const ReplayMap = forwardRef(
                     <input
                       type="checkbox"
                       checked={showGeofence}
-                      onChange={e => setShowGeofence(e.target.checked)}
+                      onChange={(e) => {
+                        setShowGeofence(e.target.checked);
+                        handleFetchGeofence();
+                      }}
                       className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                     />
                     <span className="text-sm text-gray-800">Show Geofence</span>
@@ -701,9 +780,13 @@ const ReplayMap = forwardRef(
                   <button
                     type="button"
                     className="flex items-center gap-2 px-2 py-2 rounded-md hover:bg-gray-100 transition-colors text-[#25689f] text-sm font-medium"
-                    onClick={() => { setShowAdvancedModal(true); setShowAddToMapMenu(false); }}
+                    onClick={() => {
+                      setShowAdvancedModal(true);
+                      setShowAddToMapMenu(false);
+                      handleFetchGeofence();
+                    }}
                   >
-                    <Settings size={18} /> 
+                    <Settings size={18} />
                     <span>Advanced Options</span>
                   </button>
                 </div>
@@ -760,22 +843,13 @@ const ReplayMap = forwardRef(
             >
               {isFullscreen ? <Minimize size={14} /> : <Maximize size={14} />}
             </motion.button>
-
-            {/* <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handlePrintMap}
-          className="flex items-center px-3 py-2 bg-white/95 backdrop-blur-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg shadow-lg border border-gray-200 text-xs font-medium transition-all duration-200"
-        >
-          <Printer size={14} className="mr-1.5" />
-  
-        </motion.button> */}
           </div>
         </div>
         {/* Advanced Options Modal */}
         <ReplayAdvancedOptionsModal
           isOpen={showAdvancedModal}
           onClose={() => setShowAdvancedModal(false)}
+          // Optionally, you can also call handleFetchGeofence here if you want to fetch on modal open every time
         />
       </div>
     );

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { X, Settings } from "lucide-react";
+import { useSelector } from "react-redux";
 
 const dummyGeofences = [
   { id: 1, name: "Geofence A", category: "Zone 1", color: "#25689f" },
@@ -19,6 +20,9 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleItems, setVisibleItems] = useState(50);
   const [showShapes, setShowShapes] = useState(true);
+  const {geofences} = useSelector((state) => state.replay);
+
+  console.log(geofences)
 
   const geofenceData = dummyGeofences;
   const categoryData = dummyCategories;
