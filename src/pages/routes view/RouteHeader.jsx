@@ -1,68 +1,27 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   // Download,
   Search,
   Plus,
-  FileText,
-  FileSpreadsheet,
-  FileDown,
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { setSearchQuery, selectFilteredRoutesCount, selectTotalRoutesCount } from "../../features/routeSlice";
-
+import {
+  setSearchQuery,
+  selectFilteredRoutesCount,
+  selectTotalRoutesCount,
+} from "../../features/routeSlice";
 
 export default function RouteHeader() {
   const dispatch = useDispatch();
   const searchTerm = useSelector((state) => state.route.searchQuery);
   const filteredCount = useSelector(selectFilteredRoutesCount);
   const totalRoutes = useSelector(selectTotalRoutesCount);
-  const [isDownloadOpen, setIsDownloadOpen] = useState(false);
-  const downloadRef = useRef(null);
-
-  // Outside click handler for download dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (downloadRef.current && !downloadRef.current.contains(event.target)) {
-        setIsDownloadOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   const buttonVariants = {
     hover: { scale: 1.05 },
     tap: { scale: 0.95 },
   };
-
-  // Download options
-  const downloadOptions = [
-    {
-      label: "Copy",
-      icon: <FileText size={14} />,
-      action: () => console.log("Copy"),
-    },
-    {
-      label: "Excel",
-      icon: <FileSpreadsheet size={14} />,
-      action: () => console.log("Excel"),
-    },
-    {
-      label: "CSV",
-      icon: <FileDown size={14} />,
-      action: () => console.log("CSV"),
-    },
-    {
-      label: "PDF",
-      icon: <FileText size={14} />,
-      action: () => console.log("PDF"),
-    },
-  ];
 
   return (
     <div className="w-full space-y-2 mb-3">
@@ -131,54 +90,18 @@ export default function RouteHeader() {
             <div className="flex items-center space-x-1.5 flex-shrink-0">
               <div className="w-1.5 h-1.5 bg-[#25689f] rounded-full animate-pulse"></div>
               <span className="text-xs text-gray-600">
-                Showing <span className="font-semibold text-[#25689f]">{filteredCount}</span>{" "}
+                Showing{" "}
+                <span className="font-semibold text-[#25689f]">
+                  {filteredCount}
+                </span>{" "}
                 of{" "}
-                <span className="font-semibold text-[#25689f]">{totalRoutes}</span>{" "}
+                <span className="font-semibold text-[#25689f]">
+                  {totalRoutes}
+                </span>{" "}
                 routes
               </span>
             </div>
           </div>
-
-          {/* ✅ COMPACT Right side - Download button - Updated with theme colors */}
-          {/* <div className="flex-shrink-0">
-            <div className="relative" ref={downloadRef}>
-              <motion.button
-                variants={buttonVariants}
-                whileHover="hover"
-                whileTap="tap"
-                onClick={() => setIsDownloadOpen(!isDownloadOpen)}
-                className="btn btn-ghost btn-sm text-gray-700 hover:bg-gray-100 border border-gray-200 hover:border-gray-300 transition-all duration-200 flex items-center px-2.5 py-1.5 text-sm h-auto min-h-0"
-              >
-                <Download size={12} className="mr-1.5" />
-                Download
-              </motion.button>
-
-           
-              {isDownloadOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute right-0 mt-1 w-28 bg-white rounded-md shadow-lg py-1 z-20 border border-gray-200"
-                >
-                  {downloadOptions.map((option, index) => (
-                    <button
-                      key={index}
-                      onClick={() => {
-                        option.action();
-                        setIsDownloadOpen(false);
-                      }}
-                      className="flex items-center w-full px-2.5 py-1.5 text-xs text-gray-700 hover:bg-[#25689f]/10 hover:text-[#25689f] transition-colors duration-150"
-                    >
-                      {option.icon}
-                      <span className="ml-1.5">{option.label}</span>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-            </div>
-          </div> */}
         </div>
       </motion.div>
     </div>

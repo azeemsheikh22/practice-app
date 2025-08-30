@@ -16,6 +16,7 @@ import AdminNavigation from "../admin/AdminRoot";
 import AddPolicy from "../pages/alerts/alert policy/AddPolicy";
 import Reports from "../pages/reports/Reports";
 import Prevention from "../pages/prevention/Prevention";
+import CreateRoutePlan from "../pages/routes view/create route plan/CreateRoutePlan";
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -144,6 +145,7 @@ function AllRoute() {
       />
 
       <Route path="/create-route" element={<CreateRoute />} />
+      <Route path="/create-route-plan" element={<CreateRoutePlan />} />
 
       {/* Admin Routes with nested sub-routes */}
       <Route

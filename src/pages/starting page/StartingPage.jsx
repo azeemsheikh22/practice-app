@@ -213,8 +213,20 @@ const StartingPage = () => {
       </div>
 
       {/* Main Content - Now shows 9 items with Dashboard as second */}
-      <div className="flex-grow flex items-center justify-center py-8">
+      <div className="flex-grow flex flex-col items-center justify-center py-8">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Dropdown select for card names */}
+          <div className="mb-8 flex items-center justify-center">
+            <label htmlFor="card-select" className="mr-2 text-gray-700 font-medium">Take me here after logging in:</label>
+            <select
+              id="card-select"
+              className="border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+            >
+              {options.map((item, idx) => (
+                <option key={idx} value={item.link}>{item.label}</option>
+              ))}
+            </select>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-7 max-w-6xl mx-auto">
             {options.map((item, index) => (
               <motion.div
@@ -226,7 +238,7 @@ const StartingPage = () => {
               >
                 <Link
                   to={item.link}
-                  className={`block p-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 ${item.color} h-full`}
+                  className={`block p-4 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 border border-gray-300 ${item.color} h-full`}
                 >
                   <div className="flex flex-col items-center text-center">
                     <div className="p-2 rounded-full bg-white shadow-sm mb-2">
