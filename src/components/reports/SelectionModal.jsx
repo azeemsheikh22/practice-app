@@ -74,31 +74,33 @@ const SelectionModal = ({
   
   if (!isOpen) return null;
 
+  // Use modal-root for overlay, fallback to document.body
+  let modalRoot = document.getElementById('modal-root');
+  if (!modalRoot) {
+    modalRoot = document.createElement('div');
+    modalRoot.setAttribute('id', 'modal-root');
+    document.body.appendChild(modalRoot);
+  }
+
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-      {/* Black overlay with slight transparency */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      ></div>
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <motion.div 
-        className="relative w-full max-w-md bg-white rounded-lg shadow-xl z-10 mx-4"
+        className="relative w-full max-w-md bg-white rounded-lg overflow-hidden shadow-xl z-10 mx-4"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
+        style={{ maxHeight: '80vh' }}
       >
         {/* Modal header */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-800">{getTitle()}</h3>
-            <button
-              onClick={onClose}
-              className="p-1 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
-            >
-              <X size={20} className="text-gray-500" />
-            </button>
-          </div>
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-800">{getTitle()}</h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
+          >
+            <X size={20} className="text-gray-500" />
+          </button>
         </div>
         <div className="p-6 max-h-[70vh] overflow-y-auto">
           {/* Search box */}
@@ -109,7 +111,7 @@ const SelectionModal = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#00A3C0] text-sm cursor-pointer"
+              className="flex-1 border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#25689f] text-sm cursor-pointer"
               placeholder="Search..."
             />
           </div>
@@ -127,7 +129,7 @@ const SelectionModal = ({
                     id={`item-${item.id}`}
                     checked={!!selectedItems[item.id]}
                     onChange={() => toggleSelect(item.id)}
-                    className="h-4 w-4 text-[#00A3C0] rounded border-gray-300 focus:ring-[#00A3C0] cursor-pointer"
+                    className="h-4 w-4 text-[#25689f] rounded border-gray-300 focus:ring-[#25689f] cursor-pointer"
                   />
                   <span className="ml-2 text-sm text-gray-700">{item.name}</span>
                 </label>
@@ -142,13 +144,13 @@ const SelectionModal = ({
             <div className="flex space-x-3">
               <button 
                 onClick={selectAll}
-                className="text-[#00A3C0] hover:underline text-sm font-medium cursor-pointer"
+                className="text-[#25689f] hover:underline text-sm font-medium cursor-pointer"
               >
                 Select All
               </button>
               <button 
                 onClick={deselectAll}
-                className="text-[#00A3C0] hover:underline text-sm font-medium cursor-pointer"
+                className="text-[#25689f] hover:underline text-sm font-medium cursor-pointer"
               >
                 Deselect All
               </button>
@@ -156,13 +158,13 @@ const SelectionModal = ({
             <div className="flex space-x-3">
               <button 
                 onClick={onClose}
-                className="px-4 py-2 text-sm text-[#00A3C0] hover:bg-gray-100 rounded cursor-pointer"
+                className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleSave}
-                className="px-4 py-2 text-sm bg-[#F0B97D] text-white rounded hover:bg-[#e6a65d] transition-colors cursor-pointer"
+                className="px-4 py-2 text-sm bg-[#25689f] text-white rounded hover:bg-[#1F557F] transition-colors cursor-pointer"
               >
                 Save
               </button>
@@ -171,7 +173,7 @@ const SelectionModal = ({
         </div>
       </motion.div>
     </div>,
-    document.body
+    modalRoot
   );
 };
 

@@ -1,61 +1,42 @@
-import React, { useState } from 'react';
-import Navbar from '../../components/navber/Navbar';
-import ReportSelector from '../../components/reports/ReportSelector';
-import ReportSetup from '../../components/reports/ReportSetup';
-import ReportSidebar from '../../components/reports/ReportSidebar';
-import { ArrowLeft } from 'lucide-react';
-import '../../styles/reportAnimations.css';
-
-const reportCategories = [
-  {
-    name: 'Activity',
-    reports: [
-      'Alert Log Report',
-      'Alert Log Report (PGL)',
-      'Detail Movement Report',
-      'Geofence Report (New)',
-      'Idling Report',
-      'Last Update Report',
-      'Movement Report',
-      'Parking Report',
-      'Seatbelt Unfasten Report',
-      'Travel and Stops Report',
-    ],
-  },
-  {
-    name: 'Summary',
-    reports: ['Distance Travelled Report'],
-  },
-  {
-    name: 'Driving Style',
-    reports: [],
-  },
-  {
-    name: 'Fuel',
-    reports: [],
-  },
-  {
-    name: 'Fuel Level Sensor',
-    reports: [],
-  },
-  {
-    name: 'Timecard',
-    reports: [],
-  },
-  {
-    name: 'Management Summary',
-    reports: [],
-  },
-];
-
-const customReports = [
-  'Area Speeding Report',
-  'Area Speeding Report - PGL',
-];
+import React, { useEffect, useState } from "react";
+import Navbar from "../../components/navber/Navbar";
+import ReportSelector from "../../components/reports/ReportSelector";
+import ReportSetup from "../../components/reports/ReportSetup";
+import ReportSidebar from "../../components/reports/ReportSidebar";
+import { ArrowLeft } from "lucide-react";
+import "../../styles/reportAnimations.css";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchUserReportList } from "../../features/reportsSlice";
 
 const Reports = () => {
   const [selectedReport, setSelectedReport] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    dispatch(fetchUserReportList());
+  }, [dispatch]);
+
+  const reports = useSelector((state) => state.reports.reports);
+
+  // Transform API data into categories and custom reports
+  const groupedReports = React.useMemo(() => {
+    if (!Array.isArray(reports)) return { categories: [], customReports: [] };
+    const categoriesMap = {};
+    const customReports = [];
+    reports.forEach((r) => {
+      if (r.catname === "My Customize Reports") {
+        customReports.push(r.RptName);
+      } else {
+        if (!categoriesMap[r.catname]) {
+          categoriesMap[r.catname] = [];
+        }
+        categoriesMap[r.catname].push(r.RptName);
+      }
+    });
+    const categories = Object.entries(categoriesMap).map(([name, reports]) => ({ name, reports }));
+    return { categories, customReports };
+  }, [reports]);
 
   // Handler for report selection
   const handleSelectReport = (report, category) => {
@@ -71,17 +52,15 @@ const Reports = () => {
 
   // Handler for report execution
   const handleRunReport = (config) => {
-    console.log('Running report with config:', config);
-    // Here you would typically make an API call to generate the report
-    // For now, we'll just show a message
-    alert(`Report "${selectedReport}" is being generated. You'll be notified when it's ready.`);
+    alert(
+      `Report "${selectedReport}" is being generated. You'll be notified when it's ready.`
+    );
     handleBackToSelection();
   };
 
   // Handler for sidebar actions
   const handleSidebarAction = (actionId) => {
-    console.log('Sidebar action:', actionId);
-    // Implement sidebar actions here
+    console.log("Sidebar action:", actionId);
   };
 
   return (
@@ -95,14 +74,14 @@ const Reports = () => {
         <main className="flex-1 min-w-0">
           {selectedReport ? (
             <div className="relative mb-4 animate-fadeIn">
-              <button 
+              <button
                 onClick={handleBackToSelection}
                 className="absolute top-0 left-0 mt-[-40px] flex items-center gap-1 text-[#25689f] hover:text-[#1F557F] transition-colors animate-slideInFromLeft"
               >
                 <ArrowLeft size={16} />
                 <span className="text-sm font-medium">Back to Reports</span>
               </button>
-              <ReportSetup 
+              <ReportSetup
                 selectedReport={selectedReport}
                 selectedCategory={selectedCategory}
                 onRun={handleRunReport}
@@ -111,9 +90,9 @@ const Reports = () => {
             </div>
           ) : (
             <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 animate-fadeIn">
-              <ReportSelector 
-                reportCategories={reportCategories}
-                customReports={customReports}
+              <ReportSelector
+                reportCategories={groupedReports.categories}
+                customReports={groupedReports.customReports}
                 onSelectReport={handleSelectReport}
               />
             </div>
@@ -122,4 +101,5 @@ const Reports = () => {
       </div>
     </div>
   );
-};export default Reports;
+};
+export default Reports;

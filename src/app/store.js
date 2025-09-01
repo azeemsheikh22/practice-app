@@ -9,6 +9,7 @@ import routeReducer from '../features/routeSlice'; // ✅ NEW IMPORT
 import replayReducer from '../features/replaySlice'; // ✅ REPLAY IMPORT
 import alertReducer from '../features/alertSlice'; // ✅ ALERT IMPORT
 import alertpolicyReducer from '../features/alertpolicySlice'; // ✅ ALERTPOLICY IMPORT
+import reportsReducer from '../features/reportsSlice'; // ✅ REPORTS IMPORT
 
 export const store = configureStore({
   reducer: {
@@ -22,6 +23,7 @@ export const store = configureStore({
     alert: alertReducer, // ✅ ALERT REDUCER
     alertpolicy: alertpolicyReducer, // ✅ ALERTPOLICY REDUCER
     replay: replayReducer, // ✅ REPLAY REDUCER
+    reports: reportsReducer, // ✅ REPORTS REDUCER
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -1,5 +1,5 @@
-import React from 'react';
-import { BarChart3, Download, Share2, Printer, FileText } from 'lucide-react';
+
+import { BarChart3, FileText } from 'lucide-react';
 
 // This is a placeholder component for the report sidebar
 const ReportSidebar = ({ onAction }) => {
@@ -9,15 +9,9 @@ const ReportSidebar = ({ onAction }) => {
     { id: 'recent', label: 'Recently Run', icon: <Clock size={20} /> },
     { id: 'customize', label: 'Customize New Report', icon: <Edit size={20} />, external: true },
   ];
-
-  const exportOptions = [
-    { id: 'download', label: 'Download', icon: <Download size={18} /> },
-    { id: 'print', label: 'Print', icon: <Printer size={18} /> },
-    { id: 'share', label: 'Share', icon: <Share2 size={18} /> },
-  ];
   
   return (
-    <aside className="w-full lg:w-64 bg-white rounded-xl shadow border border-gray-200 flex-shrink-0 mb-4 lg:mb-0 flex flex-col h-full">
+    <aside className="w-full lg:w-64 bg-white rounded-xl shadow border border-gray-200 flex-shrink-0 mb-4 lg:mb-0 flex flex-col min-h-[80vh]">
       <div className="p-4 border-b border-gray-200">
         <h2 className="text-lg font-bold text-gray-800">Report Tools</h2>
       </div>
@@ -39,23 +33,7 @@ const ReportSidebar = ({ onAction }) => {
           ))}
         </div>
         
-        <div className="mt-8">
-          <h3 className="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Export Options
-          </h3>
-          <div className="space-y-1">
-            {exportOptions.map((option) => (
-              <button
-                key={option.id}
-                onClick={() => onAction(option.id)}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-[#25689f]/10 transition-colors font-medium text-left cursor-pointer"
-              >
-                <span className="text-gray-500">{option.icon}</span>
-                <span>{option.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+  
       </nav>
       
       <div className="p-4 border-t border-gray-200 bg-gray-50">
