@@ -1,4 +1,3 @@
-
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -118,6 +117,7 @@ const replaySlice = createSlice({
     showShapes: false, // for geofence shapes toggle
     currentReplayIndex: null, // index of the currently animated point
     isReplayPaused: true, // replay pause state
+    showGeofenceOnMap: false, // Add to Map menu ke liye
   },
   reducers: {
     setFilters: (state, action) => {
@@ -133,6 +133,13 @@ const replaySlice = createSlice({
     },
     setShowShapes: (state, action) => {
       state.showShapes = action.payload;
+    },
+    setShowGeofences: (state, action) => {
+      // Directly set showGeofences to the provided array
+      state.showGeofences = action.payload;
+    },
+    setShowGeofenceOnMap: (state, action) => {
+      state.showGeofenceOnMap = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -174,13 +181,13 @@ const replaySlice = createSlice({
       })
       .addCase(fetchReplayGeofenceForUser.fulfilled, (state, action) => {
         state.geofencesLoading = false;
-        // Only store geofences where chkShowOnMap === 'true'
-        if (Array.isArray(action.payload)) {
-          state.geofences = action.payload.filter(g => g.chkShowOnMap === 'true');
-          state.showGeofences = action.payload.filter(g => g.chkShowOnMap === 'true');
-        } else {
-          state.geofences = [];
-          state.showGeofences = [];
+        const filtered = Array.isArray(action.payload)
+          ? action.payload.filter(g => g.chkShowOnMap === 'true')
+          : [];
+        state.geofences = filtered;
+        // Sirf tab set karo jab showGeofences empty hai
+        if (!state.showGeofences || state.showGeofences.length === 0) {
+          state.showGeofences = filtered;
         }
         state.geofencesError = null;
       })
@@ -192,7 +199,7 @@ const replaySlice = createSlice({
   },
 });
 
-export const { setFilters, setCurrentReplayIndex, setReplayPaused, setShowShapes } =
+export const { setFilters, setCurrentReplayIndex, setReplayPaused, setShowShapes, setShowGeofences, setShowGeofenceOnMap } =
   replaySlice.actions;
 export const selectShowShapes = (state) => state.replay.showShapes;
 export default replaySlice.reducer;

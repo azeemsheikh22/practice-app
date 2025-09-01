@@ -10,7 +10,14 @@ import {
   initializeConnection,
   selectConnectionStatus,
 } from "../../features/gpsTrackingSlice";
-import { fetchReplayData, selectReplayData, fetchReplayTrips, selectReplayTrips } from "../../features/replaySlice";
+import {
+  fetchReplayData,
+  selectReplayData,
+  fetchReplayTrips,
+  selectReplayTrips,
+  fetchReplayGeofenceForUser,
+} from "../../features/replaySlice";
+import { fetchGeofenceCatList } from "../../features/geofenceSlice";
 
 const Replay = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
@@ -25,26 +32,19 @@ const Replay = () => {
   const dispatch = useDispatch();
   const replayApiData = useSelector(selectReplayData);
 
-  // Handler to get replay data from sidebar
-  const handleGetReplayData = ({ vehicle, fromDate, toDate, fromTime, toTime }) => {
-    if (!vehicle || !fromDate || !toDate) {
-      console.log("Replay.jsx: Missing required data for replay fetch");
-      return;
-    }
-    // Format dates for API (YYYY/MM/DD)
-    const datefrom = fromDate.replace(/-/g, "/");
-    const dateto = toDate.replace(/-/g, "/");
-    // Pass fromTime and toTime to thunks
-    dispatch(fetchReplayData({ carId: vehicle.valueId, datefrom, dateto, fromTime, toTime }));
-    dispatch(fetchReplayTrips({ carId: vehicle.valueId, datefrom, dateto, fromTime, toTime }));
-  };
-
   // Log vehicleId from query param if present
   const location = useLocation();
+  const [urlVehicleId, setUrlVehicleId] = useState(null);
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const vehicleId = params.get("vehicleId");
+    setUrlVehicleId(vehicleId);
   }, [location.search]);
+
+  useEffect(() => {
+    dispatch(fetchGeofenceCatList());
+    dispatch(fetchReplayGeofenceForUser());
+  }, []);
 
   const connectionStatus = useSelector(selectConnectionStatus);
 
@@ -81,6 +81,27 @@ const Replay = () => {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleGetReplayData = ({
+    vehicle,
+    fromDate,
+    toDate,
+    fromTime,
+    toTime,
+  }) => {
+    // If vehicle is not selected, but urlVehicleId exists, use that
+    let carId = vehicle && vehicle.valueId ? vehicle.valueId : urlVehicleId;
+    if (!carId || !fromDate || !toDate) {
+      console.log("Replay.jsx: Missing required data for replay fetch");
+      return;
+    }
+    // Format dates for API (YYYY/MM/DD)
+    const datefrom = fromDate.replace(/-/g, "/");
+    const dateto = toDate.replace(/-/g, "/");
+    // Pass fromTime and toTime to thunks
+    dispatch(fetchReplayData({ carId, datefrom, dateto, fromTime, toTime }));
+    dispatch(fetchReplayTrips({ carId, datefrom, dateto, fromTime, toTime }));
   };
 
   return (
@@ -127,27 +148,58 @@ const Replay = () => {
             isMobileMenuOpen ? "lg:z-0" : "z-0"
           }`}
         >
-
           {/* Info Bar Above Map */}
           {Array.isArray(replayApiData) && replayApiData.length > 0 && (
-            <div className="w-full flex flex-row items-center justify-between px-2 py-1 bg-gradient-to-r from-[#25689f]/10 to-[#1F557F]/10 shadow-sm text-[11px] md:text-xs font-medium z-20" style={{minHeight: 28, lineHeight: 1.1}}>
+            <div
+              className="w-full flex flex-row items-center justify-between px-2 py-1 bg-gradient-to-r from-[#25689f]/10 to-[#1F557F]/10 shadow-sm text-[11px] md:text-xs font-medium z-20"
+              style={{ minHeight: 28, lineHeight: 1.1 }}
+            >
               {/* Start Time */}
               <div className="flex flex-row items-center gap-1">
                 <span className="text-gray-500">Start:</span>
-                <span className="font-semibold text-gray-800 truncate max-w-[150px]" title={replayApiData[0].gps_time}>
-                  {new Date(replayApiData[0].gps_time).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
+                <span
+                  className="font-semibold text-gray-800 truncate max-w-[150px]"
+                  title={replayApiData[0].gps_time}
+                >
+                  {new Date(replayApiData[0].gps_time).toLocaleString("en-GB", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: true,
+                  })}
                 </span>
               </div>
               {/* Vehicle Name */}
               <div className="flex flex-row items-center gap-1">
                 {/* <img src={require('../../assets/logo.png')} alt="vehicle" className="w-5 h-5 rounded object-contain border border-gray-200 bg-white" /> */}
-                <span className="font-semibold text-[#25689f] text-xs md:text-sm truncate max-w-[120px]" title={replayApiData[0].car_name}>{replayApiData[0].car_name}</span>
+                <span
+                  className="font-semibold text-[#25689f] text-xs md:text-sm truncate max-w-[120px]"
+                  title={replayApiData[0].car_name}
+                >
+                  {replayApiData[0].car_name}
+                </span>
               </div>
               {/* End Time */}
               <div className="flex flex-row items-center gap-1">
                 <span className="text-gray-500">End:</span>
-                <span className="font-semibold text-gray-800 truncate max-w-[150px]" title={replayApiData[replayApiData.length-1].gps_time}>
-                  {new Date(replayApiData[replayApiData.length-1].gps_time).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
+                <span
+                  className="font-semibold text-gray-800 truncate max-w-[150px]"
+                  title={replayApiData[replayApiData.length - 1].gps_time}
+                >
+                  {new Date(
+                    replayApiData[replayApiData.length - 1].gps_time
+                  ).toLocaleString("en-GB", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    hour12: true,
+                  })}
                 </span>
               </div>
             </div>

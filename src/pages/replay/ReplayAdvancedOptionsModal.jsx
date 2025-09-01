@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { FixedSizeList as List } from "react-window";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
@@ -10,9 +10,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState("geofence");
   const [selectedGeofenceIds, setSelectedGeofenceIds] = useState(new Set());
   const [selectedCategories, setSelectedCategories] = useState(new Set());
-
   const [searchTerm, setSearchTerm] = useState("");
-  const [visibleItems, setVisibleItems] = useState(50);
   const showShapes = useSelector((state) => state.replay.showShapes);
   const { geofences } = useSelector((state) => state.replay);
   const { geofenceCatList } = useSelector((state) => state.geofence);
@@ -46,10 +44,15 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
   // For react-window, itemData is filteredData
   const itemData = filteredData;
 
-  // By default, select all geofences and categories when modal opens and data is available
+  // Get showGeofences from redux
+  const showGeofences = useSelector((state) => state.replay.showGeofences);
+
+  // When modal opens, initialize selection from Redux showGeofences
   useEffect(() => {
     if (isOpen) {
-      if (geofenceData.length > 0) {
+      if (Array.isArray(showGeofences) && showGeofences.length > 0) {
+        setSelectedGeofenceIds(new Set(showGeofences.map((g) => g.id)));
+      } else if (geofenceData.length > 0) {
         setSelectedGeofenceIds(new Set(geofenceData.map((g) => g.id)));
       }
       if (categoryData.length > 0) {
@@ -57,7 +60,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, geofenceData, categoryData]);
+  }, [isOpen, geofenceData, categoryData, showGeofences, geofences]);
 
   const handleSelectAll = () => {
     if (activeTab === "geofence") {
@@ -135,6 +138,22 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
+  // Apply Filters handler: only update showGeofences based on selected geofences
+  const handleApplyFilters = () => {
+    if (activeTab === "geofence") {
+      // Only update showGeofences with selected geofences
+      const selectedGeofences = geofenceData.filter((g) =>
+        selectedGeofenceIds.has(g.id)
+      );
+      dispatch({
+        type: "replay/setShowGeofences",
+        payload: selectedGeofences,
+      });
+    }
+    // Do not update showGeofences for category tab
+    onClose();
+  };
+
   // Modal content
   const modalContent = (
     <div className="fixed inset-0 flex items-center justify-center z-[9999]">
@@ -170,7 +189,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
               onClick={() => {
                 setActiveTab("geofence");
                 setSearchTerm("");
-                setVisibleItems(50);
+          
               }}
               className={`flex-1 cursor-pointer py-1.5 px-3 text-sm font-medium rounded-md transition-colors ${
                 activeTab === "geofence"
@@ -184,7 +203,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
               onClick={() => {
                 setActiveTab("category");
                 setSearchTerm("");
-                setVisibleItems(50);
+              
               }}
               className={`flex-1 cursor-pointer py-1.5 px-3 text-sm font-medium rounded-md transition-colors ${
                 activeTab === "category"
@@ -210,7 +229,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  setVisibleItems(50);
+              
                 }}
                 className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-transparent"
               />
@@ -327,7 +346,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                 Cancel
               </button>
               <button
-                onClick={onClose}
+                onClick={handleApplyFilters}
                 className="px-4 py-2 text-sm cursor-pointer font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
                 style={{ background: "#25689f" }}
               >

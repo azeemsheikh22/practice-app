@@ -348,7 +348,14 @@ const VehicleList = memo(() => {
   // Expand/collapse handler
   const handleExpandToggle = (e, car_id) => {
     e.stopPropagation();
-    setExpandedMap((prev) => ({ ...prev, [car_id]: !prev[car_id] }));
+    setExpandedMap((prev) => {
+      // If already expanded, collapse it
+      if (prev[car_id]) {
+        return { ...prev, [car_id]: false };
+      }
+      // Otherwise, collapse all and expand only this one
+      return { [car_id]: true };
+    });
   };
 
   // Vehicle Info modal handler

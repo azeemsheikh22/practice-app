@@ -9,11 +9,11 @@ import {
   useImperativeHandle,
 } from "react";
 import ReplayAdvancedOptionsModal from "./ReplayAdvancedOptionsModal";
+import ReplayGeofenceManager from "./ReplayGeofenceManager";
 import { useSelector, useDispatch } from "react-redux";
 import {
   setCurrentReplayIndex,
   selectCurrentReplayIndex,
-  fetchReplayGeofenceForUser,
 } from "../../features/replaySlice";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -30,7 +30,6 @@ import {
 import { motion } from "framer-motion";
 import icon from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
-import { fetchGeofenceCatList } from "../../features/geofenceSlice";
 
 const getVehicleIcon = (status, head = 0) => {
   let iconImg = stoppedIcon;
@@ -105,7 +104,7 @@ const ReplayMap = forwardRef(
     const dispatch = useDispatch();
     const currentReplayIndex = useSelector(selectCurrentReplayIndex);
     const lastViewRef = useRef({ lat: null, lng: null, zoom: null });
-    const { showGeofences } = useSelector((state) => state.replay);
+    const showGeofenceOnMap = useSelector((state) => state.replay.showGeofenceOnMap);
 
     // Invalidate map size when sidebar expands/collapses
     useEffect(() => {
@@ -677,14 +676,7 @@ const ReplayMap = forwardRef(
 
     // Add to Map popover state
     const [showAddToMapMenu, setShowAddToMapMenu] = useState(false);
-    const [showGeofence, setShowGeofence] = useState(false);
     const [showAdvancedModal, setShowAdvancedModal] = useState(false);
-
-    // Helper: Dispatch fetchReplayGeofenceForUser
-    const handleFetchGeofence = () => {
-      dispatch(fetchGeofenceCatList());
-      dispatch(fetchReplayGeofenceForUser());
-    };
 
     const controlsZIndex = isMobileMenuOpen ? 10 : 1000;
 
@@ -702,7 +694,8 @@ const ReplayMap = forwardRef(
     return (
       <div className="relative h-full w-full">
         <div ref={mapRef} className="w-full h-full" />
-
+        {/* Geofence Manager for replay map */}
+        {showGeofenceOnMap && <ReplayGeofenceManager mapInstanceRef={mapInstanceRef} />}
         {/* Animated Marker Context Menu */}
         <AnimatedMarkerContextMenu
           visible={markerMenu.visible}
@@ -769,12 +762,10 @@ const ReplayMap = forwardRef(
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={showGeofence}
+                      checked={showGeofenceOnMap}
                       onChange={(e) => {
-                        setShowGeofence(e.target.checked);
-                        if (e.target.checked) {
-                          handleFetchGeofence();
-                        }
+                        dispatch({ type: "replay/setShowGeofenceOnMap", payload: e.target.checked });
+                    
                       }}
                       className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                     />
@@ -786,7 +777,7 @@ const ReplayMap = forwardRef(
                     onClick={() => {
                       setShowAdvancedModal(true);
                       setShowAddToMapMenu(false);
-                      handleFetchGeofence();
+                
                     }}
                   >
                     <Settings size={18} />
