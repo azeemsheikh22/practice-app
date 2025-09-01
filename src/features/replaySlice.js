@@ -69,7 +69,7 @@ export const fetchReplayData = createAsyncThunk(
 
 export const fetchReplayGeofenceForUser = createAsyncThunk(
   "replay/fetchReplayGeofenceForUser",
-  async ({ rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
       const token = localStorage.getItem("token");
       const userid = localStorage.getItem("clientId");
@@ -105,6 +105,7 @@ const replaySlice = createSlice({
     tripsError: null,
     // Geofence state
     geofences: null,
+    showGeofences: null,
     geofencesLoading: false,
     geofencesError: null,
     filters: {
@@ -114,6 +115,7 @@ const replaySlice = createSlice({
       showStops: true,
       showSummary: false,
     },
+    showShapes: false, // for geofence shapes toggle
     currentReplayIndex: null, // index of the currently animated point
     isReplayPaused: true, // replay pause state
   },
@@ -128,6 +130,9 @@ const replaySlice = createSlice({
     },
     setReplayPaused: (state, action) => {
       state.isReplayPaused = action.payload;
+    },
+    setShowShapes: (state, action) => {
+      state.showShapes = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -169,7 +174,14 @@ const replaySlice = createSlice({
       })
       .addCase(fetchReplayGeofenceForUser.fulfilled, (state, action) => {
         state.geofencesLoading = false;
-        state.geofences = action.payload;
+        // Only store geofences where chkShowOnMap === 'true'
+        if (Array.isArray(action.payload)) {
+          state.geofences = action.payload.filter(g => g.chkShowOnMap === 'true');
+          state.showGeofences = action.payload.filter(g => g.chkShowOnMap === 'true');
+        } else {
+          state.geofences = [];
+          state.showGeofences = [];
+        }
         state.geofencesError = null;
       })
       .addCase(fetchReplayGeofenceForUser.rejected, (state, action) => {
@@ -180,8 +192,9 @@ const replaySlice = createSlice({
   },
 });
 
-export const { setFilters, setCurrentReplayIndex, setReplayPaused } =
+export const { setFilters, setCurrentReplayIndex, setReplayPaused, setShowShapes } =
   replaySlice.actions;
+export const selectShowShapes = (state) => state.replay.showShapes;
 export default replaySlice.reducer;
 export const selectReplayData = (state) => state.replay.replayData;
 export const selectReplayLoading = (state) => state.replay.loading;

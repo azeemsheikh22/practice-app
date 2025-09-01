@@ -254,6 +254,8 @@ export const requestVehicleListWithScope = createAsyncThunk(
 export const updateVehicleFilter = createAsyncThunk(
   "gpsTracking/updateVehicleFilter",
   async (vehicleIds, { getState }) => {
+    console.log("id", vehicleIds.length);
+
     const { connection } = getState().gpsTracking;
 
     // Update saved vehicle IDs for reconnection

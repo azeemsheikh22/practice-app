@@ -527,9 +527,3 @@
   }
 }
 
-
-.leaflet-container img {
-  image-rendering: crisp-edges;
-  backface-visibility: hidden;
-}
-

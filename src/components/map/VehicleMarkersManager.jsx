@@ -54,15 +54,15 @@ const createVehicleIcon = (status, head = 0) => {
   const icon = L.divIcon({
     className: "vehicle-marker",
     html: `
-      <div style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
+      <div style="width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; transform-origin: center center;">
         <img src="${iconUrl}" alt="${statusKey}" 
-             style="width: 22px; height: 22px; transform: rotate(${rotation}deg);" />
+             style="width: 24px; height: 24px; transform: rotate(${rotation}deg); image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges;" />
       </div>
     `,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14],
-    tooltipAnchor: [0, -4],
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -15],
+    tooltipAnchor: [0, -5],
   });
 
   iconCache.set(cacheKey, icon);

@@ -54,12 +54,17 @@ const MapCore = forwardRef(
       const map = L.map(mapRef.current, {
         zoomControl: false,
         attributionControl: false,
-        preferCanvas: false
-        
-        ,
-        renderer: L.canvas({ padding: 0 }),
+        preferCanvas: true,
+        renderer: L.canvas({ 
+          padding: 0.5,
+          tolerance: 5,
+          pane: 'overlayPane' 
+        }),
         minZoom: 3,
         maxZoom: 20,
+        fadeAnimation: true,
+        zoomAnimation: true,
+        markerZoomAnimation: true,
       }).setView([30.3753, 69.3451], 5.5);
 
       mapInstanceRef.current = map;

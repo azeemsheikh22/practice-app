@@ -23,8 +23,8 @@ const TreeView = memo(({
   isMobile = false,
   mobileHeight,
 }) => {
-  // Define maximum vehicle limit
-  const MAX_VEHICLE_LIMIT = 500;
+  // No maximum vehicle limit
+  const MAX_VEHICLE_LIMIT = Number.MAX_SAFE_INTEGER; // Effectively unlimited
 
   // Memoize tree container height calculation
   const treeContainerHeight = useMemo(() => {
@@ -140,35 +140,9 @@ const TreeView = memo(({
       return;
     }
     
-    // Check if this is a vehicle or group
+    // Check if this is a vehicle or group - keeping the type identification but removing limits
     const isVehicle = item.Type === "Vehicle";
     const isGroup = item.Type === "Group";
-    
-    // If it's a single vehicle, simple check
-    if (isVehicle && selectedVehicleIds.length >= MAX_VEHICLE_LIMIT) {
-      toast.error(`Cannot select more than ${MAX_VEHICLE_LIMIT} vehicles for optimal performance.`);
-      return;
-    }
-    
-    // If it's a group, we need to estimate how many vehicles would be added
-    if (isGroup && item.children?.length > 0) {
-      // Rough estimate of how many vehicles would be added
-      let vehicleCount = 0;
-      const countVehicles = (node) => {
-        if (node.Type === "Vehicle") {
-          vehicleCount++;
-        } else if (node.children?.length > 0) {
-          node.children.forEach(countVehicles);
-        }
-      };
-      
-      item.children.forEach(countVehicles);
-      
-      if (selectedVehicleIds.length + vehicleCount > MAX_VEHICLE_LIMIT) {
-        toast.error(`Cannot select more than ${MAX_VEHICLE_LIMIT} vehicles. This group would exceed the limit.`);
-        return;
-      }
-    }
     
     // ✅ Performance: Add to pending selections for batch processing
     pendingSelectionsRef.current.push({ item, isChecked });
@@ -180,17 +154,13 @@ const TreeView = memo(({
     
     // Set new timeout for batch processing
     selectionTimeoutRef.current = setTimeout(processPendingSelections, 50);
-  }, [selectedVehicleIds.length, processPendingSelections, MAX_VEHICLE_LIMIT]);
+  }, [selectedVehicleIds.length, processPendingSelections]);
 
   // Memoize vehicle selection handlers
   const handleSelectAllVehicles = useCallback((isChecked) => {
     const vehicleItems = treeData.filter((item) => item.Type === "Vehicle");
     
-    // Check if selecting all would exceed limit
-    if (isChecked && vehicleItems.length > MAX_VEHICLE_LIMIT) {
-      toast.error(`Cannot select more than ${MAX_VEHICLE_LIMIT} vehicles. There are ${vehicleItems.length} vehicles total.`);
-      return;
-    }
+    // No limit check needed anymore
     
     if (vehicleItems.length === 0) return;
     const allVehiclesItem = {
@@ -200,7 +170,7 @@ const TreeView = memo(({
       valueId: null,
     };
     onItemSelect(allVehiclesItem, isChecked);
-  }, [treeData, onItemSelect, MAX_VEHICLE_LIMIT]);
+  }, [treeData, onItemSelect]);
 
   // Memoize all vehicles selection state
   const areAllVehiclesSelected = useMemo(() => {
@@ -503,10 +473,10 @@ const TreeView = memo(({
           className="w-full p-2 cursor-pointer bg-dark text-white rounded-md hover:bg-dark transition-colors duration-200 font-medium text-sm"
         >
           Deselect All ({selectedCount})
-          {/* Show limit indicator */}
+          {/* Show selected count */}
           {selectedCount > 0 && (
             <span className="ml-1 text-xs opacity-80">
-              {selectedCount}/{MAX_VEHICLE_LIMIT}
+              {selectedCount}
             </span>
           )}
         </button>

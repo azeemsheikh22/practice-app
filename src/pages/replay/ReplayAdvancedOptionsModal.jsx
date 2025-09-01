@@ -1,50 +1,69 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { FixedSizeList as List } from "react-window";
 import { motion } from "framer-motion";
-import { X, Settings } from "lucide-react";
-import { useSelector } from "react-redux";
-
-const dummyGeofences = [
-  { id: 1, name: "Geofence A", category: "Zone 1", color: "#25689f" },
-  { id: 2, name: "Geofence B", category: "Zone 2", color: "#10b981" },
-  { id: 3, name: "Geofence C", category: "Zone 1", color: "#ef4444" },
-];
-const dummyCategories = [
-  { id: 1, name: "Zone 1", color: "#25689f" },
-  { id: 2, name: "Zone 2", color: "#10b981" },
-];
+import { X } from "lucide-react";
+import { useSelector, useDispatch } from "react-redux";
+import { createPortal } from "react-dom";
 
 const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
+  const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState("geofence");
   const [selectedGeofenceIds, setSelectedGeofenceIds] = useState(new Set());
   const [selectedCategories, setSelectedCategories] = useState(new Set());
+
   const [searchTerm, setSearchTerm] = useState("");
   const [visibleItems, setVisibleItems] = useState(50);
-  const [showShapes, setShowShapes] = useState(true);
-  const {geofences} = useSelector((state) => state.replay);
+  const showShapes = useSelector((state) => state.replay.showShapes);
+  const { geofences } = useSelector((state) => state.replay);
+  const { geofenceCatList } = useSelector((state) => state.geofence);
 
-  console.log(geofences)
-
-  const geofenceData = dummyGeofences;
-  const categoryData = dummyCategories;
+  // Only use real geofence data for geofence tab
+  const geofenceData =
+    Array.isArray(geofences) && geofences.length > 0 ? geofences : [];
+  // Use real category data from geofenceCatList if available
+  const categoryData =
+    Array.isArray(geofenceCatList) && geofenceCatList.length > 0
+      ? geofenceCatList
+      : [];
 
   const filteredData = useMemo(() => {
     let currentData = activeTab === "geofence" ? geofenceData : categoryData;
     if (!searchTerm.trim()) return currentData;
     const searchLower = searchTerm.toLowerCase();
-    return currentData.filter((item) =>
-      (item.name || "").toLowerCase().includes(searchLower)
-    );
+    if (activeTab === "geofence") {
+      // Search by geofenceName
+      return currentData.filter((item) =>
+        (item.geofenceName || "").toLowerCase().includes(searchLower)
+      );
+    } else {
+      // Search by Categoryname
+      return currentData.filter((item) =>
+        (item.Categoryname || "").toLowerCase().includes(searchLower)
+      );
+    }
   }, [activeTab, geofenceData, categoryData, searchTerm]);
 
-  const displayedData = useMemo(() => {
-    return filteredData.slice(0, visibleItems);
-  }, [filteredData, visibleItems]);
+  // For react-window, itemData is filteredData
+  const itemData = filteredData;
+
+  // By default, select all geofences and categories when modal opens and data is available
+  useEffect(() => {
+    if (isOpen) {
+      if (geofenceData.length > 0) {
+        setSelectedGeofenceIds(new Set(geofenceData.map((g) => g.id)));
+      }
+      if (categoryData.length > 0) {
+        setSelectedCategories(new Set(categoryData.map((c) => c.Categoryname)));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, geofenceData, categoryData]);
 
   const handleSelectAll = () => {
     if (activeTab === "geofence") {
       setSelectedGeofenceIds(new Set(geofenceData.map((g) => g.id)));
     } else {
-      setSelectedCategories(new Set(categoryData.map((c) => c.name)));
+      setSelectedCategories(new Set(categoryData.map((c) => c.Categoryname)));
     }
   };
 
@@ -67,8 +86,8 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
     } else {
       setSelectedCategories((prev) => {
         const next = new Set(prev);
-        if (next.has(item.name)) next.delete(item.name);
-        else next.add(item.name);
+        if (next.has(item.Categoryname)) next.delete(item.Categoryname);
+        else next.add(item.Categoryname);
         return next;
       });
     }
@@ -76,14 +95,53 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
 
   const selectedCount = filteredData.filter((item) => {
     if (activeTab === "geofence") return selectedGeofenceIds.has(item.id);
-    return selectedCategories.has(item.name);
+    return selectedCategories.has(item.Categoryname);
   }).length;
+
+  // Row renderer for react-window
+  const renderGeofenceRow = useCallback(
+    ({ index, style }) => {
+      const item = itemData[index];
+      return (
+        <div
+          key={item.id}
+          style={style}
+          className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors react-window-list-item"
+        >
+          <input
+            type="checkbox"
+            id={`item-geofence-${item.id}`}
+            checked={selectedGeofenceIds.has(item.id)}
+            onChange={() => handleItemToggle(item)}
+            className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded"
+          />
+          <label
+            htmlFor={`item-geofence-${item.id}`}
+            className="ml-3 flex-1 cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {item.geofenceName}
+                </p>
+              </div>
+            </div>
+          </label>
+        </div>
+      );
+    },
+    [itemData, selectedGeofenceIds, handleItemToggle]
+  );
 
   if (!isOpen) return null;
 
-  return (
+  // Modal content
+  const modalContent = (
     <div className="fixed inset-0 flex items-center justify-center z-[9999]">
-      <div className="absolute inset-0 bg-black/60 z-[9998]" onClick={onClose}></div>
+      <div
+        className="absolute inset-0 bg-black/60 z-[9998]"
+        onClick={onClose}
+      ></div>
       <motion.div
         className="relative w-full max-w-4xl bg-white rounded-lg shadow-xl z-[10000] mx-4 max-h-[85vh] flex flex-col"
         initial={{ opacity: 0, scale: 0.95 }}
@@ -139,7 +197,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
           </div>
         </div>
         {/* Content */}
-        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0">
           {/* Filter heading and controls */}
           <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
             {/* Search Box */}
@@ -147,9 +205,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
               <input
                 type="text"
                 placeholder={`Search ${
-                  activeTab === "geofence"
-                    ? "geofences"
-                    : "categories"
+                  activeTab === "geofence" ? "geofences" : "categories"
                 }...`}
                 value={searchTerm}
                 onChange={(e) => {
@@ -164,7 +220,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                 <button
                   onClick={handleSelectAll}
                   className="px-3 py-1.5 cursor-pointer text-xs rounded-md"
-                  style={{ background: '#25689f', color: 'white' }}
+                  style={{ background: "#25689f", color: "white" }}
                 >
                   Select All
                 </button>
@@ -182,8 +238,8 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-          {/* Scrollable list */}
-          <div className="flex-1 overflow-y-auto px-4 py-2">
+          {/* Scrollable list - only the list gets overflow */}
+          <div className="flex-1 px-4 py-2">
             {filteredData.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-center">
@@ -191,104 +247,100 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                     <X size={24} className="text-gray-400" />
                   </div>
                   <p className="text-gray-500 font-medium">
-                    No {activeTab === "geofence" ? "geofences" : "categories"} found
+                    No {activeTab === "geofence" ? "geofences" : "categories"}{" "}
+                    found
                   </p>
                 </div>
               </div>
+            ) : activeTab === "geofence" ? (
+              <div style={{ height: 290, overflow: "auto" }}>
+                <List
+                  height={290}
+                  itemCount={filteredData.length}
+                  itemSize={48}
+                  width={"100%"}
+                  itemData={filteredData}
+                  className="react-window-list"
+                >
+                  {renderGeofenceRow}
+                </List>
+              </div>
             ) : (
-              <div className="space-y-1">
-                {displayedData.map((item, index) => (
+              <div
+                className="space-y-1"
+                style={{ maxHeight: 290, overflow: "auto" }}
+              >
+                {filteredData.map((item, index) => (
                   <div
-                    key={activeTab === "geofence" ? item.id : item.id || index}
+                    key={item.id || index}
                     className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors"
                   >
                     <input
                       type="checkbox"
-                      id={`item-${activeTab === "geofence" ? item.id : item.id || index}`}
-                      checked={
-                        activeTab === "geofence"
-                          ? selectedGeofenceIds.has(item.id)
-                          : selectedCategories.has(item.name)
-                      }
+                      id={`item-category-${item.id || index}`}
+                      checked={selectedCategories.has(item.Categoryname)}
                       onChange={() => handleItemToggle(item)}
-                    className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded"
+                      className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded"
                     />
                     <label
-                      htmlFor={`item-${activeTab === "geofence" ? item.id : item.id || index}`}
+                      htmlFor={`item-category-${item.id || index}`}
                       className="ml-3 flex-1 cursor-pointer"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">
-                            {item.name}
+                            {item.Categoryname}
                           </p>
-                          {activeTab === "geofence" && item.category && (
-                            <p className="text-xs text-gray-500 truncate">
-                              {item.category}
-                            </p>
-                          )}
                         </div>
-                        {item.color && (
-                          <div
-                            className="w-3 h-3 rounded-full ml-2 flex-shrink-0"
-                            style={{ backgroundColor: item.color }}
-                          ></div>
-                        )}
                       </div>
                     </label>
                   </div>
                 ))}
-                {displayedData.length < filteredData.length && (
-                  <div className="text-center py-4">
-                    <div className="text-sm text-gray-500">
-                      Showing {displayedData.length} of {filteredData.length} items
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      Scroll down to load more
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
         </div>
-        {/* Show Shapes Toggle */}
-        <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center cursor-pointer select-none">
-              <span
-                className="inline-flex items-center justify-center h-5 w-5 rounded-full"
-                style={{ color: '#25689f' }}
-              >
-                <Settings size={18} />
-              </span>
+        {/* Modal footer with Show Geofence Shapes toggle */}
+        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <label className="flex items-center cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showShapes}
+                onChange={(e) =>
+                  dispatch({
+                    type: "replay/setShowShapes",
+                    payload: e.target.checked,
+                  })
+                }
+                className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded"
+              />
               <span className="ml-2 text-sm font-medium text-gray-700">
                 Show Geofence Shapes
               </span>
-            </span>
-          </div>
-        </div>
-        {/* Modal footer */}
-        <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 cursor-pointer text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm cursor-pointer font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
-              style={{ background: '#25689f' }}
-            >
-              Apply Filters
-            </button>
+            </label>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 cursor-pointer text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-sm cursor-pointer font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
+                style={{ background: "#25689f" }}
+              >
+                Apply Filters
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default ReplayAdvancedOptionsModal;

@@ -30,7 +30,7 @@ import {
 import { motion } from "framer-motion";
 import icon from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
-
+import { fetchGeofenceCatList } from "../../features/geofenceSlice";
 
 const getVehicleIcon = (status, head = 0) => {
   let iconImg = stoppedIcon;
@@ -105,6 +105,7 @@ const ReplayMap = forwardRef(
     const dispatch = useDispatch();
     const currentReplayIndex = useSelector(selectCurrentReplayIndex);
     const lastViewRef = useRef({ lat: null, lng: null, zoom: null });
+    const { showGeofences } = useSelector((state) => state.replay);
 
     // Invalidate map size when sidebar expands/collapses
     useEffect(() => {
@@ -681,10 +682,10 @@ const ReplayMap = forwardRef(
 
     // Helper: Dispatch fetchReplayGeofenceForUser
     const handleFetchGeofence = () => {
-      console.log("hello")
-      // User will add import for fetchReplayGeofenceForUser
+      dispatch(fetchGeofenceCatList());
       dispatch(fetchReplayGeofenceForUser());
     };
+
     const controlsZIndex = isMobileMenuOpen ? 10 : 1000;
 
     // Close popover on outside click
@@ -771,7 +772,9 @@ const ReplayMap = forwardRef(
                       checked={showGeofence}
                       onChange={(e) => {
                         setShowGeofence(e.target.checked);
-                        handleFetchGeofence();
+                        if (e.target.checked) {
+                          handleFetchGeofence();
+                        }
                       }}
                       className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                     />

@@ -11,10 +11,13 @@ import {
 } from "lucide-react";
 import "../../styles/performance.css";
 import { useSelector, useDispatch } from "react-redux";
+import { Link } from "react-router-dom";
 import {
   selectCarData,
   selectSelectedVehicles,
 } from "../../features/gpsTrackingSlice";
+import VehicleInfoModal from "../vehicle-info/VehicleInfoModal";
+import VehicleDispatchModal from "../vehicle-info/VehicleDispatchModal";
 import { setSelectedVehicle } from "../../features/mapInteractionSlice";
 import movingIcon from "../../assets/moving-vehicle.png";
 import stoppedIcon from "../../assets/stopped-vehicle.png";
@@ -25,9 +28,7 @@ const VehicleList = memo(() => {
   const [sortOption, setSortOption] = useState("nameAZ");
   const carData = useSelector(selectCarData) || [];
   const selectedVehiclesFromSlice = useSelector(selectSelectedVehicles);
-
   
-
   // --- Redux-based Persistent Vehicle Data Management ---
   // Use global reference to ensure data persistence across tab switches
   const vehicleMapRef = useRef(window.__PERSISTENT_VEHICLE_MAP || new Map());
@@ -249,6 +250,16 @@ const VehicleList = memo(() => {
 
   // For expanded state per vehicle
   const [expandedMap, setExpandedMap] = useState({});
+  const [vehicleInfoModalOpen, setVehicleInfoModalOpen] = useState(false);
+  const [selectedVehicleForModal, setSelectedVehicleForModal] = useState(null);
+  const [vehicleDispatchModalOpen, setVehicleDispatchModalOpen] = useState(false);
+  const [selectedVehicleForDispatch, setSelectedVehicleForDispatch] = useState(null);
+  
+  // For debugging modal state
+  useEffect(() => {
+    console.log("Modal state in VehicleList:", vehicleInfoModalOpen);
+    console.log("Selected vehicle for modal:", selectedVehicleForModal);
+  }, [vehicleInfoModalOpen, selectedVehicleForModal]);
   const dispatch = useDispatch();
   const selectedVehicleId = useSelector(
     (state) => state.mapInteraction.selectedVehicleId
@@ -327,10 +338,33 @@ const VehicleList = memo(() => {
       dispatch(setSelectedVehicle(car.car_id));
     }
   };
+
+  // Prevent card selection when clicking on replay
+  const handleReplayClick = (e) => {
+    e.stopPropagation();
+    // Link component will handle navigation
+  };
+
   // Expand/collapse handler
   const handleExpandToggle = (e, car_id) => {
     e.stopPropagation();
     setExpandedMap((prev) => ({ ...prev, [car_id]: !prev[car_id] }));
+  };
+
+  // Vehicle Info modal handler
+  const handleOpenVehicleInfo = (e, vehicle) => {
+    e.stopPropagation();
+    console.log("Opening vehicle info modal for:", vehicle);
+    setSelectedVehicleForModal(vehicle);
+    setVehicleInfoModalOpen(true);
+    console.log("Modal state should now be:", true);
+  };
+
+  // Vehicle Dispatch modal handler
+  const handleOpenVehicleDispatch = (e, vehicle) => {
+    e.stopPropagation();
+    setSelectedVehicleForDispatch(vehicle);
+    setVehicleDispatchModalOpen(true);
   };
 
   return (
@@ -543,7 +577,10 @@ const VehicleList = memo(() => {
                         <div className="mt-3 border-t pt-2 bg-blue-50 border-blue-200 shadow-lg rounded-b-xl animate-fadeIn">
                           <ul className="space-y-1">
                             <li>
-                              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                              <button 
+                                className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200"
+                                onClick={(e) => handleOpenVehicleInfo(e, stableCarData)}
+                              >
                                 Vehicle Info
                               </button>
                             </li>
@@ -553,14 +590,22 @@ const VehicleList = memo(() => {
                               </button>
                             </li>
                             <li>
-                              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200"
+                                onClick={(e) => handleOpenVehicleDispatch(e, stableCarData)}
+                              >
                                 Vehicle Dispatch
                               </button>
                             </li>
                             <li>
-                              <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
+                              <Link
+                                to={`/replay?vehicleId=${stableCarData.car_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200 block"
+                                onClick={(e) => handleReplayClick(e)}
+                              >
                                 Replay
-                              </button>
+                              </Link>
                             </li>
                             <li>
                               <button className="w-full text-left px-3 py-2 rounded hover:bg-blue-100 text-sm text-gray-900 font-medium transition-colors cursor-pointer focus:outline-none focus:bg-blue-200">
@@ -592,6 +637,25 @@ const VehicleList = memo(() => {
           </div>
         </div>
       </div>
+
+      {/* Vehicle Info Modal */}
+      {/* Adding a key to force re-render when the modal state changes */}
+      <VehicleInfoModal 
+        key={vehicleInfoModalOpen ? "modal-open" : "modal-closed"}
+        isOpen={vehicleInfoModalOpen}
+        onClose={() => {
+          console.log("Closing modal");
+          setVehicleInfoModalOpen(false);
+        }}
+        vehicleData={selectedVehicleForModal}
+      />
+      {/* Vehicle Dispatch Modal */}
+      <VehicleDispatchModal
+        key={vehicleDispatchModalOpen ? "dispatch-modal-open" : "dispatch-modal-closed"}
+        isOpen={vehicleDispatchModalOpen}
+        onClose={() => setVehicleDispatchModalOpen(false)}
+        vehicleData={selectedVehicleForDispatch}
+      />
     </div>
   );
 });

@@ -4,7 +4,6 @@ import { toast } from 'react-hot-toast';
 
 // Use only endpoints that allow CORS and are reliable
 const testEndpoints = [
-  '/api/ping', // Your backend ping endpoint (should return 200)
   'https://jsonplaceholder.typicode.com/posts/1' // Public test endpoint with CORS
 ];
 
