@@ -1,15 +1,28 @@
-
+import { useState } from 'react';
 import { BarChart3, FileText } from 'lucide-react';
 
 // This is a placeholder component for the report sidebar
 const ReportSidebar = ({ onAction }) => {
+  const [showComingSoon, setShowComingSoon] = useState(false);
+  const [comingSoonLabel, setComingSoonLabel] = useState('');
+
   const sidebarLinks = [
     { id: 'gallery', label: 'Reports Gallery', icon: <BarChart3 size={20} /> },
     { id: 'scheduled', label: 'Scheduled Reports', icon: <FileText size={20} /> },
     { id: 'recent', label: 'Recently Run', icon: <Clock size={20} /> },
     { id: 'customize', label: 'Customize New Report', icon: <Edit size={20} />, external: true },
   ];
-  
+
+  const handleSidebarClick = (id, label) => {
+    if (id === 'gallery') {
+      onAction(id);
+    } else {
+      setComingSoonLabel(label);
+      setShowComingSoon(true);
+      setTimeout(() => setShowComingSoon(false), 1500);
+    }
+  };
+
   return (
     <aside className="w-full lg:w-64 bg-white rounded-xl shadow border border-gray-200 flex-shrink-0 mb-4 lg:mb-0 flex flex-col min-h-[80vh]">
       <div className="p-4 border-b border-gray-200">
@@ -22,7 +35,10 @@ const ReportSidebar = ({ onAction }) => {
             <a
               key={link.id}
               href={link.external ? '#' : undefined}
-              onClick={() => onAction(link.id)}
+              onClick={(e) => {
+                e.preventDefault();
+                handleSidebarClick(link.id, link.label);
+              }}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-[#25689f]/10 transition-colors font-medium cursor-pointer ${link.id === 'gallery' ? 'bg-[#25689f]/10 text-[#25689f]' : ''}`}
               target={link.external ? '_blank' : undefined}
               rel={link.external ? 'noopener noreferrer' : undefined}
@@ -44,6 +60,15 @@ const ReportSidebar = ({ onAction }) => {
           </a>
         </div>
       </div>
+      
+      {/* Coming soon message */}
+      {showComingSoon && (
+        <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-300 px-8 py-6 text-center animate-fadeIn">
+            <span className="text-lg font-semibold text-[#25689f]">{comingSoonLabel} - Coming soon...</span>
+          </div>
+        </div>
+      )}
     </aside>
   );
 };
