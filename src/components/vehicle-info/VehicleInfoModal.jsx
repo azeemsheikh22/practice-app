@@ -73,9 +73,8 @@ const VehicleInfoModal = ({ isOpen, onClose, vehicleData }) => {
   ];
 
   return createPortal(
-    <div className="fixed inset-0 flex items-center justify-center z-[906]">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
-      <div className="relative w-full max-w-3xl bg-white rounded-lg shadow-xl z-10 mx-4" style={{maxHeight: '80vh'}}>
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl border border-gray-300 w-full max-w-3xl p-0 overflow-hidden animate-fadeIn relative" style={{maxHeight: '80vh'}}>
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center">
             <Car size={20} className="text-primary mr-2" />
@@ -83,8 +82,8 @@ const VehicleInfoModal = ({ isOpen, onClose, vehicleData }) => {
               Edit Vehicle
             </h3>
           </div>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 transition-colors">
-            <X size={20} className="text-gray-500" />
+          <button onClick={onClose} className="text-gray-500 hover:text-red-500 text-2xl font-bold cursor-pointer p-1" title="Close">
+            ×
           </button>
         </div>
         <div className="border-b border-gray-200">
