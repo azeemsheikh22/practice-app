@@ -29,11 +29,58 @@ export const fetchUserReportList = createAsyncThunk(
   }
 );
 
+export const generateReport = createAsyncThunk(
+  "reports/generateReport",
+  async (reportParams, { rejectWithValue }) => {
+    try {
+      const token = localStorage.getItem("token");
+      const userId = localStorage.getItem("clientId");
+      
+      const { reportId, selectedValueIds, fromDateTime, toDateTime } = reportParams;
+      
+      // Build API URL with parameters
+      let apiUrl = `${API_BASE_URL}api/reports/ReportHeading?ReportId=${reportId}&UserId=${userId}&FromDate=${fromDateTime}&ToDate=${toDateTime}`;
+      
+      // Add vehicle/driver/group IDs to URL
+      selectedValueIds.forEach((valueId) => {
+        if (reportParams.target === 'vehicle') {
+          apiUrl += `&VehicleId=${valueId}`;
+        } else if (reportParams.target === 'driver') {
+          apiUrl += `&DriverId=${valueId}`;
+        } else if (reportParams.target === 'group') {
+          apiUrl += `&GroupId=${valueId}`;
+        }
+      })
+
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+
+    } catch (error) {
+      console.error("Generate Report API Error:", error);
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const reportsSlice = createSlice({
   name: "reports",
   initialState: {
     reports: [],
+    reportData: null,
     loading: false,
+    generateLoading: false,
     error: null,
   },
   reducers: {
@@ -43,6 +90,9 @@ const reportsSlice = createSlice({
     },
     clearError: (state) => {
       state.error = null;
+    },
+    clearReportData: (state) => {
+      state.reportData = null;
     },
   },
   extraReducers: (builder) => {
@@ -58,9 +108,21 @@ const reportsSlice = createSlice({
       .addCase(fetchUserReportList.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+      .addCase(generateReport.pending, (state) => {
+        state.generateLoading = true;
+        state.error = null;
+      })
+      .addCase(generateReport.fulfilled, (state, action) => {
+        state.generateLoading = false;
+        state.reportData = action.payload;
+      })
+      .addCase(generateReport.rejected, (state, action) => {
+        state.generateLoading = false;
+        state.error = action.payload;
       });
   },
 });
 
-export const { clearReports, clearError } = reportsSlice.actions;
+export const { clearReports, clearError, clearReportData } = reportsSlice.actions;
 export default reportsSlice.reducer;

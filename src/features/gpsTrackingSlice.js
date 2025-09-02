@@ -699,6 +699,7 @@ export const selectConnectionStatus = (state) =>
   state.gpsTracking.connectionStatus;
 export const selectMovingStatusFilter = (state) =>
   state.gpsTracking.movingStatusFilter;
+export const selectLoading = (state) => state.gpsTracking.loading;
 
 // ✅ NEW: Alert data selectors
 export const selectAlertData = (state) => state.gpsTracking.alertData;
