@@ -2,9 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Wifi, WifiOff, Signal, Activity } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-// Use only endpoints that allow CORS and are reliable
+// Use multiple endpoints for redundancy
 const testEndpoints = [
-  'https://jsonplaceholder.typicode.com/posts/1' // Public test endpoint with CORS
+  'https://jsonplaceholder.typicode.com/posts/1',
+  'https://httpbin.org/get',
+  'https://api.github.com/'
 ];
 
 const NetworkStatus = () => {
@@ -14,24 +16,27 @@ const NetworkStatus = () => {
   const [isChecking, setIsChecking] = useState(false);
   const [lastStatus, setLastStatus] = useState('');
 
-  // Only return true if a real HTTP 200 response is received
+  // Improved connectivity check: if any endpoint returns 200, consider online
   const verifyActualConnectivity = useCallback(async () => {
+    let online = false;
     for (const url of testEndpoints) {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 3000);
         const res = await fetch(url, { method: 'GET', cache: 'no-store', mode: 'cors', signal: controller.signal });
         clearTimeout(timeout);
-        if (res && res.status === 200) return true;
+        if (res && res.status === 200) {
+          online = true;
+          break;
+        }
       } catch {
         continue;
       }
     }
-    return false;
+    return online;
   }, []);
 
-
-  // Only show ms if a real HTTP 200 response is received
+  // Improved speed check: use first successful endpoint
   const checkConnectionSpeed = useCallback(async () => {
     if (!navigator.onLine) {
       setIsOnline(false);
@@ -49,7 +54,7 @@ const NetworkStatus = () => {
         const start = performance.now();
         const res = await fetch(endpoint, {
           method: 'GET',
-          cache: 'no-cache',
+          cache: 'no-store',
           mode: 'cors',
           signal: AbortSignal.timeout(10000)
         });
@@ -92,8 +97,6 @@ const NetworkStatus = () => {
     setIsChecking(false);
   }, []);
 
-  // Remove checkViaImage fallback (not reliable for CORS)
-
   // Toast alerts
   useEffect(() => {
     if (lastStatus !== '') {
@@ -102,7 +105,7 @@ const NetworkStatus = () => {
       } else if (connectionSpeed === 'very-slow' && lastStatus !== 'very-slow') {
         toast("🐌 Your internet is very slow");
       } else if (connectionSpeed === 'excellent' && lastStatus !== 'excellent') {
-        toast.success("✅ Excellent connection");
+        // toast.success("✅ Excellent connection");
       }
     }
 

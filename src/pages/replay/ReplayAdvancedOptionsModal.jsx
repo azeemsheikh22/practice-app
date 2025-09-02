@@ -13,14 +13,17 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const showShapes = useSelector((state) => state.replay.showShapes);
   const { geofences } = useSelector((state) => state.replay);
+  const { categories, showCategories } = useSelector((state) => state.replay);
   const { geofenceCatList } = useSelector((state) => state.geofence);
 
   // Only use real geofence data for geofence tab
   const geofenceData =
     Array.isArray(geofences) && geofences.length > 0 ? geofences : [];
-  // Use real category data from geofenceCatList if available
+  // Use categories from replay slice if available, otherwise use geofenceCatList
   const categoryData =
-    Array.isArray(geofenceCatList) && geofenceCatList.length > 0
+    Array.isArray(categories) && categories.length > 0
+      ? categories
+      : Array.isArray(geofenceCatList) && geofenceCatList.length > 0
       ? geofenceCatList
       : [];
 
@@ -55,12 +58,15 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
       } else if (geofenceData.length > 0) {
         setSelectedGeofenceIds(new Set(geofenceData.map((g) => g.id)));
       }
-      if (categoryData.length > 0) {
+      
+      if (Array.isArray(showCategories) && showCategories.length > 0) {
+        setSelectedCategories(new Set(showCategories.map((c) => c.Categoryname)));
+      } else if (categoryData.length > 0) {
         setSelectedCategories(new Set(categoryData.map((c) => c.Categoryname)));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, geofenceData, categoryData, showGeofences, geofences]);
+  }, [isOpen, geofenceData, categoryData, showGeofences, showCategories, geofences, categories]);
 
   const handleSelectAll = () => {
     if (activeTab === "geofence") {
@@ -149,8 +155,32 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
         type: "replay/setShowGeofences",
         payload: selectedGeofences,
       });
+    } else if (activeTab === "category") {
+      // Filter geofences based on selected categories
+      const selectedCategoryNames = Array.from(selectedCategories);
+      
+      const filteredGeofencesByCategory = geofenceData.filter((geofence) => {
+        // Use Categoryname field (with lowercase 'n')
+        const categoryMatch = selectedCategoryNames.includes(geofence.Categoryname);
+        return categoryMatch;
+      });
+    
+      
+      // Update showGeofences with filtered geofences (not categories)
+      dispatch({
+        type: "replay/setShowGeofences",
+        payload: filteredGeofencesByCategory,
+      });
+      
+      // Also update showCategories for reference
+      const selectedCategoriesArray = categoryData.filter((c) =>
+        selectedCategories.has(c.Categoryname)
+      );
+      dispatch({
+        type: "replay/setShowCategories",
+        payload: selectedCategoriesArray,
+      });
     }
-    // Do not update showGeofences for category tab
     onClose();
   };
 
@@ -289,32 +319,44 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                 className="space-y-1"
                 style={{ maxHeight: 290, overflow: "auto" }}
               >
-                {filteredData.map((item, index) => (
-                  <div
-                    key={item.id || index}
-                    className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      id={`item-category-${item.id || index}`}
-                      checked={selectedCategories.has(item.Categoryname)}
-                      onChange={() => handleItemToggle(item)}
-                      className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded"
-                    />
-                    <label
-                      htmlFor={`item-category-${item.id || index}`}
-                      className="ml-3 flex-1 cursor-pointer"
+                {filteredData.map((item, index) => {
+                  // Count geofences for this category
+                  const geofenceCountForCategory = geofenceData.filter(
+                    (geofence) => geofence.Categoryname === item.Categoryname
+                  ).length;
+
+                  return (
+                    <div
+                      key={item.id || index}
+                      className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {item.Categoryname}
-                          </p>
+                      <input
+                        type="checkbox"
+                        id={`item-category-${item.id || index}`}
+                        checked={selectedCategories.has(item.Categoryname)}
+                        onChange={() => handleItemToggle(item)}
+                        className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded"
+                      />
+                      <label
+                        htmlFor={`item-category-${item.id || index}`}
+                        className="ml-3 flex-1 cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {item.Categoryname}
+                            </p>
+                          </div>
+                          <div className="ml-2 flex-shrink-0">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                              {geofenceCountForCategory}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </label>
-                  </div>
-                ))}
+                      </label>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

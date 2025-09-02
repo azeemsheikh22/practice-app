@@ -107,6 +107,9 @@ const replaySlice = createSlice({
     showGeofences: null,
     geofencesLoading: false,
     geofencesError: null,
+    // Category state
+    categories: null,
+    showCategories: null,
     filters: {
       displayMode: "line", // 'line' | 'marker' | 'all'
       stopDuration: "all",
@@ -137,6 +140,10 @@ const replaySlice = createSlice({
     setShowGeofences: (state, action) => {
       // Directly set showGeofences to the provided array
       state.showGeofences = action.payload;
+    },
+    setShowCategories: (state, action) => {
+      // Directly set showCategories to the provided array
+      state.showCategories = action.payload;
     },
     setShowGeofenceOnMap: (state, action) => {
       state.showGeofenceOnMap = action.payload;
@@ -189,6 +196,24 @@ const replaySlice = createSlice({
         if (!state.showGeofences || state.showGeofences.length === 0) {
           state.showGeofences = filtered;
         }
+        
+        // Extract unique categories from geofences
+        const uniqueCategories = Array.from(
+          new Set(filtered.map(g => g.CategoryId))
+        ).map(catId => {
+          const geofence = filtered.find(g => g.CategoryId === catId);
+          return {
+            id: catId,
+            Categoryname: geofence?.Categoryname || 'Uncategorized'
+          };
+        }).filter(cat => cat.id); // Remove empty category IDs
+        
+        state.categories = uniqueCategories;
+        // Initialize showCategories if empty
+        if (!state.showCategories || state.showCategories.length === 0) {
+          state.showCategories = uniqueCategories;
+        }
+        
         state.geofencesError = null;
       })
       .addCase(fetchReplayGeofenceForUser.rejected, (state, action) => {
@@ -199,7 +224,7 @@ const replaySlice = createSlice({
   },
 });
 
-export const { setFilters, setCurrentReplayIndex, setReplayPaused, setShowShapes, setShowGeofences, setShowGeofenceOnMap } =
+export const { setFilters, setCurrentReplayIndex, setReplayPaused, setShowShapes, setShowGeofences, setShowCategories, setShowGeofenceOnMap } =
   replaySlice.actions;
 export const selectShowShapes = (state) => state.replay.showShapes;
 export default replaySlice.reducer;
