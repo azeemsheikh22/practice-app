@@ -21,6 +21,8 @@ const ReplayTripsTab = ({ selectedVehicle }) => {
   const trips = useSelector(selectReplayTrips);
   const loading = useSelector(selectReplayTripsLoading);
 
+  console.log(trips)
+
   return (
     <div className="flex-1 p-2">
       {loading ? (

@@ -305,7 +305,7 @@ const ReplayControls = ({
                 {/* Right Controls - Alarms, Stops, Draw, Speed (4 columns) */}
                 <div className="col-span-4 flex items-center justify-end space-x-1 sm:space-x-2">
                     {/* Alarms Toggle */}
-                    <motion.button
+                    {/* <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleFiltersChange({ ...filters, showAlarms: !filters.showAlarms })}
@@ -317,10 +317,10 @@ const ReplayControls = ({
                     >
                         <span className="mr-1">🚨</span>
                         <span className="hidden sm:inline">Alarms</span>
-                    </motion.button>
+                    </motion.button> */}
 
                     {/* Stops Toggle */}
-                    <motion.button
+                    {/* <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleFiltersChange({ ...filters, showStops: !filters.showStops })}
@@ -332,10 +332,10 @@ const ReplayControls = ({
                     >
                         <span className="mr-1">⏹️</span>
                         <span className="hidden sm:inline">Stops</span>
-                    </motion.button>
+                    </motion.button> */}
 
                     {/* Draw Track Button */}
-                    <motion.button
+                    {/* <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={onDrawTrack}
@@ -344,7 +344,7 @@ const ReplayControls = ({
                     >
                         <Layers size={12} className="mr-0 sm:mr-1" />
                         <span className="hidden sm:inline">Draw</span>
-                    </motion.button>
+                    </motion.button> */}
 
                     <ReplaySpeedControl
                         currentSpeed={playbackSpeed}

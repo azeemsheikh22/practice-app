@@ -106,6 +106,8 @@ const ReplayMap = forwardRef(
     const lastViewRef = useRef({ lat: null, lng: null, zoom: null });
     const showGeofenceOnMap = useSelector((state) => state.replay.showGeofenceOnMap);
 
+    console.log("replay data", replayData);
+
     // Invalidate map size when sidebar expands/collapses
     useEffect(() => {
       if (mapInstanceRef.current) {

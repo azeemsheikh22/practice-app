@@ -21,7 +21,7 @@ const ReplaySpeedControl = ({ currentSpeed, onSpeedChange }) => {
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center px-1 sm:px-2 py-1 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer text-xs"
+        className="flex items-center px-1 sm:px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors cursor-pointer text-xs"
       >
         <span className="mr-1">{currentSpeedOption.icon}</span>
         <span className="font-medium text-gray-700 mr-1 hidden xs:inline">
