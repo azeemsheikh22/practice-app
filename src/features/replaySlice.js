@@ -102,6 +102,7 @@ const replaySlice = createSlice({
     replayTrips: null,
     tripsLoading: false,
     tripsError: null,
+    selectedTrip: null, // Selected trip for map display
     // Geofence state
     geofences: null,
     showGeofences: null,
@@ -147,6 +148,9 @@ const replaySlice = createSlice({
     },
     setShowGeofenceOnMap: (state, action) => {
       state.showGeofenceOnMap = action.payload;
+    },
+    setSelectedTrip: (state, action) => {
+      state.selectedTrip = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -224,7 +228,7 @@ const replaySlice = createSlice({
   },
 });
 
-export const { setFilters, setCurrentReplayIndex, setReplayPaused, setShowShapes, setShowGeofences, setShowCategories, setShowGeofenceOnMap } =
+export const { setFilters, setCurrentReplayIndex, setReplayPaused, setShowShapes, setShowGeofences, setShowCategories, setShowGeofenceOnMap, setSelectedTrip } =
   replaySlice.actions;
 export const selectShowShapes = (state) => state.replay.showShapes;
 export default replaySlice.reducer;
@@ -238,6 +242,7 @@ export const selectCurrentReplayIndex = (state) =>
 // Trips selectors
 export const selectReplayTrips = (state) => state.replay.replayTrips;
 export const selectReplayTripsLoading = (state) => state.replay.tripsLoading;
+export const selectSelectedTrip = (state) => state.replay.selectedTrip;
 export const selectReplayTripsError = (state) => state.replay.tripsError;
 
 const userid = localStorage.getItem("clientId");

@@ -1,27 +1,43 @@
-import React from "react";
-import { useSelector } from "react-redux";
-import { selectReplayTrips, selectReplayTripsLoading } from "../../features/replaySlice";
+import React, { useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { selectReplayTrips, selectReplayTripsLoading, selectSelectedTrip, setSelectedTrip } from "../../features/replaySlice";
 
 
 const tripFields = [
-  { label: "Start Time", key: "Start Time", type: "datetime" },
-  { label: "Arrival Time", key: "Arrival Time", type: "datetime" },
-  { label: "Start Location", key: "Start Location" },
-  { label: "Stop Location", key: "Stop Location" },
-  { label: "Distance (km)", key: "Distance" },
-  { label: "Travel Time", key: "Travel Time" },
-  { label: "Standing Time", key: "Standing Time" },
-  { label: "Idle Duration", key: "Idle Duration" },
-  { label: "Avg Speed", key: "Avg Speed" },
-  { label: "Max Speed", key: "Max Speed" },
-  { label: "Driver", key: "Driver" },
+  { label: "Start", key: "Start Time", type: "datetime", icon: "🚀" },
+  { label: "End", key: "Arrival Time", type: "datetime", icon: "🏁" },
+  { label: "From", key: "Start Location", icon: "📍" },
+  { label: "To", key: "Stop Location", icon: "📌" },
+  { label: "Distance", key: "Distance", icon: "🛣️", unit: "km" },
+  { label: "Duration", key: "Travel Time", icon: "⏱️" },
+  { label: "Standing", key: "Standing Time", icon: "🅿️" },
+  { label: "Idle", key: "Idle Duration", icon: "�" },
+  { label: "Avg Speed", key: "Avg Speed", icon: "🏃", unit: "km/h" },
+  { label: "Max Speed", key: "Max Speed", icon: "🚀", unit: "km/h" },
 ];
 
 const ReplayTripsTab = ({ selectedVehicle }) => {
+  const dispatch = useDispatch();
   const trips = useSelector(selectReplayTrips);
   const loading = useSelector(selectReplayTripsLoading);
+  const selectedTrip = useSelector(selectSelectedTrip);
 
-  console.log(trips)
+  const handleTripSelect = (trip, index) => {
+    // If same trip is clicked, deselect it
+    if (selectedTrip && selectedTrip.index === index) {
+      dispatch(setSelectedTrip(null));
+    } else {
+      // Select the new trip with index
+      dispatch(setSelectedTrip({ ...trip, index }));
+    }
+  };
+
+  // Clear selected trip when trips data changes (new vehicle selected)
+  useEffect(() => {
+    if (selectedTrip && trips && trips.length === 0) {
+      dispatch(setSelectedTrip(null));
+    }
+  }, [trips, selectedTrip, dispatch]);
 
   return (
     <div className="flex-1 p-2">
@@ -50,38 +66,88 @@ const ReplayTripsTab = ({ selectedVehicle }) => {
           <div className="text-sm">Loading trips data...</div>
         </div>
       ) : Array.isArray(trips) && trips.length > 0 ? (
-        <div className="grid gap-4" style={{maxHeight: '70vh', overflowY: 'auto', paddingBottom: 8}}>
-          {trips.map((trip, idx) => (
+        <div className="space-y-3" style={{maxHeight: '75vh', overflowY: 'auto', paddingBottom: 8}}>
+          {trips.map((trip, idx) => {
+            const isSelected = selectedTrip && selectedTrip.index === idx;
+            
+            return (
             <div
               key={idx}
-              className="rounded-xl shadow-md border border-gray-200 bg-white p-4 flex flex-col gap-2 hover:shadow-lg transition relative"
-              style={{minWidth: 320}}
+              onClick={() => handleTripSelect(trip, idx)}
+              className={`rounded-lg shadow-sm border transition-all duration-200 overflow-hidden cursor-pointer ${
+                isSelected 
+                  ? 'border-[#25689f] bg-blue-50 shadow-md ring-2 ring-[#25689f]/20' 
+                  : 'border-gray-200 bg-white hover:shadow-md hover:border-gray-300'
+              }`}
             >
-              <div className="absolute top-2 right-4 text-xs text-gray-400 font-semibold">Trip #{idx+1}</div>
-              <div className="flex flex-wrap gap-x-8 gap-y-2">
-                {tripFields.map(field => (
-                  <div key={field.key} className="flex flex-col min-w-[160px] max-w-[260px]">
-                    <span className="text-[11px] text-gray-500 font-medium">{field.label}</span>
-                    <span className="text-[13px] font-semibold text-gray-800 truncate" title={
-                      trip[field.key] && typeof trip[field.key] === 'object'
-                        ? JSON.stringify(trip[field.key])
-                        : (trip[field.key] ? String(trip[field.key]) : "-")
-                    }>
-                      {field.type === "datetime" && trip[field.key]
-                        ? new Date(trip[field.key]).toLocaleString()
-                        : (
-                            trip[field.key] == null
-                              ? "-"
-                              : typeof trip[field.key] === 'object'
-                                ? JSON.stringify(trip[field.key])
-                                : trip[field.key]
-                          )}
-                    </span>
-                  </div>
-                ))}
+              {/* Trip Header */}
+              <div className={`px-3 py-2 ${
+                isSelected 
+                  ? 'bg-gradient-to-r from-[#25689f] to-[#1F557F]' 
+                  : 'bg-gradient-to-r from-[#25689f] to-[#1F557F]'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-white font-semibold text-sm flex items-center gap-2">
+                    🛣️ Trip {idx+1}
+                    {isSelected && <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Selected</span>}
+                  </span>
+                  <span className="text-white/90 text-xs flex items-center gap-1">
+                  {trip.Driver || 'Unknown Driver'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Trip Content - Compact Grid */}
+              <div className="p-3">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {tripFields.map(field => {
+                    const rawValue = trip[field.key];
+                    let displayValue = "-";
+                    let fullValue = "-";
+                    
+                    if (rawValue != null) {
+                      if (field.type === "datetime") {
+                        const date = new Date(rawValue);
+                        displayValue = date.toLocaleDateString() + " " + date.toLocaleTimeString('en-US', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        });
+                        fullValue = date.toLocaleString();
+                      } else if (typeof rawValue === 'object') {
+                        displayValue = JSON.stringify(rawValue).substring(0, 20) + "...";
+                        fullValue = JSON.stringify(rawValue);
+                      } else {
+                        const strValue = String(rawValue);
+                        displayValue = strValue.length > 25 ? strValue.substring(0, 25) + "..." : strValue;
+                        fullValue = strValue;
+                        if (field.unit) {
+                          displayValue += ` ${field.unit}`;
+                          fullValue += ` ${field.unit}`;
+                        }
+                      }
+                    }
+
+                    return (
+                      <div 
+                        key={field.key} 
+                        className="flex flex-col"
+                        title={displayValue.includes("...") ? `${field.label}: ${fullValue}` : undefined}
+                      >
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <span className="text-[10px]">{field.icon}</span>
+                          <span className="text-[10px] text-gray-500 font-medium">{field.label}</span>
+                        </div>
+                        <span className="text-[12px] font-medium text-gray-800 leading-tight truncate">
+                          {displayValue}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center text-gray-500 py-8">

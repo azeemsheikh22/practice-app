@@ -31,6 +31,7 @@ const Replay = () => {
 
   const dispatch = useDispatch();
   const replayApiData = useSelector(selectReplayData);
+  const tripsData = useSelector(selectReplayTrips);
 
   // Log vehicleId from query param if present
   const location = useLocation();
@@ -210,6 +211,7 @@ const Replay = () => {
             <ReplayMap
               ref={mapRef}
               replayData={replayApiData}
+              tripsData={tripsData}
               isPlaying={isPlaying}
               currentTime={currentTime}
               isMobileMenuOpen={isMobileMenuOpen}

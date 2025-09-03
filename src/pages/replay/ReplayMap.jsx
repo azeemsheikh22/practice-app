@@ -14,6 +14,8 @@ import { useSelector, useDispatch } from "react-redux";
 import {
   setCurrentReplayIndex,
   selectCurrentReplayIndex,
+  selectReplayTrips,
+  selectSelectedTrip,
 } from "../../features/replaySlice";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -96,7 +98,14 @@ const AnimatedMarkerContextMenu = ({ visible, x, y, onCreateGeofence }) => {
 
 const ReplayMap = forwardRef(
   (
-    { replayData, isPlaying, currentTime, isMobileMenuOpen, sidebarExpanded },
+    {
+      replayData,
+      tripsData,
+      isPlaying,
+      currentTime,
+      isMobileMenuOpen,
+      sidebarExpanded,
+    },
     ref
   ) => {
     const filters = useSelector((state) => state.replay.filters || {});
@@ -104,9 +113,13 @@ const ReplayMap = forwardRef(
     const dispatch = useDispatch();
     const currentReplayIndex = useSelector(selectCurrentReplayIndex);
     const lastViewRef = useRef({ lat: null, lng: null, zoom: null });
-    const showGeofenceOnMap = useSelector((state) => state.replay.showGeofenceOnMap);
+    const showGeofenceOnMap = useSelector(
+      (state) => state.replay.showGeofenceOnMap
+    );
+    const showTripMarkers = filters.showTripMarkers || false;
+    const selectedTrip = useSelector(selectSelectedTrip);
 
-    console.log("replay data", replayData);
+  
 
     // Invalidate map size when sidebar expands/collapses
     useEffect(() => {
@@ -185,7 +198,10 @@ const ReplayMap = forwardRef(
           layer.options &&
           layer.options.className &&
           (layer.options.className === "start-marker" ||
-            layer.options.className === "end-marker")
+            layer.options.className === "end-marker" ||
+            layer.options.className === "trip-start-marker" ||
+            layer.options.className === "trip-end-marker" ||
+            layer.options.className === "trip-polyline")
         ) {
           mapInstanceRef.current.removeLayer(layer);
         }
@@ -193,7 +209,9 @@ const ReplayMap = forwardRef(
         if (layer._icon && layer._icon.classList) {
           if (
             layer._icon.classList.contains("start-marker") ||
-            layer._icon.classList.contains("end-marker")
+            layer._icon.classList.contains("end-marker") ||
+            layer._icon.classList.contains("trip-start-marker") ||
+            layer._icon.classList.contains("trip-end-marker")
           ) {
             mapInstanceRef.current.removeLayer(layer);
           }
@@ -201,7 +219,7 @@ const ReplayMap = forwardRef(
       });
     };
 
-    // Jab bhi replayData aaye ya displayMode change ho, clear all and drawTrack
+    // Jab bhi replayData aaye ya displayMode change ho ya showTripMarkers change ho, clear all and drawTrack
     useEffect(() => {
       if (replayData && replayData.length > 0) {
         clearMapLayers();
@@ -212,7 +230,24 @@ const ReplayMap = forwardRef(
         clearMapLayers();
       }
       // eslint-disable-next-line
-    }, [displayMode, replayData ? replayData.length : 0]);
+    }, [displayMode, replayData ? replayData.length : 0, showTripMarkers]);
+
+    // Draw trip markers when showTripMarkers or selectedTrip changes
+    useEffect(() => {
+      // Clear existing trip markers first
+      clearTripMarkers();
+      
+      if (tripsData && tripsData.length > 0) {
+        if (showTripMarkers) {
+          // Show all trips when checkbox is enabled
+          drawTripMarkers();
+        } else if (selectedTrip && selectedTrip.index !== undefined) {
+          // Show only selected trip when checkbox is disabled but trip is selected
+          drawSingleTrip(selectedTrip.index);
+        }
+      }
+      // eslint-disable-next-line
+    }, [showTripMarkers, tripsData, selectedTrip]);
 
     // Sirf pehli dafa ya jab autoZoomEnabled true ho, fitToBounds
     useEffect(() => {
@@ -228,13 +263,27 @@ const ReplayMap = forwardRef(
       if (!mapInstanceRef.current) return;
       const map = mapInstanceRef.current;
       const disableAutoZoom = () => setAutoZoomEnabled(false);
+      
+      // Add zoom event listener to redraw trip markers with proper sizing
+      const handleZoomEnd = () => {
+        if (showTripMarkers && tripsData && tripsData.length > 0) {
+          setTimeout(() => {
+            drawTripMarkers(); // Redraw with new sizes
+          }, 150);
+        }
+      };
+      
       map.on("zoomstart", disableAutoZoom);
       map.on("dragstart", disableAutoZoom);
+      map.on("zoomend", handleZoomEnd);
+      
       return () => {
         map.off("zoomstart", disableAutoZoom);
         map.off("dragstart", disableAutoZoom);
+        map.off("zoomend", handleZoomEnd);
       };
-    }, []);
+    }, [showTripMarkers, tripsData]);
+    
 
     // Handle map type change
     const handleMapTypeChange = (type) => {
@@ -394,28 +443,131 @@ const ReplayMap = forwardRef(
           );
         }
 
-        // Add start and end markers (sab se upar)
-        if (coordinates.length > 0) {
+        // Add start and end markers (sab se upar) - Only show if trip markers are disabled
+        if (coordinates.length > 0 && !showTripMarkers) {
           const startIcon = L.divIcon({
             className: "start-marker",
-            html: '<div style="background: #10b981; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">S</div>',
-            iconSize: [26, 26],
-            iconAnchor: [13, 13],
+            html: `<div style="
+              background: linear-gradient(135deg, #10b981, #059669); 
+              color: white; 
+              border-radius: 50%; 
+              width: 40px; 
+              height: 40px; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              font-weight: bold; 
+              font-size: 18px;
+              border: 4px solid white;
+              box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            ">
+              ⚑
+            </div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
           });
+
           const endIcon = L.divIcon({
             className: "end-marker",
-            html: '<div style="background: #ef4444; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">E</div>',
-            iconSize: [26, 26],
-            iconAnchor: [13, 13],
+            html: `<div style="
+              background: linear-gradient(135deg, #ef4444, #dc2626); 
+              color: white; 
+              border-radius: 50%; 
+              width: 40px; 
+              height: 40px; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              font-weight: bold; 
+              font-size: 18px;
+              border: 4px solid white;
+              box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            ">
+              🏁
+            </div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
           });
-          L.marker(coordinates[0], {
+
+          const startMarker = L.marker(coordinates[0], {
             icon: startIcon,
-            zIndexOffset: 5000,
+            zIndexOffset: 10000, // Highest priority
           }).addTo(mapInstanceRef.current);
-          L.marker(coordinates[coordinates.length - 1], {
+
+          const endMarker = L.marker(coordinates[coordinates.length - 1], {
             icon: endIcon,
-            zIndexOffset: 5000,
+            zIndexOffset: 10000, // Highest priority
           }).addTo(mapInstanceRef.current);
+
+          // Add rich popups for start/end markers
+          const startTime = replayData[0]?.gps_time;
+          const endTime = replayData[replayData.length - 1]?.gps_time;
+          const totalDuration =
+            startTime && endTime
+              ? Math.round(
+                  (new Date(endTime) - new Date(startTime)) / (1000 * 60)
+                )
+              : 0;
+
+          startMarker.bindPopup(`
+            <div style="min-width: 220px; text-align: center;">
+              <div style="
+                background: linear-gradient(135deg, #10b981, #059669);
+                color: white;
+                padding: 8px 12px;
+                margin: -8px -12px 12px -12px;
+                font-size: 16px;
+                font-weight: bold;
+              ">
+                ⚑ JOURNEY START
+              </div>
+              <div style="text-align: left;">
+                <p style="margin: 6px 0; font-size: 13px;"><strong>📅 Time:</strong> ${
+                  startTime ? new Date(startTime).toLocaleString() : "Unknown"
+                }</p>
+                <p style="margin: 6px 0; font-size: 13px;"><strong>🚗 Vehicle:</strong> ${
+                  replayData[0]?.car_name || "Unknown"
+                }</p>
+                <p style="margin: 6px 0; font-size: 13px;"><strong>📍 Status:</strong> ${
+                  replayData[0]?.status || "Unknown"
+                }</p>
+                <p style="margin: 6px 0; font-size: 13px;"><strong>⏱️ Total Duration:</strong> ${totalDuration} minutes</p>
+                <p style="margin: 6px 0; font-size: 13px;"><strong>📊 Total Points:</strong> ${
+                  replayData.length
+                }</p>
+              </div>
+            </div>
+          `);
+
+          endMarker.bindPopup(`
+            <div style="min-width: 220px; text-align: center;">
+              <div style="
+                background: linear-gradient(135deg, #ef4444, #dc2626);
+                color: white;
+                padding: 8px 12px;
+                margin: -8px -12px 12px -12px;
+                font-size: 16px;
+                font-weight: bold;
+              ">
+                🏁 JOURNEY END
+              </div>
+              <div style="text-align: left;">
+                <p style="margin: 6px 0; font-size: 13px;"><strong>📅 Time:</strong> ${
+                  endTime ? new Date(endTime).toLocaleString() : "Unknown"
+                }</p>
+                <p style="margin: 6px 0; font-size: 13px;"><strong>🚗 Vehicle:</strong> ${
+                  replayData[replayData.length - 1]?.car_name || "Unknown"
+                }</p>
+                <p style="margin: 6px 0; font-size: 13px;"><strong>📍 Status:</strong> ${
+                  replayData[replayData.length - 1]?.status || "Unknown"
+                }</p>
+                <p style="margin: 6px 0; font-size: 13px;"><strong>⏱️ Total Duration:</strong> ${totalDuration} minutes</p>
+                <p style="margin: 6px 0; font-size: 13px;"><strong>📊 Total Points:</strong> ${
+                  replayData.length
+                }</p>
+              </div>
+            </div>
+          `);
         }
         return;
       }
@@ -455,28 +607,566 @@ const ReplayMap = forwardRef(
         allMarkers.forEach((marker) => marker.addTo(mapInstanceRef.current));
       }
 
-      if (coordinates.length > 0) {
+      if (coordinates.length > 0 && !showTripMarkers) {
         const startIcon = L.divIcon({
           className: "start-marker",
-          html: '<div style="background: #10b981; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">S</div>',
-          iconSize: [26, 26],
-          iconAnchor: [13, 13],
+          html: `<div style="
+            background: linear-gradient(135deg, #10b981, #059669); 
+            color: white; 
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            font-size: 18px;
+            border: 4px solid white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+          ">
+            ⚑
+          </div>`,
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
         });
+
         const endIcon = L.divIcon({
           className: "end-marker",
-          html: '<div style="background: #ef4444; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px;">E</div>',
-          iconSize: [26, 26],
-          iconAnchor: [13, 13],
+          html: `<div style="
+            background: linear-gradient(135deg, #ef4444, #dc2626); 
+            color: white; 
+            border-radius: 50%; 
+            width: 40px; 
+            height: 40px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-weight: bold; 
+            font-size: 18px;
+            border: 4px solid white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+          ">
+            🏁
+          </div>`,
+          iconSize: [40, 40],
+          iconAnchor: [20, 20],
         });
-        L.marker(coordinates[0], { icon: startIcon, zIndexOffset: 5000 }).addTo(
-          mapInstanceRef.current
-        );
+
+        L.marker(coordinates[0], {
+          icon: startIcon,
+          zIndexOffset: 10000,
+        }).addTo(mapInstanceRef.current);
         L.marker(coordinates[coordinates.length - 1], {
           icon: endIcon,
-          zIndexOffset: 5000,
+          zIndexOffset: 10000,
         }).addTo(mapInstanceRef.current);
       }
     };
+
+    // Clear trip markers and polylines
+    const clearTripMarkers = () => {
+      if (!mapInstanceRef.current) return;
+
+      const layersToRemove = [];
+
+      mapInstanceRef.current.eachLayer((layer) => {
+        // Check for custom trip marker properties
+        if (layer._isTripMarker === true || layer._isTripPolyline === true) {
+          layersToRemove.push(layer);
+        }
+        // Fallback: Check if layer has options and className for polylines
+        else if (layer.options && layer.options.className) {
+          const className = layer.options.className;
+          if (className.includes("trip-start-marker") || 
+              className.includes("trip-end-marker") || 
+              className.includes("trip-polyline")) {
+            layersToRemove.push(layer);
+          }
+        }
+        // Fallback: Check for divIcon markers by _icon html class
+        else if (layer._icon && layer._icon.classList) {
+          if (layer._icon.classList.contains("trip-start-marker") ||
+              layer._icon.classList.contains("trip-end-marker")) {
+            layersToRemove.push(layer);
+          }
+        }
+      });
+
+      // Remove all identified layers
+      layersToRemove.forEach(layer => {
+        try {
+          mapInstanceRef.current.removeLayer(layer);
+        } catch (error) {
+          console.warn('Error removing layer:', error);
+        }
+      });
+      
+      console.log(`Cleared ${layersToRemove.length} trip-related layers`);
+    };
+
+    // Draw only selected trip (when trip checkbox is disabled but trip is selected)
+    const drawSingleTrip = (selectedTripIndex) => {
+      if (!replayData || !tripsData || selectedTripIndex >= tripsData.length) return;
+
+      const tripColors = [
+        "#E74C3C", "#3498DB", "#2ECC71", "#F39C12", "#9B59B6", "#1ABC9C",
+        "#E67E22", "#34495E", "#FF6B9D", "#4ECDC4", "#45B7D1", "#96CEB4",
+      ];
+
+      const trip = tripsData[selectedTripIndex];
+      const tripColor = tripColors[selectedTripIndex % tripColors.length];
+      const usedPositions = [];
+
+      // Handle different possible field names for trip times
+      let tripStartTime, tripEndTime;
+
+      if (trip.startTime) {
+        tripStartTime = new Date(trip.startTime).getTime();
+        tripEndTime = new Date(trip.endTime).getTime();
+      } else if (trip.start_time) {
+        tripStartTime = new Date(trip.start_time).getTime();
+        tripEndTime = new Date(trip.end_time).getTime();
+      } else if (trip.StartTime) {
+        tripStartTime = new Date(trip.StartTime).getTime();
+        tripEndTime = new Date(trip.EndTime).getTime();
+      } else if (trip["Start Time"] && trip["Arrival Time"]) {
+        tripStartTime = new Date(trip["Start Time"]).getTime();
+        tripEndTime = new Date(trip["Arrival Time"]).getTime();
+      } else {
+        return;
+      }
+
+      // Filter replay GPS points within trip time range
+      const tripGPSPoints = replayData.filter((point) => {
+        const pointTime = new Date(point.gps_time).getTime();
+        return pointTime >= tripStartTime && pointTime <= tripEndTime;
+      });
+
+      if (tripGPSPoints.length > 0) {
+        drawTripOnMap(tripGPSPoints, tripColor, selectedTripIndex, usedPositions, true); // Always highlighted for single trip
+      }
+    };
+
+    // Draw trip markers and polylines
+    const drawTripMarkers = () => {
+      if (!mapInstanceRef.current || !replayData) {
+        return;
+      }
+
+      // Clear existing trip markers first
+      clearTripMarkers();
+
+      const tripColors = [
+        "#E74C3C", // Red
+        "#3498DB", // Blue
+        "#2ECC71", // Green
+        "#F39C12", // Orange
+        "#9B59B6", // Purple
+        "#1ABC9C", // Turquoise
+        "#E67E22", // Dark Orange
+        "#34495E", // Dark Blue Grey
+        "#FF6B9D", // Pink
+        "#4ECDC4", // Light Teal
+        "#45B7D1", // Light Blue
+        "#96CEB4", // Light Green
+      ];
+
+      // If we don't have proper trip data, create trips based on time gaps in GPS data
+      if (!tripsData || tripsData.length === 0) {
+        createTripsFromGpsGaps();
+        return;
+      }
+
+      // Collect all trip markers positions to avoid overlapping
+      const usedPositions = [];
+
+      tripsData.forEach((trip, index) => {
+        const tripColor = tripColors[index % tripColors.length];
+
+        // Check if trip has meaningful distance first
+        const tripDistance = trip.Distance || trip.distance || 0;
+        if (tripDistance === 0) {
+         
+          return;
+        }
+
+        // Handle different possible field names for trip times
+        let tripStartTime, tripEndTime;
+
+        if (trip.startTime) {
+          tripStartTime = new Date(trip.startTime).getTime();
+          tripEndTime = new Date(trip.endTime).getTime();
+        } else if (trip.start_time) {
+          tripStartTime = new Date(trip.start_time).getTime();
+          tripEndTime = new Date(trip.end_time).getTime();
+        } else if (trip.StartTime) {
+          tripStartTime = new Date(trip.StartTime).getTime();
+          tripEndTime = new Date(trip.EndTime).getTime();
+        } else if (trip["Start Time"] && trip["Arrival Time"]) {
+          // Handle fields with spaces in names
+          tripStartTime = new Date(trip["Start Time"]).getTime();
+          tripEndTime = new Date(trip["Arrival Time"]).getTime();
+        } else {
+          return;
+        }
+
+        // Filter replay GPS points within trip time range
+        const tripGPSPoints = replayData.filter((point) => {
+          const pointTime = new Date(point.gps_time).getTime();
+          return pointTime >= tripStartTime && pointTime <= tripEndTime;
+        });
+
+        if (tripGPSPoints.length > 0) {
+          const isSelected = selectedTrip && selectedTrip.index === index;
+          drawTripOnMap(tripGPSPoints, tripColor, index, usedPositions, isSelected);
+        }
+      });
+    };
+
+    // Create trips from GPS gaps when no trip data is available
+    const createTripsFromGpsGaps = () => {
+      if (!replayData || replayData.length < 2) return;
+
+      const trips = [];
+      let currentTrip = [replayData[0]];
+
+      for (let i = 1; i < replayData.length; i++) {
+        const prevTime = new Date(replayData[i - 1].gps_time).getTime();
+        const currentTime = new Date(replayData[i].gps_time).getTime();
+        const timeDiff = currentTime - prevTime;
+
+        // If gap is more than 30 minutes, consider it a new trip
+        if (timeDiff > 30 * 60 * 1000) {
+          if (currentTrip.length > 1) {
+            trips.push(currentTrip);
+          }
+          currentTrip = [replayData[i]];
+        } else {
+          currentTrip.push(replayData[i]);
+        }
+      }
+
+      // Add the last trip
+      if (currentTrip.length > 1) {
+        trips.push(currentTrip);
+      }
+
+      // Colors for different trips - same as main function
+      const tripColors = [
+        "#E74C3C", // Red
+        "#3498DB", // Blue
+        "#2ECC71", // Green
+        "#F39C12", // Orange
+        "#9B59B6", // Purple
+        "#1ABC9C", // Turquoise
+        "#E67E22", // Dark Orange
+        "#34495E", // Dark Blue Grey
+        "#FF6B9D", // Pink
+        "#4ECDC4", // Light Teal
+        "#45B7D1", // Light Blue
+        "#96CEB4", // Light Green
+      ];
+
+      const usedPositions = []; // Track positions for this GPS gap based trip creation
+
+      trips.forEach((tripPoints, index) => {
+        // Calculate distance for this trip to filter out 0 distance trips
+        let tripDistance = 0;
+        for (let i = 1; i < tripPoints.length; i++) {
+          const prev = tripPoints[i - 1];
+          const curr = tripPoints[i];
+          const distance =
+            Math.sqrt(
+              Math.pow(curr.latitude - prev.latitude, 2) +
+                Math.pow(curr.longitude - prev.longitude, 2)
+            ) * 111; // Rough conversion to km
+          tripDistance += distance;
+        }
+
+        // Only draw trips with meaningful distance (more than 10 meters)
+        if (tripDistance >= 0.01) {
+          const tripColor = tripColors[index % tripColors.length];
+          drawTripOnMap(tripPoints, tripColor, index, usedPositions);
+        } else {
+    
+        }
+      });
+    };
+
+    // Draw individual trip on map
+    const drawTripOnMap = (tripGPSPoints, tripColor, index, usedPositions, isSelected = false) => {
+      if (!tripGPSPoints || tripGPSPoints.length === 0) return;
+
+      // Calculate trip distance first to filter out 0 distance trips
+      let tripDistance = 0;
+      for (let i = 1; i < tripGPSPoints.length; i++) {
+        const prev = tripGPSPoints[i - 1];
+        const curr = tripGPSPoints[i];
+        const distance =
+          Math.sqrt(
+            Math.pow(curr.latitude - prev.latitude, 2) +
+              Math.pow(curr.longitude - prev.longitude, 2)
+          ) * 111; // Rough conversion to km
+        tripDistance += distance;
+      }
+
+      // Don't show trips with 0 or very minimal distance (less than 0.01 km = 10 meters)
+      if (tripDistance < 0.01) {
+
+        return;
+      }
+
+      // Get current zoom level for responsive marker sizing
+      const currentZoom = mapInstanceRef.current ? mapInstanceRef.current.getZoom() : 12;
+      
+      // Calculate marker sizes based on zoom level with better visibility
+      const baseSize = Math.max(24, Math.min(40, currentZoom * 2.5)); // Smaller max size: 24px to 40px
+      const badgeSize = Math.max(14, Math.min(20, currentZoom * 1.4)); // Smaller badge: 14px to 20px
+      const fontSize = Math.max(11, Math.min(16, currentZoom * 1.0)); // Smaller font: 11px to 16px
+      const badgeFontSize = Math.max(8, Math.min(12, currentZoom * 0.7)); // Smaller badge font: 8px to 12px
+      
+      // Enhanced z-index for better layering - higher values for better visibility
+      const baseZIndex = 8000 + (index * 100); // Each trip gets higher z-index
+      const markerZIndex = currentZoom < 12 ? baseZIndex + 2000 : baseZIndex; // Even higher when zoomed out
+      
+      // Selected trip gets extra highlighting
+      const selectedBonus = isSelected ? 5000 : 0;
+      const finalZIndex = markerZIndex + selectedBonus;
+
+      // Get first and last GPS points for markers
+      const startPoint = tripGPSPoints[0];
+      const endPoint = tripGPSPoints[tripGPSPoints.length - 1];
+
+      // Check if trip markers are too close to main route markers
+      const mainStartPoint = replayData[0];
+      const mainEndPoint = replayData[replayData.length - 1];
+
+      // Function to check if position is too close to existing markers
+      const getAvailablePosition = (originalLat, originalLng, type) => {
+        const currentZoom = mapInstanceRef.current ? mapInstanceRef.current.getZoom() : 12;
+        const minDistance = currentZoom > 12 ? 0.0002 : 0.0008; // Smaller offset when zoomed in
+        
+        let testLat = originalLat;
+        let testLng = originalLng;
+        let attempt = 0;
+        const maxAttempts = 8;
+        
+        while (attempt < maxAttempts) {
+          // Check if current position conflicts with existing markers
+          const hasConflict = usedPositions.some(pos => {
+            const distance = Math.sqrt(
+              Math.pow(testLat - pos.lat, 2) + Math.pow(testLng - pos.lng, 2)
+            );
+            return distance < minDistance;
+          });
+          
+          if (!hasConflict) {
+            // Position is available, record it and return
+            usedPositions.push({ lat: testLat, lng: testLng, type, index });
+            return [testLat, testLng];
+          }
+          
+          // Try different positions in a circular pattern
+          const angle = (attempt * 45) * (Math.PI / 180); // 45 degree increments
+          const offsetDistance = minDistance * (1 + attempt * 0.5);
+          testLat = originalLat + Math.cos(angle) * offsetDistance;
+          testLng = originalLng + Math.sin(angle) * offsetDistance;
+          attempt++;
+        }
+        
+        // If no position found, use original with small random offset
+        const randomOffset = minDistance * (0.5 + Math.random() * 0.5);
+        const randomAngle = Math.random() * 2 * Math.PI;
+        testLat = originalLat + Math.cos(randomAngle) * randomOffset;
+        testLng = originalLng + Math.sin(randomAngle) * randomOffset;
+        usedPositions.push({ lat: testLat, lng: testLng, type, index });
+        return [testLat, testLng];
+      };
+
+      // Get non-overlapping positions for start and end markers
+      const startOffset = getAvailablePosition(startPoint.latitude, startPoint.longitude, 'start');
+      const endOffset = getAvailablePosition(endPoint.latitude, endPoint.longitude, 'end');
+
+      const startMarker = L.divIcon({
+        html: `<div style="
+          background: ${tripColor}; 
+          width: ${baseSize}px; 
+          height: ${baseSize}px; 
+          border-radius: 50%; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center;
+          position: relative;
+          cursor: pointer;
+          ${isSelected ? 'box-shadow: 0 0 15px rgba(37, 104, 159, 0.8); border: 3px solid #25689f;' : ''}
+        ">
+          <span style="color: white; font-size: ${fontSize}px; font-weight: bold;">${
+            index + 1
+          }</span>
+          <div style="
+            position: absolute; 
+            top: -${Math.round(badgeSize * 0.3)}px; 
+            right: -${Math.round(badgeSize * 0.3)}px; 
+            background: #10b981; 
+            width: ${badgeSize}px; 
+            height: ${badgeSize}px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            ${isSelected ? 'box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);' : ''}
+          ">
+            <span style="color: white; font-size: ${badgeFontSize}px; font-weight: bold;">S</span>
+          </div>
+        </div>`,
+        className: "trip-start-marker",
+        iconSize: [baseSize, baseSize],
+        iconAnchor: [baseSize / 2, baseSize / 2],
+      });
+
+      const startMarkerInstance = L.marker(startOffset, {
+        icon: startMarker,
+        className: "trip-start-marker",
+        zIndexOffset: finalZIndex, // Enhanced z-index for better visibility
+      });
+      
+      // Add custom properties for identification
+      startMarkerInstance._isTripMarker = true;
+      startMarkerInstance._tripIndex = index;
+      startMarkerInstance._markerType = 'start';
+      
+      startMarkerInstance.addTo(mapInstanceRef.current).bindPopup(`
+          <div style="min-width: 200px;">
+            <h3 style="margin: 0 0 8px 0; color: ${tripColor}; font-size: 14px;">
+              🚗 Trip ${index + 1} - Start
+            </h3>
+            <p style="margin: 4px 0; font-size: 12px;"><strong>Time:</strong> ${new Date(
+              startPoint.gps_time
+            ).toLocaleString()}</p>
+            <p style="margin: 4px 0; font-size: 12px;"><strong>Vehicle:</strong> ${
+              startPoint.car_name || "Unknown"
+            }</p>
+            <p style="margin: 4px 0; font-size: 12px;"><strong>Status:</strong> ${
+              startPoint.status || "Unknown"
+            }</p>
+            <p style="margin: 4px 0; font-size: 11px; color: #666;"><em>* Position auto-adjusted to prevent overlap</em></p>
+          </div>
+        `);
+
+      const endMarker = L.divIcon({
+        html: `<div style="
+          background: ${tripColor}; 
+          width: ${baseSize}px; 
+          height: ${baseSize}px; 
+          border-radius: 50%; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center;
+          position: relative;
+          cursor: pointer;
+          ${isSelected ? 'box-shadow: 0 0 15px rgba(37, 104, 159, 0.8); border: 3px solid #25689f;' : ''}
+        ">
+          <span style="color: white; font-size: ${fontSize}px; font-weight: bold;">${
+            index + 1
+          }</span>
+          <div style="
+            position: absolute; 
+            top: -${Math.round(badgeSize * 0.3)}px; 
+            right: -${Math.round(badgeSize * 0.3)}px; 
+            background: #ef4444; 
+            width: ${badgeSize}px; 
+            height: ${badgeSize}px; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            ${isSelected ? 'box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);' : ''}
+          ">
+            <span style="color: white; font-size: ${badgeFontSize}px; font-weight: bold;">E</span>
+          </div>
+        </div>`,
+        className: "trip-end-marker",
+        iconSize: [baseSize, baseSize],
+        iconAnchor: [baseSize / 2, baseSize / 2],
+      });
+
+      const endMarkerInstance = L.marker(endOffset, {
+        icon: endMarker,
+        className: "trip-end-marker",
+        zIndexOffset: finalZIndex + 10, // Slightly higher than start marker
+      });
+      
+      // Add custom properties for identification  
+      endMarkerInstance._isTripMarker = true;
+      endMarkerInstance._tripIndex = index;
+      endMarkerInstance._markerType = 'end';
+      
+      endMarkerInstance.addTo(mapInstanceRef.current).bindPopup(`
+          <div style="min-width: 200px;">
+            <h3 style="margin: 0 0 8px 0; color: ${tripColor}; font-size: 14px;">
+              🏁 Trip ${index + 1} - End
+            </h3>
+            <p style="margin: 4px 0; font-size: 12px;"><strong>Time:</strong> ${new Date(
+              endPoint.gps_time
+            ).toLocaleString()}</p>
+            <p style="margin: 4px 0; font-size: 12px;"><strong>Vehicle:</strong> ${
+              endPoint.car_name || "Unknown"
+            }</p>
+            <p style="margin: 4px 0; font-size: 12px;"><strong>Status:</strong> ${
+              endPoint.status || "Unknown"
+            }</p>
+            <p style="margin: 4px 0; font-size: 11px; color: #666;"><em>* Position auto-adjusted to prevent overlap</em></p>
+          </div>
+        `);
+
+      // Create trip polyline with unique color and pattern
+      const tripPath = tripGPSPoints.map((point) => [
+        point.latitude,
+        point.longitude,
+      ]);
+
+      const startTime = new Date(startPoint.gps_time).getTime();
+      const endTime = new Date(endPoint.gps_time).getTime();
+      const duration = Math.round((endTime - startTime) / (1000 * 60));
+
+      // Calculate average speed
+      let totalDistance = 0;
+      for (let i = 1; i < tripGPSPoints.length; i++) {
+        const prev = tripGPSPoints[i - 1];
+        const curr = tripGPSPoints[i];
+        const distance =
+          Math.sqrt(
+            Math.pow(curr.latitude - prev.latitude, 2) +
+              Math.pow(curr.longitude - prev.longitude, 2)
+          ) * 111; // Rough conversion to km
+        totalDistance += distance;
+      }
+      const avgSpeed =
+        duration > 0 ? Math.round((totalDistance / duration) * 60) : 0;
+
+      const tripPolyline = L.polyline(tripPath, {
+        color: tripColor,
+        weight: isSelected ? 8 : 6, // Thicker line when selected
+        opacity: isSelected ? 1 : 0.9, // More opaque when selected
+        className: `trip-polyline ${isSelected ? 'selected-trip' : ''}`,
+        dashArray: isSelected ? "none" : (index % 2 === 0 ? "15, 10" : "10, 5, 5, 5"), // Solid line when selected
+      });
+      
+      // Add custom property for identification
+      tripPolyline._isTripPolyline = true;
+      tripPolyline._tripIndex = index;
+      
+      tripPolyline.addTo(mapInstanceRef.current).bindPopup(`
+          <div style="min-width: 220px;">
+            <h3 style="margin: 0 0 8px 0; color: ${tripColor}; font-size: 16px;">
+              🛣️ Trip ${index + 1}
+            </h3>
+           
+
+          </div>
+        `);
+    };
+
     // Jab play ho ya displayMode change ho to status markers hide/show karo
     useEffect(() => {
       if (!mapInstanceRef.current || !mapInstanceRef.current._vehicleMarkers)
@@ -697,7 +1387,9 @@ const ReplayMap = forwardRef(
       <div className="relative h-full w-full">
         <div ref={mapRef} className="w-full h-full" />
         {/* Geofence Manager for replay map */}
-        {showGeofenceOnMap && <ReplayGeofenceManager mapInstanceRef={mapInstanceRef} />}
+        {showGeofenceOnMap && (
+          <ReplayGeofenceManager mapInstanceRef={mapInstanceRef} />
+        )}
         {/* Animated Marker Context Menu */}
         <AnimatedMarkerContextMenu
           visible={markerMenu.visible}
@@ -766,8 +1458,10 @@ const ReplayMap = forwardRef(
                       type="checkbox"
                       checked={showGeofenceOnMap}
                       onChange={(e) => {
-                        dispatch({ type: "replay/setShowGeofenceOnMap", payload: e.target.checked });
-                    
+                        dispatch({
+                          type: "replay/setShowGeofenceOnMap",
+                          payload: e.target.checked,
+                        });
                       }}
                       className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                     />
@@ -779,7 +1473,6 @@ const ReplayMap = forwardRef(
                     onClick={() => {
                       setShowAdvancedModal(true);
                       setShowAddToMapMenu(false);
-                
                     }}
                   >
                     <Settings size={18} />

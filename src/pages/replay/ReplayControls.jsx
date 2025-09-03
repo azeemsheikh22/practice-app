@@ -209,7 +209,7 @@ const ReplayControls = ({
 
             {/* Responsive Controls Layout with inline filter options */}
             <div className="grid grid-cols-12 gap-1 sm:gap-4 items-center px-2 sm:px-4 py-2">
-                {/* Left Controls - Summary Checkbox, Display Mode and Stop Duration (4 columns) */}
+                {/* Left Controls - Summary Checkbox, Trip Markers Checkbox, Display Mode (4 columns) */}
                 <div className="col-span-4 flex items-center space-x-1 sm:space-x-2">
                     {/* Show Summary Checkbox */}
                     <input
@@ -221,6 +221,18 @@ const ReplayControls = ({
                         style={{ marginTop: 1 }}
                     />
                     <label htmlFor="show-summary" className="text-xs font-medium text-gray-700 cursor-pointer select-none mr-2">Summary</label>
+                    
+                    {/* Show Trip Markers Checkbox */}
+                    <input
+                        type="checkbox"
+                        id="show-trip-markers"
+                        checked={filters.showTripMarkers || false}
+                        onChange={e => handleFiltersChange({ ...filters, showTripMarkers: e.target.checked })}
+                        className="mr-1 accent-[#25689f] cursor-pointer"
+                        style={{ marginTop: 1 }}
+                    />
+                    <label htmlFor="show-trip-markers" className="text-xs font-medium text-gray-700 cursor-pointer select-none mr-2">Trips</label>
+                    
                     {/* Display Mode Dropdown */}
                     <select
                         value={filters.displayMode || "line"}
@@ -230,18 +242,6 @@ const ReplayControls = ({
                     >
                         <option value="line">📍 Line</option>
                         <option value="marker">🎯 Marker</option>
-                    </select>
-                    {/* Stop Duration Dropdown */}
-                    <select
-                        value={filters.stopDuration || "all"}
-                        onChange={e => handleFiltersChange({ ...filters, stopDuration: e.target.value })}
-                        className="p-1 border border-gray-300 rounded text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#25689f] bg-white"
-                        title="Stop Duration"
-                    >
-                        <option value="all">All Stops</option>
-                        <option value="5">Above 5 min</option>
-                        <option value="10">Above 10 min</option>
-                        <option value="15">Above 15 min</option>
                     </select>
                 </div>
 
@@ -302,49 +302,20 @@ const ReplayControls = ({
                     </motion.button>
                 </div>
 
-                {/* Right Controls - Alarms, Stops, Draw, Speed (4 columns) */}
+                {/* Right Controls - Stop Duration and Speed (4 columns) */}
                 <div className="col-span-4 flex items-center justify-end space-x-1 sm:space-x-2">
-                    {/* Alarms Toggle */}
-                    {/* <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleFiltersChange({ ...filters, showAlarms: !filters.showAlarms })}
-                        className={`flex items-center px-1 sm:px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${filters.showAlarms
-                            ? 'bg-red-100 text-red-700 border border-red-200'
-                            : 'bg-gray-100 text-gray-600 border border-gray-200'
-                            }`}
-                        title="Toggle Alarms"
+                    {/* Stop Duration Dropdown */}
+                    <select
+                        value={filters.stopDuration || "all"}
+                        onChange={e => handleFiltersChange({ ...filters, stopDuration: e.target.value })}
+                        className="p-1 border border-gray-300 rounded text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#25689f] bg-white"
+                        title="Stop Duration"
                     >
-                        <span className="mr-1">🚨</span>
-                        <span className="hidden sm:inline">Alarms</span>
-                    </motion.button> */}
-
-                    {/* Stops Toggle */}
-                    {/* <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleFiltersChange({ ...filters, showStops: !filters.showStops })}
-                        className={`flex items-center px-1 sm:px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${filters.showStops
-                            ? 'bg-orange-100 text-orange-700 border border-orange-200'
-                            : 'bg-gray-100 text-gray-600 border border-gray-200'
-                            }`}
-                        title="Toggle Stop Points"
-                    >
-                        <span className="mr-1">⏹️</span>
-                        <span className="hidden sm:inline">Stops</span>
-                    </motion.button> */}
-
-                    {/* Draw Track Button */}
-                    {/* <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={onDrawTrack}
-                        className="flex items-center px-1 sm:px-2 py-1 bg-[#25689f] text-white rounded-md hover:bg-[#1F557F] transition-colors text-xs font-medium cursor-pointer"
-                        title="Draw Track on Map"
-                    >
-                        <Layers size={12} className="mr-0 sm:mr-1" />
-                        <span className="hidden sm:inline">Draw</span>
-                    </motion.button> */}
+                        <option value="all">All Stops</option>
+                        <option value="5">Above 5 min</option>
+                        <option value="10">Above 10 min</option>
+                        <option value="15">Above 15 min</option>
+                    </select>
 
                     <ReplaySpeedControl
                         currentSpeed={playbackSpeed}
