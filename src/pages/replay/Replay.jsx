@@ -16,6 +16,7 @@ import {
   fetchReplayTrips,
   selectReplayTrips,
   fetchReplayGeofenceForUser,
+  incrementGetReplayCount,
 } from "../../features/replaySlice";
 import { fetchGeofenceCatList } from "../../features/geofenceSlice";
 
@@ -94,13 +95,13 @@ const Replay = () => {
     // If vehicle is not selected, but urlVehicleId exists, use that
     let carId = vehicle && vehicle.valueId ? vehicle.valueId : urlVehicleId;
     if (!carId || !fromDate || !toDate) {
-      console.log("Replay.jsx: Missing required data for replay fetch");
       return;
     }
     // Format dates for API (YYYY/MM/DD)
     const datefrom = fromDate.replace(/-/g, "/");
     const dateto = toDate.replace(/-/g, "/");
     // Pass fromTime and toTime to thunks
+    dispatch(incrementGetReplayCount());
     dispatch(fetchReplayData({ carId, datefrom, dateto, fromTime, toTime }));
     dispatch(fetchReplayTrips({ carId, datefrom, dateto, fromTime, toTime }));
   };

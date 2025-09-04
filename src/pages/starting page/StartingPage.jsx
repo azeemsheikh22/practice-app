@@ -1,19 +1,21 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import { User, HelpCircle, Phone, LogOut, ChevronDown } from "lucide-react";
 import logo from "../../assets/logo.png";
 import logo3 from "../../assets/LogoColor.png";
-
 import menuIcon1 from "../../assets/menuICON1.png";
 import menuIcon2 from "../../assets/menuICON2.png";
 import menuIcon3 from "../../assets/menuICON3.png";
-// import menuIcon4 from "../../assets/menuICON4.png";
-import menuIcon5 from "../../assets/menuICON5.png";
-import menuIcon6 from "../../assets/menuICON6.png";
+import menuIcon5 from "../../assets/menuICON5.png"
 import menuIcon7 from "../../assets/menuICON7.png";
 import menuIcon8 from "../../assets/menuICON8.png";
 import menuIcon9 from "../../assets/menuICON9.png";
+import menuIcon10 from "../../assets/menuICON10.png";
+import menuIcon11 from "../../assets/menuICON11.png";
+import menuIcon12 from "../../assets/menuICON12.png";
+import toast from 'react-hot-toast';
+
 
 const StartingPage = () => {
   const [firstName, setFirstName] = useState("");
@@ -53,8 +55,28 @@ const StartingPage = () => {
     navigate("/login");
   };
 
+  // Show toast for coming soon
+  const showComingSoonToast = () => {
+    toast('Coming Soon', {
+      icon: '🚧',
+      style: {
+        borderRadius: '8px',
+        background: '#fffbe6',
+        color: '#b45309',
+        fontWeight: 'bold',
+        fontSize: '15px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+      },
+      duration: 2000,
+    });
+  };
+
   // Updated menu options with Dashboard added as second option
   const options = [
+    {
+      label: "Default",
+      link: "default"
+    },
     {
       label: "Live Map",
       icon: <img src={menuIcon1} className="w-8 h-8" alt="Live Map" />,
@@ -85,23 +107,11 @@ const StartingPage = () => {
       color: "bg-yellow-50 hover:bg-yellow-100",
       link: "/replay",
     },
-    // {
-    //   label: "Places",
-    //   icon: <img src={menuIcon4} className="w-8 h-8" alt="Places" />,
-    //   color: "bg-purple-50 hover:bg-purple-100",
-    //   link: "/places",
-    // },
     {
       label: "Alerts",
       icon: <img src={menuIcon5} className="w-8 h-8" alt="Alerts" />,
       color: "bg-red-50 hover:bg-red-100",
       link: "/alerts",
-    },
-    {
-      label: "Scheduler",
-      icon: <img src={menuIcon6} className="w-8 h-8" alt="Scheduler" />,
-      color: "bg-orange-50 hover:bg-orange-100",
-      link: "/scheduler",
     },
     {
       label: "Routes",
@@ -111,29 +121,29 @@ const StartingPage = () => {
     },
     {
       label: "Prevention",
-      icon: <img src={menuIcon8} className="w-8 h-8" alt="Prevention" />,
+      icon: <img src={menuIcon10} className="w-8 h-8" alt="Prevention" />,
       color: "bg-teal-50 hover:bg-teal-100",
       link: "/prevention",
     },
     {
       label: "Live Dashboard",
-      icon: <img src={menuIcon8} className="w-8 h-8" alt="livedashboard" />,
+      icon: <img src={menuIcon11} className="w-8 h-8" alt="livedashboard" />,
       color: "bg-teal-50 hover:bg-teal-100",
       link: "/livedashboard",
     },
     {
       label: "Fleet Service",
-      icon: <img src={menuIcon8} className="w-8 h-8" alt="fleet-service" />,
+      icon: <img src={menuIcon12} className="w-8 h-8" alt="fleet-service" />,
       color: "bg-teal-50 hover:bg-teal-100",
       link: "/fleet-service",
     },
   ];
 
   // Get logo URL
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-  const logoUrl = groupLogo
-    ? `${apiBaseUrl}${groupLogo}`.replace(/\/+$/, "") // Remove trailing slash
-    : logo;
+  // const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  // const logoUrl = groupLogo
+  //   ? `${apiBaseUrl}${groupLogo}`.replace(/\/+$/, "") // Remove trailing slash
+  //   : logo;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -182,30 +192,30 @@ const StartingPage = () => {
                     transition={{ duration: 0.2 }}
                     className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200"
                   >
-                    <Link
-                      to="/profile"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    <button
+                      onClick={showComingSoonToast}
+                      className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
                     >
                       <User size={16} className="mr-2" />
                       Profile
-                    </Link>
-                    <Link
-                      to="/help"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    </button>
+                    <button
+                      onClick={showComingSoonToast}
+                      className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
                     >
                       <HelpCircle size={16} className="mr-2" />
                       Help
-                    </Link>
-                    <Link
-                      to="/contact"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    </button>
+                    <button
+                      onClick={showComingSoonToast}
+                      className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
                     >
                       <Phone size={16} className="mr-2" />
                       Contact
-                    </Link>
+                    </button>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                      className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 cursor-pointer"
                     >
                       <LogOut size={16} className="mr-2" />
                       Logout
@@ -253,7 +263,7 @@ const StartingPage = () => {
             </select>
           </div>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 max-w-7xl mx-auto">
-            {options.map((item, index) => (
+            {options.filter(item => item.label !== "Default").map((item, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 20 }}

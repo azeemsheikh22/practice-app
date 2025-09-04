@@ -111,6 +111,7 @@ const replaySlice = createSlice({
     // Category state
     categories: null,
     showCategories: null,
+    getReplayCount: 0,
     filters: {
       displayMode: "line", // 'line' | 'marker' | 'all'
       stopDuration: "all",
@@ -137,6 +138,9 @@ const replaySlice = createSlice({
     },
     setShowShapes: (state, action) => {
       state.showShapes = action.payload;
+    },
+    incrementGetReplayCount: (state) => {
+      state.getReplayCount += 1;
     },
     setShowGeofences: (state, action) => {
       // Directly set showGeofences to the provided array
@@ -178,8 +182,8 @@ const replaySlice = createSlice({
       .addCase(fetchReplayTrips.fulfilled, (state, action) => {
         state.tripsLoading = false;
         // Filter out trips with zero distance
-        const filteredTrips = Array.isArray(action.payload) 
-          ? action.payload.filter(trip => {
+        const filteredTrips = Array.isArray(action.payload)
+          ? action.payload.filter((trip) => {
               const distance = Number(trip.Distance);
               return distance > 0; // Only keep trips with distance greater than 0
             })
@@ -200,31 +204,33 @@ const replaySlice = createSlice({
       .addCase(fetchReplayGeofenceForUser.fulfilled, (state, action) => {
         state.geofencesLoading = false;
         const filtered = Array.isArray(action.payload)
-          ? action.payload.filter(g => g.chkShowOnMap === 'true')
+          ? action.payload.filter((g) => g.chkShowOnMap === "true")
           : [];
         state.geofences = filtered;
         // Sirf tab set karo jab showGeofences empty hai
         if (!state.showGeofences || state.showGeofences.length === 0) {
           state.showGeofences = filtered;
         }
-        
+
         // Extract unique categories from geofences
         const uniqueCategories = Array.from(
-          new Set(filtered.map(g => g.CategoryId))
-        ).map(catId => {
-          const geofence = filtered.find(g => g.CategoryId === catId);
-          return {
-            id: catId,
-            Categoryname: geofence?.Categoryname || 'Uncategorized'
-          };
-        }).filter(cat => cat.id); // Remove empty category IDs
-        
+          new Set(filtered.map((g) => g.CategoryId))
+        )
+          .map((catId) => {
+            const geofence = filtered.find((g) => g.CategoryId === catId);
+            return {
+              id: catId,
+              Categoryname: geofence?.Categoryname || "Uncategorized",
+            };
+          })
+          .filter((cat) => cat.id); // Remove empty category IDs
+
         state.categories = uniqueCategories;
         // Initialize showCategories if empty
         if (!state.showCategories || state.showCategories.length === 0) {
           state.showCategories = uniqueCategories;
         }
-        
+
         state.geofencesError = null;
       })
       .addCase(fetchReplayGeofenceForUser.rejected, (state, action) => {
@@ -235,8 +241,17 @@ const replaySlice = createSlice({
   },
 });
 
-export const { setFilters, setCurrentReplayIndex, setReplayPaused, setShowShapes, setShowGeofences, setShowCategories, setShowGeofenceOnMap, setSelectedTrip } =
-  replaySlice.actions;
+export const {
+  setFilters,
+  setCurrentReplayIndex,
+  setReplayPaused,
+  setShowShapes,
+  setShowGeofences,
+  setShowCategories,
+  setShowGeofenceOnMap,
+  setSelectedTrip,
+  incrementGetReplayCount,
+} = replaySlice.actions;
 export const selectShowShapes = (state) => state.replay.showShapes;
 export default replaySlice.reducer;
 export const selectReplayData = (state) => state.replay.replayData;
@@ -244,6 +259,7 @@ export const selectReplayLoading = (state) => state.replay.loading;
 export const selectReplayError = (state) => state.replay.error;
 export const selectReplayFilters = (state) => state.replay.filters;
 export const selectReplayPaused = (state) => state.replay.isReplayPaused;
+export const selectGetReplayCount = (state) => state.replay.getReplayCount;
 export const selectCurrentReplayIndex = (state) =>
   state.replay.currentReplayIndex;
 // Trips selectors
@@ -251,5 +267,3 @@ export const selectReplayTrips = (state) => state.replay.replayTrips;
 export const selectReplayTripsLoading = (state) => state.replay.tripsLoading;
 export const selectSelectedTrip = (state) => state.replay.selectedTrip;
 export const selectReplayTripsError = (state) => state.replay.tripsError;
-
-const userid = localStorage.getItem("clientId");

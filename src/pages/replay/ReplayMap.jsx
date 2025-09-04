@@ -16,6 +16,7 @@ import {
   selectCurrentReplayIndex,
   selectReplayTrips,
   selectSelectedTrip,
+  selectGetReplayCount,
 } from "../../features/replaySlice";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -118,8 +119,10 @@ const ReplayMap = forwardRef(
     );
     const showTripMarkers = filters.showTripMarkers || false;
     const selectedTrip = useSelector(selectSelectedTrip);
+    const getReplayCount = useSelector(selectGetReplayCount);
 
-  
+
+    // console.log(getReplayCount)
 
     // Invalidate map size when sidebar expands/collapses
     useEffect(() => {
@@ -236,7 +239,7 @@ const ReplayMap = forwardRef(
     useEffect(() => {
       // Clear existing trip markers first
       clearTripMarkers();
-      
+
       if (tripsData && tripsData.length > 0) {
         if (showTripMarkers) {
           // Show all trips when checkbox is enabled
@@ -263,7 +266,7 @@ const ReplayMap = forwardRef(
       if (!mapInstanceRef.current) return;
       const map = mapInstanceRef.current;
       const disableAutoZoom = () => setAutoZoomEnabled(false);
-      
+
       // Add zoom event listener to redraw trip markers with proper sizing
       const handleZoomEnd = () => {
         if (showTripMarkers && tripsData && tripsData.length > 0) {
@@ -272,18 +275,17 @@ const ReplayMap = forwardRef(
           }, 150);
         }
       };
-      
+
       map.on("zoomstart", disableAutoZoom);
       map.on("dragstart", disableAutoZoom);
       map.on("zoomend", handleZoomEnd);
-      
+
       return () => {
         map.off("zoomstart", disableAutoZoom);
         map.off("dragstart", disableAutoZoom);
         map.off("zoomend", handleZoomEnd);
       };
     }, [showTripMarkers, tripsData]);
-    
 
     // Handle map type change
     const handleMapTypeChange = (type) => {
@@ -427,12 +429,17 @@ const ReplayMap = forwardRef(
             allMarkers.push(marker);
           }
         });
-        
+
         // Combine both arrays for _vehicleMarkers
-        mapInstanceRef.current._vehicleMarkers = [...statusMarkers, ...allMarkers];
-        
+        mapInstanceRef.current._vehicleMarkers = [
+          ...statusMarkers,
+          ...allMarkers,
+        ];
+
         if (!isPlaying) {
-          statusMarkers.forEach((marker) => marker.addTo(mapInstanceRef.current));
+          statusMarkers.forEach((marker) =>
+            marker.addTo(mapInstanceRef.current)
+          );
           allMarkers.forEach((marker) => marker.addTo(mapInstanceRef.current));
         }
 
@@ -486,13 +493,13 @@ const ReplayMap = forwardRef(
             icon: startIcon,
             zIndexOffset: 10000,
           }).addTo(mapInstanceRef.current);
-          
+
           L.marker(coordinates[coordinates.length - 1], {
             icon: endIcon,
             zIndexOffset: 10000,
           }).addTo(mapInstanceRef.current);
         }
-        
+
         return; // Marker mode complete
       }
 
@@ -773,40 +780,53 @@ const ReplayMap = forwardRef(
         // Fallback: Check if layer has options and className for polylines
         else if (layer.options && layer.options.className) {
           const className = layer.options.className;
-          if (className.includes("trip-start-marker") || 
-              className.includes("trip-end-marker") || 
-              className.includes("trip-polyline")) {
+          if (
+            className.includes("trip-start-marker") ||
+            className.includes("trip-end-marker") ||
+            className.includes("trip-polyline")
+          ) {
             layersToRemove.push(layer);
           }
         }
         // Fallback: Check for divIcon markers by _icon html class
         else if (layer._icon && layer._icon.classList) {
-          if (layer._icon.classList.contains("trip-start-marker") ||
-              layer._icon.classList.contains("trip-end-marker")) {
+          if (
+            layer._icon.classList.contains("trip-start-marker") ||
+            layer._icon.classList.contains("trip-end-marker")
+          ) {
             layersToRemove.push(layer);
           }
         }
       });
 
       // Remove all identified layers
-      layersToRemove.forEach(layer => {
+      layersToRemove.forEach((layer) => {
         try {
           mapInstanceRef.current.removeLayer(layer);
         } catch (error) {
-          console.warn('Error removing layer:', error);
+          console.warn("Error removing layer:", error);
         }
       });
-      
-      console.log(`Cleared ${layersToRemove.length} trip-related layers`);
     };
 
     // Draw only selected trip (when trip checkbox is disabled but trip is selected)
     const drawSingleTrip = (selectedTripIndex) => {
-      if (!replayData || !tripsData || selectedTripIndex >= tripsData.length) return;
+      if (!replayData || !tripsData || selectedTripIndex >= tripsData.length)
+        return;
 
       const tripColors = [
-        "#E74C3C", "#3498DB", "#2ECC71", "#F39C12", "#9B59B6", "#1ABC9C",
-        "#E67E22", "#34495E", "#FF6B9D", "#4ECDC4", "#45B7D1", "#96CEB4",
+        "#E74C3C",
+        "#3498DB",
+        "#2ECC71",
+        "#F39C12",
+        "#9B59B6",
+        "#1ABC9C",
+        "#E67E22",
+        "#34495E",
+        "#FF6B9D",
+        "#4ECDC4",
+        "#45B7D1",
+        "#96CEB4",
       ];
 
       const trip = tripsData[selectedTripIndex];
@@ -839,7 +859,13 @@ const ReplayMap = forwardRef(
       });
 
       if (tripGPSPoints.length > 0) {
-        drawTripOnMap(tripGPSPoints, tripColor, selectedTripIndex, usedPositions, true); // Always highlighted for single trip
+        drawTripOnMap(
+          tripGPSPoints,
+          tripColor,
+          selectedTripIndex,
+          usedPositions,
+          true
+        ); // Always highlighted for single trip
       }
     };
 
@@ -882,7 +908,6 @@ const ReplayMap = forwardRef(
         // Check if trip has meaningful distance first
         const tripDistance = trip.Distance || trip.distance || 0;
         if (tripDistance === 0) {
-         
           return;
         }
 
@@ -914,7 +939,13 @@ const ReplayMap = forwardRef(
 
         if (tripGPSPoints.length > 0) {
           const isSelected = selectedTrip && selectedTrip.index === index;
-          drawTripOnMap(tripGPSPoints, tripColor, index, usedPositions, isSelected);
+          drawTripOnMap(
+            tripGPSPoints,
+            tripColor,
+            index,
+            usedPositions,
+            isSelected
+          );
         }
       });
     };
@@ -984,13 +1015,18 @@ const ReplayMap = forwardRef(
           const tripColor = tripColors[index % tripColors.length];
           drawTripOnMap(tripPoints, tripColor, index, usedPositions);
         } else {
-    
         }
       });
     };
 
     // Draw individual trip on map
-    const drawTripOnMap = (tripGPSPoints, tripColor, index, usedPositions, isSelected = false) => {
+    const drawTripOnMap = (
+      tripGPSPoints,
+      tripColor,
+      index,
+      usedPositions,
+      isSelected = false
+    ) => {
       if (!tripGPSPoints || tripGPSPoints.length === 0) return;
 
       // Calculate trip distance first to filter out 0 distance trips
@@ -1008,23 +1044,24 @@ const ReplayMap = forwardRef(
 
       // Don't show trips with 0 or very minimal distance (less than 0.01 km = 10 meters)
       if (tripDistance < 0.01) {
-
         return;
       }
 
       // Get current zoom level for responsive marker sizing
-      const currentZoom = mapInstanceRef.current ? mapInstanceRef.current.getZoom() : 12;
-      
+      const currentZoom = mapInstanceRef.current
+        ? mapInstanceRef.current.getZoom()
+        : 12;
+
       // Calculate marker sizes based on zoom level with better visibility
       const baseSize = Math.max(24, Math.min(40, currentZoom * 2.5)); // Smaller max size: 24px to 40px
       const badgeSize = Math.max(14, Math.min(20, currentZoom * 1.4)); // Smaller badge: 14px to 20px
       const fontSize = Math.max(11, Math.min(16, currentZoom * 1.0)); // Smaller font: 11px to 16px
       const badgeFontSize = Math.max(8, Math.min(12, currentZoom * 0.7)); // Smaller badge font: 8px to 12px
-      
+
       // Enhanced z-index for better layering - higher values for better visibility
-      const baseZIndex = 8000 + (index * 100); // Each trip gets higher z-index
+      const baseZIndex = 8000 + index * 100; // Each trip gets higher z-index
       const markerZIndex = currentZoom < 12 ? baseZIndex + 2000 : baseZIndex; // Even higher when zoomed out
-      
+
       // Selected trip gets extra highlighting
       const selectedBonus = isSelected ? 5000 : 0;
       const finalZIndex = markerZIndex + selectedBonus;
@@ -1039,37 +1076,39 @@ const ReplayMap = forwardRef(
 
       // Function to check if position is too close to existing markers
       const getAvailablePosition = (originalLat, originalLng, type) => {
-        const currentZoom = mapInstanceRef.current ? mapInstanceRef.current.getZoom() : 12;
+        const currentZoom = mapInstanceRef.current
+          ? mapInstanceRef.current.getZoom()
+          : 12;
         const minDistance = currentZoom > 12 ? 0.0002 : 0.0008; // Smaller offset when zoomed in
-        
+
         let testLat = originalLat;
         let testLng = originalLng;
         let attempt = 0;
         const maxAttempts = 8;
-        
+
         while (attempt < maxAttempts) {
           // Check if current position conflicts with existing markers
-          const hasConflict = usedPositions.some(pos => {
+          const hasConflict = usedPositions.some((pos) => {
             const distance = Math.sqrt(
               Math.pow(testLat - pos.lat, 2) + Math.pow(testLng - pos.lng, 2)
             );
             return distance < minDistance;
           });
-          
+
           if (!hasConflict) {
             // Position is available, record it and return
             usedPositions.push({ lat: testLat, lng: testLng, type, index });
             return [testLat, testLng];
           }
-          
+
           // Try different positions in a circular pattern
-          const angle = (attempt * 45) * (Math.PI / 180); // 45 degree increments
+          const angle = attempt * 45 * (Math.PI / 180); // 45 degree increments
           const offsetDistance = minDistance * (1 + attempt * 0.5);
           testLat = originalLat + Math.cos(angle) * offsetDistance;
           testLng = originalLng + Math.sin(angle) * offsetDistance;
           attempt++;
         }
-        
+
         // If no position found, use original with small random offset
         const randomOffset = minDistance * (0.5 + Math.random() * 0.5);
         const randomAngle = Math.random() * 2 * Math.PI;
@@ -1080,8 +1119,16 @@ const ReplayMap = forwardRef(
       };
 
       // Get non-overlapping positions for start and end markers
-      const startOffset = getAvailablePosition(startPoint.latitude, startPoint.longitude, 'start');
-      const endOffset = getAvailablePosition(endPoint.latitude, endPoint.longitude, 'end');
+      const startOffset = getAvailablePosition(
+        startPoint.latitude,
+        startPoint.longitude,
+        "start"
+      );
+      const endOffset = getAvailablePosition(
+        endPoint.latitude,
+        endPoint.longitude,
+        "end"
+      );
 
       const startMarker = L.divIcon({
         html: `<div style="
@@ -1094,11 +1141,15 @@ const ReplayMap = forwardRef(
           justify-content: center;
           position: relative;
           cursor: pointer;
-          ${isSelected ? 'box-shadow: 0 0 15px rgba(37, 104, 159, 0.8); border: 3px solid #25689f;' : ''}
+          ${
+            isSelected
+              ? "box-shadow: 0 0 15px rgba(37, 104, 159, 0.8); border: 3px solid #25689f;"
+              : ""
+          }
         ">
           <span style="color: white; font-size: ${fontSize}px; font-weight: bold;">${
-            index + 1
-          }</span>
+          index + 1
+        }</span>
           <div style="
             position: absolute; 
             top: -${Math.round(badgeSize * 0.3)}px; 
@@ -1110,7 +1161,7 @@ const ReplayMap = forwardRef(
             display: flex; 
             align-items: center; 
             justify-content: center;
-            ${isSelected ? 'box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);' : ''}
+            ${isSelected ? "box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);" : ""}
           ">
             <span style="color: white; font-size: ${badgeFontSize}px; font-weight: bold;">S</span>
           </div>
@@ -1125,12 +1176,12 @@ const ReplayMap = forwardRef(
         className: "trip-start-marker",
         zIndexOffset: finalZIndex, // Enhanced z-index for better visibility
       });
-      
+
       // Add custom properties for identification
       startMarkerInstance._isTripMarker = true;
       startMarkerInstance._tripIndex = index;
-      startMarkerInstance._markerType = 'start';
-      
+      startMarkerInstance._markerType = "start";
+
       startMarkerInstance.addTo(mapInstanceRef.current).bindPopup(`
           <div style="min-width: 200px;">
             <h3 style="margin: 0 0 8px 0; color: ${tripColor}; font-size: 14px;">
@@ -1160,11 +1211,15 @@ const ReplayMap = forwardRef(
           justify-content: center;
           position: relative;
           cursor: pointer;
-          ${isSelected ? 'box-shadow: 0 0 15px rgba(37, 104, 159, 0.8); border: 3px solid #25689f;' : ''}
+          ${
+            isSelected
+              ? "box-shadow: 0 0 15px rgba(37, 104, 159, 0.8); border: 3px solid #25689f;"
+              : ""
+          }
         ">
           <span style="color: white; font-size: ${fontSize}px; font-weight: bold;">${
-            index + 1
-          }</span>
+          index + 1
+        }</span>
           <div style="
             position: absolute; 
             top: -${Math.round(badgeSize * 0.3)}px; 
@@ -1176,7 +1231,7 @@ const ReplayMap = forwardRef(
             display: flex; 
             align-items: center; 
             justify-content: center;
-            ${isSelected ? 'box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);' : ''}
+            ${isSelected ? "box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);" : ""}
           ">
             <span style="color: white; font-size: ${badgeFontSize}px; font-weight: bold;">E</span>
           </div>
@@ -1191,12 +1246,12 @@ const ReplayMap = forwardRef(
         className: "trip-end-marker",
         zIndexOffset: finalZIndex + 10, // Slightly higher than start marker
       });
-      
-      // Add custom properties for identification  
+
+      // Add custom properties for identification
       endMarkerInstance._isTripMarker = true;
       endMarkerInstance._tripIndex = index;
-      endMarkerInstance._markerType = 'end';
-      
+      endMarkerInstance._markerType = "end";
+
       endMarkerInstance.addTo(mapInstanceRef.current).bindPopup(`
           <div style="min-width: 200px;">
             <h3 style="margin: 0 0 8px 0; color: ${tripColor}; font-size: 14px;">
@@ -1244,14 +1299,18 @@ const ReplayMap = forwardRef(
         color: tripColor,
         weight: isSelected ? 8 : 6, // Thicker line when selected
         opacity: isSelected ? 1 : 0.9, // More opaque when selected
-        className: `trip-polyline ${isSelected ? 'selected-trip' : ''}`,
-        dashArray: isSelected ? "none" : (index % 2 === 0 ? "15, 10" : "10, 5, 5, 5"), // Solid line when selected
+        className: `trip-polyline ${isSelected ? "selected-trip" : ""}`,
+        dashArray: isSelected
+          ? "none"
+          : index % 2 === 0
+          ? "15, 10"
+          : "10, 5, 5, 5", // Solid line when selected
       });
-      
+
       // Add custom property for identification
       tripPolyline._isTripPolyline = true;
       tripPolyline._tripIndex = index;
-      
+
       tripPolyline.addTo(mapInstanceRef.current).bindPopup(`
           <div style="min-width: 220px;">
             <h3 style="margin: 0 0 8px 0; color: ${tripColor}; font-size: 16px;">
@@ -1298,7 +1357,6 @@ const ReplayMap = forwardRef(
         let nextIdx = Math.ceil(floatIdx);
         if (idx < 0) idx = 0;
         if (nextIdx >= replayData.length) nextIdx = replayData.length - 1;
-        dispatch(setCurrentReplayIndex(idx));
         const p1 = replayData[idx];
         const p2 = replayData[nextIdx];
         let lat = p1.latitude;
