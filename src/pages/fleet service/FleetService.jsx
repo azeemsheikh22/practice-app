@@ -2,6 +2,7 @@ import {useState } from "react";
 import Navbar from "../../components/navber/Navbar";
 import { motion } from "framer-motion";
 import { LayoutDashboard, FileText, Shield, Car, History } from "lucide-react";
+import Reminders from "./pages/Reminders";
 
 export default function FleetService() {
   const [activeTab, setActiveTab] = useState("reminders");
@@ -37,11 +38,7 @@ export default function FleetService() {
   const renderTabContent = () => {
     switch (activeTab) {
       case "reminders":
-        return (
-          <div>
-            <h1>Service Reminders Content</h1>
-          </div>
-        );
+        return <Reminders />;
       case "history":
         return (
           <div>

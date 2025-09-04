@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import {useMemo } from "react";
 import { motion } from "framer-motion";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -9,10 +9,7 @@ import {
   FileText,
   Users,
   Car,
-  Layers,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import logo3 from "../../assets/LogoColor.png";
 
@@ -24,9 +21,6 @@ const ReportResults = ({
   isLoading,
   onBack,
 }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const recordsPerPage = 100; 
-
   const processReportData = () => {
     if (!reportData || !reportData.data) {
       return { headers: [], rows: [], summary: null };
@@ -36,9 +30,13 @@ const ReportResults = ({
 
     // Extract headers from the first detail item's reportData with dynamic widths
     const headers = [];
+    const excludedColumns = ['Fuel %', 'Fuel', 'FixedHeader', 'Play', 'CarID'];
     if (detail && detail.length > 0 && detail[0].reportData) {
       detail[0].reportData.forEach((item) => {
-        if (item.col && item.col.trim() !== "" && item.col !== " ") {
+        if (item.col && 
+            item.col.trim() !== "" && 
+            item.col !== " " && 
+            !excludedColumns.includes(item.col)) {
           headers.push({
             key: item.col,
             label: item.col,
@@ -87,19 +85,11 @@ const ReportResults = ({
   // Get processed data with memoization
   const { headers, rows, summary } = useMemo(() => processReportData(), [reportData]);
 
-  // Pagination calculations
-  const totalPages = Math.ceil(rows.length / recordsPerPage);
-  const startIndex = (currentPage - 1) * recordsPerPage;
-  const endIndex = startIndex + recordsPerPage;
-  const paginatedRows = rows.slice(startIndex, endIndex);
-
-  // Pagination handlers
-  const goToPage = (page) => {
-    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
-  };
-
   // Only show data if we have real API data
   const hasRealData = reportData && reportData.data && rows.length > 0;
+
+
+  console.log(reportData?.data)
 
   // Download CSV function
   const downloadCSV = () => {
@@ -158,195 +148,144 @@ const ReportResults = ({
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    // Add Telogix logo and header
-    const addHeader = () => {
-      // Add logo if possible - convert image to base64
+    // Header drawing function (called on each page)
+    const drawHeader = (docInstance) => {
+      // Logo/text header
       try {
-        const img = new Image();
-        img.src = logo3;
-        
-        // For now, use text-based header with professional styling
-        doc.setFontSize(20);
-        doc.setTextColor(37, 104, 159); // Telogix blue color #25689f
-        doc.setFont("helvetica", "bold");
-        doc.text("TELOGIX", 20, 20);
-        
-        // Add tagline
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.setFont("helvetica", "normal");
-        doc.text("GPS Tracking Solutions", 20, 27);
-      } catch (error) {
-        console.log("Logo loading error:", error);
-        // Fallback text header
-        doc.setFontSize(18);
-        doc.setTextColor(37, 104, 159);
-        doc.setFont("helvetica", "bold");
-        doc.text("TELOGIX REPORT", 20, 20);
+        docInstance.setFontSize(18);
+        docInstance.setTextColor(37, 104, 159);
+        docInstance.setFont('helvetica', 'bold');
+        docInstance.text('TELOGIX', 20, 18);
+
+        docInstance.setFontSize(9);
+        docInstance.setTextColor(100, 100, 100);
+        docInstance.setFont('helvetica', 'normal');
+        docInstance.text('GPS Tracking Solutions', 20, 24);
+      } catch (e) {
+        // ignore
       }
-      
-      // Report title
-      doc.setFontSize(16);
-      doc.setTextColor(51, 51, 51);
-      doc.setFont("helvetica", "bold");
-      doc.text(reportName, pageWidth - 20, 20, { align: 'right' });
-      
-      // Report details
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.setFont("helvetica", "normal");
-      doc.text(`Category: ${reportCategory}`, pageWidth - 20, 27, { align: 'right' });
-      doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 20, 33, { align: 'right' });
-      doc.text(`Total Records: ${rows.length}`, pageWidth - 20, 39, { align: 'right' });
-      
-      // Add professional line separator
-      doc.setDrawColor(37, 104, 159);
-      doc.setLineWidth(0.5);
-      doc.line(20, 45, pageWidth - 20, 45);
-      
-      // Add lighter line below
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.2);
-      doc.line(20, 47, pageWidth - 20, 47);
+
+      // Right side details
+      docInstance.setFontSize(11);
+      docInstance.setTextColor(51, 51, 51);
+      docInstance.setFont('helvetica', 'bold');
+      docInstance.text(reportName, pageWidth - 20, 18, { align: 'right' });
+
+      docInstance.setFontSize(8);
+      docInstance.setTextColor(100, 100, 100);
+      docInstance.setFont('helvetica', 'normal');
+      docInstance.text(`Category: ${reportCategory}`, pageWidth - 20, 24, { align: 'right' });
+      docInstance.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 20, 30, { align: 'right' });
+      docInstance.text(`Total Records: ${rows.length}`, pageWidth - 20, 36, { align: 'right' });
+
+      // Separator line
+      docInstance.setDrawColor(37, 104, 159);
+      docInstance.setLineWidth(0.5);
+      docInstance.line(20, 40, pageWidth - 20, 40);
     };
 
-    // Footer function
-    const addFooter = (pageNumber, totalPages) => {
-      const footerY = pageHeight - 15;
-      
-      // Add footer line
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.2);
-      doc.line(20, footerY - 5, pageWidth - 20, footerY - 5);
-      
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.setFont("helvetica", "normal");
-      
-      // Left footer - company info
-      doc.text("© Telogix GPS Tracking System", 20, footerY);
-      
-      // Center footer - page info
-      doc.text(`Page ${pageNumber} of ${totalPages}`, pageWidth / 2, footerY, { align: 'center' });
-      
-      // Right footer - generation time
-      doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth - 20, footerY, { align: 'right' });
+    // Footer drawing function (called on each page)
+    const drawFooter = (docInstance, pageNumber, pageCount) => {
+      const footerY = pageHeight - 12;
+      docInstance.setDrawColor(220, 220, 220);
+      docInstance.setLineWidth(0.2);
+      docInstance.line(20, footerY - 6, pageWidth - 20, footerY - 6);
+
+      docInstance.setFontSize(8);
+      docInstance.setTextColor(100, 100, 100);
+      docInstance.setFont('helvetica', 'normal');
+      docInstance.text('© Telogix GPS Tracking System', 20, footerY);
+      docInstance.text(`Page ${pageNumber} of ${pageCount}`, pageWidth / 2, footerY, { align: 'center' });
+      docInstance.text(new Date().toLocaleDateString(), pageWidth - 20, footerY, { align: 'right' });
     };
 
-    // Prepare table data with better formatting
+    // Prepare table data
     const tableHeaders = headers.map(h => h.label);
     const tableData = rows.map(row => 
       headers.map(h => {
         let value = row[h.key] || "-";
-        // Clean up HTML and format data
-        if (typeof value === "string") {
-          value = value.replace(/<[^>]*>/g, ''); // Remove HTML tags
-          value = value.replace(/&nbsp;/g, ' '); // Replace HTML spaces
-          
-          // Format specific data types
-          if (h.key === "Distance" && value !== "-") {
+        if (typeof value === 'string') {
+          value = value.replace(/<[^>]*>/g, '');
+          value = value.replace(/&nbsp;/g, ' ');
+
+          if (h.key === 'Distance' && value !== '-') {
             value = value + (value.includes('km') ? '' : ' km');
-          } else if (h.key === "Max Speed" && value !== "-" && !value.includes('km/h')) {
-            value = value + (value === "0" || value === "-" ? '' : ' km/h');
+          } else if (h.key === 'Max Speed' && value !== '-' && !value.includes('km/h')) {
+            value = value + (value === '0' || value === '-' ? '' : ' km/h');
           }
-          
-          // Limit length for PDF table
-          if (value.length > 35) {
-            value = value.substring(0, 32) + "...";
-          }
+
+          if (value.length > 80) value = value.substring(0, 77) + '...';
         }
         return String(value);
       })
     );
 
-    // Calculate rows per page based on content
-    const rowsPerPage = 18;
-    const totalPages = Math.ceil(rows.length / rowsPerPage);
-    
-    // Generate pages
-    for (let page = 1; page <= totalPages; page++) {
-      if (page > 1) doc.addPage('l', 'a4'); // Landscape orientation
-      
-      addHeader();
-      
-      const startRow = (page - 1) * rowsPerPage;
-      const endRow = Math.min(startRow + rowsPerPage, rows.length);
-      const pageData = tableData.slice(startRow, endRow);
-      
-      // Add summary section on first page
-      if (page === 1 && summary && Object.keys(summary).length > 0) {
-        doc.setFontSize(12);
-        doc.setTextColor(37, 104, 159);
-        doc.setFont("helvetica", "bold");
-        doc.text("Report Summary", 20, 55);
-        
-        let summaryY = 62;
-        Object.entries(summary).forEach(([key, value], index) => {
-          if (index < 4) { // Show max 4 summary items
-            doc.setFontSize(9);
-            doc.setTextColor(80, 80, 80);
-            doc.setFont("helvetica", "normal");
-            doc.text(`${key}: ${value || 'N/A'}`, 20 + (index * 70), summaryY);
-          }
-        });
-        
-        // Adjust table start position
-        var tableStartY = 75;
-      } else {
-        var tableStartY = 55;
-      }
-      
-      // Add data table
-      autoTable(doc, {
-        head: [tableHeaders],
-        body: pageData,
-        startY: tableStartY,
-        margin: { left: 20, right: 20, bottom: 25 },
-        styles: {
-          fontSize: 7,
-          cellPadding: 2,
-          overflow: 'linebreak',
-          halign: 'left',
-          lineColor: [220, 220, 220],
-          lineWidth: 0.1
-        },
-        headStyles: {
-          fillColor: [37, 104, 159], // Telogix blue
-          textColor: [255, 255, 255],
-          fontSize: 8,
-          fontStyle: 'bold',
-          halign: 'center'
-        },
-        alternateRowStyles: {
-          fillColor: [248, 249, 250]
-        },
-        columnStyles: {
-          0: { cellWidth: 30, halign: 'left' },   // Car
-          1: { cellWidth: 25, halign: 'left' },   // Driver
-          2: { cellWidth: 20, halign: 'center' }, // Distance
-          3: { cellWidth: 20, halign: 'center' }, // Speed
-          // Auto-width for remaining columns
-        },
-        didDrawCell: function(data) {
-          // Add special formatting for specific columns
-          if (data.section === 'body') {
-            if (data.column.index === 0) { // Car column
-              doc.setTextColor(34, 139, 34); // Green for cars
-            } else if (data.column.index === 1) { // Driver column  
-              doc.setTextColor(138, 43, 226); // Violet for drivers
-            } else if (data.column.index === 2) { // Distance column
-              doc.setTextColor(30, 144, 255); // Blue for distance
-            } else if (data.column.index === 3) { // Speed column
-              doc.setTextColor(255, 140, 0); // Orange for speed
-            }
-          }
-        }
+    // If header summary exists (reportData.data.header), render it above table on first page
+    let startY = 48; // default table start after header
+    if (summary && Object.keys(summary).length > 0) {
+      // Render a compact summary block at the top
+      doc.setFontSize(11);
+      doc.setTextColor(37, 104, 159);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Report Summary', 20, 46);
+
+      doc.setFontSize(9);
+      doc.setTextColor(80, 80, 80);
+      doc.setFont('helvetica', 'normal');
+
+      const entries = Object.entries(summary);
+      entries.forEach(([key, value], i) => {
+        const x = 20 + (i % 3) * 70;
+        const y = 52 + Math.floor(i / 3) * 10;
+        const textValue = value === '0' ? 'N/A' : value;
+        let suffix = '';
+        if (key.toLowerCase().includes('speed')) suffix = ' km/h';
+        if (key.toLowerCase().includes('km') || key.toLowerCase().includes('distance')) suffix = ' km';
+
+        doc.text(`${key}: ${textValue}${textValue !== 'N/A' ? suffix : ''}`, x, y);
       });
-      
-      addFooter(page, totalPages);
+
+      // leave space for summary
+      startY = 72;
     }
 
-    // Save the PDF with timestamp
+    // Use autoTable to render the table and let it manage pagination automatically
+    autoTable(doc, {
+      head: [tableHeaders],
+      body: tableData,
+      startY,
+      margin: { left: 20, right: 20, bottom: 30 },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+        overflow: 'linebreak',
+        halign: 'left',
+        valign: 'middle',
+        textColor: [51, 51, 51],
+        lineColor: [220, 220, 220],
+        lineWidth: 0.1,
+      },
+      headStyles: {
+        fillColor: [37, 104, 159],
+        textColor: [255, 255, 255],
+        fontSize: 9,
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      alternateRowStyles: { fillColor: [248, 249, 250] },
+      columnStyles: {
+        0: { cellWidth: 40, halign: 'left' },
+        1: { cellWidth: 40, halign: 'left' }
+      },
+      didDrawPage: function (data) {
+        // Show full header only on first page; footer on every page
+        if (data.pageNumber === 1) {
+          drawHeader(doc);
+        }
+        drawFooter(doc, data.pageNumber, data.pageCount);
+      }
+    });
+
     const timestamp = new Date().toISOString().slice(0, 16).replace(/[:.]/g, '-');
     doc.save(`${reportName}_Report_${timestamp}.pdf`);
   };
@@ -440,7 +379,7 @@ const ReportResults = ({
                   </h3>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <CheckCircle size={16} className="text-green-600" />
-                    <span>Showing {paginatedRows.length} of {rows.length} records</span>
+                    <span>Showing {rows.length} records</span>
                   </div>
                 </div>
               </div>
@@ -461,7 +400,7 @@ const ReportResults = ({
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {paginatedRows.map((row, index) => (
+                    {rows.map((row, index) => (
                       <tr
                         key={row.id}
                         className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
@@ -519,10 +458,12 @@ const ReportResults = ({
                             ) : header.key.includes("Location") ? (
                               <div className="max-w-xs">
                                 <span
-                                  className="text-gray-700 truncate block"
+                                  className="text-gray-700 block"
                                   title={row[header.key]}
                                 >
-                                  {row[header.key]}
+                                  {row[header.key].length > 30 
+                                    ? row[header.key].substring(0, 30) + "..."
+                                    : row[header.key]}
                                 </span>
                               </div>
                             ) : (
@@ -537,66 +478,6 @@ const ReportResults = ({
                   </tbody>
                 </table>
               </div>
-
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="bg-white px-6 py-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-gray-600">
-                      Page {currentPage} of {totalPages} ({rows.length} total records)
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => goToPage(currentPage - 1)}
-                        disabled={currentPage === 1}
-                        className="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        <ChevronLeft size={16} />
-                        Previous
-                      </button>
-                      
-                      {/* Page numbers */}
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          let pageNum;
-                          if (totalPages <= 5) {
-                            pageNum = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNum = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i;
-                          } else {
-                            pageNum = currentPage - 2 + i;
-                          }
-                          
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => goToPage(pageNum)}
-                              className={`px-3 py-2 text-sm rounded-lg cursor-pointer ${
-                                currentPage === pageNum
-                                  ? "bg-[#25689f] text-white"
-                                  : "bg-white border border-gray-300 hover:bg-gray-50"
-                              }`}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <button
-                        onClick={() => goToPage(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                        className="flex items-center gap-1 px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        Next
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Table Footer Summary - Fixed at Bottom */}
               {summary && Object.keys(summary).length > 0 && (
