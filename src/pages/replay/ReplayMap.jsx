@@ -372,7 +372,42 @@ const ReplayMap = forwardRef(
 
       // --- DisplayMode: marker ---
       if (displayMode === "marker") {
-        // Har data point par marker banao (moving, idle, stop sab)
+        // Pehle line mode ka sab kuch banao (polyline + start/end markers)
+        const coordinates = replayData.map((point) => [
+          point.latitude,
+          point.longitude,
+        ]);
+        const polyline = L.polyline(coordinates, {
+          color: "#25689f",
+          weight: 4,
+          opacity: 0.8,
+        }).addTo(mapInstanceRef.current);
+        setRouteLayer(polyline);
+
+        // Start/end markers bhi add karo (same as line mode)
+        const statusMarkers = [];
+        replayData.forEach((point, idx) => {
+          if (point.latitude && point.longitude) {
+            const status = point.status || point.status1 || "";
+            if (idx === 0 || idx === replayData.length - 1) {
+              const marker = L.marker([point.latitude, point.longitude], {
+                icon: getVehicleIcon(status, point.head),
+                title: point.car_name || "",
+                zIndexOffset: 1500,
+              });
+              marker.bindPopup(
+                `<div style=\"min-width:120px\"><b>${
+                  point.car_name || ""
+                }</b><br/>${point.gps_time || ""}<br/>Status: ${
+                  status || ""
+                }<br/>Speed: ${point.speed ?? "-"} km/h</div>`
+              );
+              statusMarkers.push(marker);
+            }
+          }
+        });
+
+        // Ab extra markers add karo (har point par)
         const allMarkers = [];
         replayData.forEach((point) => {
           if (point.latitude && point.longitude) {
@@ -392,12 +427,73 @@ const ReplayMap = forwardRef(
             allMarkers.push(marker);
           }
         });
-        mapInstanceRef.current._vehicleMarkers = allMarkers;
+        
+        // Combine both arrays for _vehicleMarkers
+        mapInstanceRef.current._vehicleMarkers = [...statusMarkers, ...allMarkers];
+        
         if (!isPlaying) {
+          statusMarkers.forEach((marker) => marker.addTo(mapInstanceRef.current));
           allMarkers.forEach((marker) => marker.addTo(mapInstanceRef.current));
         }
-        // Polyline, S/E marker kuch bhi na banao
-        return;
+
+        // Add start and end flag markers bhi (same as line mode)
+        if (coordinates.length > 0 && !showTripMarkers) {
+          const startIcon = L.divIcon({
+            className: "start-marker",
+            html: `<div style="
+              background: linear-gradient(135deg, #10b981, #059669); 
+              color: white; 
+              border-radius: 50%; 
+              width: 40px; 
+              height: 40px; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              font-weight: bold; 
+              font-size: 18px;
+              border: 4px solid white;
+              box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            ">
+              ⚑
+            </div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+          });
+
+          const endIcon = L.divIcon({
+            className: "end-marker",
+            html: `<div style="
+              background: linear-gradient(135deg, #ef4444, #dc2626); 
+              color: white; 
+              border-radius: 50%; 
+              width: 40px; 
+              height: 40px; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              font-weight: bold; 
+              font-size: 18px;
+              border: 4px solid white;
+              box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            ">
+              🏁
+            </div>`,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+          });
+
+          L.marker(coordinates[0], {
+            icon: startIcon,
+            zIndexOffset: 10000,
+          }).addTo(mapInstanceRef.current);
+          
+          L.marker(coordinates[coordinates.length - 1], {
+            icon: endIcon,
+            zIndexOffset: 10000,
+          }).addTo(mapInstanceRef.current);
+        }
+        
+        return; // Marker mode complete
       }
 
       // --- DisplayMode: line ---

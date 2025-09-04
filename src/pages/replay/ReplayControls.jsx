@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { setFilters, selectReplayFilters } from "../../features/replaySlice";
 import {
@@ -8,7 +8,6 @@ import {
     SkipForward,
     Square,
     RotateCcw,
-    Layers,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import ReplayProgressBar from "../../components/replay/ReplayProgressBar";

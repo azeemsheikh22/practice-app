@@ -177,7 +177,14 @@ const replaySlice = createSlice({
       })
       .addCase(fetchReplayTrips.fulfilled, (state, action) => {
         state.tripsLoading = false;
-        state.replayTrips = action.payload;
+        // Filter out trips with zero distance
+        const filteredTrips = Array.isArray(action.payload) 
+          ? action.payload.filter(trip => {
+              const distance = Number(trip.Distance);
+              return distance > 0; // Only keep trips with distance greater than 0
+            })
+          : [];
+        state.replayTrips = filteredTrips;
         state.tripsError = null;
       })
       .addCase(fetchReplayTrips.rejected, (state, action) => {

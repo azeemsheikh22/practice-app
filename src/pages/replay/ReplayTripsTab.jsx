@@ -22,6 +22,8 @@ const ReplayTripsTab = ({ selectedVehicle }) => {
   const loading = useSelector(selectReplayTripsLoading);
   const selectedTrip = useSelector(selectSelectedTrip);
 
+  console.log("Trips Data:", trips);
+
   const handleTripSelect = (trip, index) => {
     // If same trip is clicked, deselect it
     if (selectedTrip && selectedTrip.index === index) {
