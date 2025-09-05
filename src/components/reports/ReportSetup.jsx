@@ -18,6 +18,7 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
     target: "vehicle",
     vehicleSelected: false,
     selectedItems: [],
+    selectedValueIds: [], // Array of IDs for API
     timeFrame: "today",
     fromDate: new Date().toISOString().split("T")[0],
     toDate: new Date().toISOString().split("T")[0],
@@ -112,34 +113,44 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
   };
 
   // Handle saving selections from the modal
-  const handleSaveSelection = (items) => {
-    setReportConfig({
-      ...reportConfig,
-      vehicleSelected: items.length > 0,
-      selectedItems: items,
-    });
+  const handleSaveSelection = (selectedIds, items) => {
+    setReportConfig(prev => ({
+      ...prev,
+      selectedItems: items,         // Store full items with details
+      selectedValueIds: selectedIds, // Store valueIds for API
+      vehicleSelected: selectedIds.length > 0,
+      selectedText: items.map(item => item.text).join(", ") // Join names for display
+    }));
+    setIsModalOpen(false);
   };
 
-  // Function to simulate running the report
+  // Function to run the report
   const handleRunReport = () => {
-    // Extract valueIds from selected items for sending to backend
-    const selectedValueIds = reportConfig.selectedItems.map(
-      (item) => item.valueId || item.id
-    );
+    // Format dates and times
+    const fromDateTime = `${reportConfig.fromDate}T${reportConfig.fromTime}`;
+    const toDateTime = `${reportConfig.toDate}T${reportConfig.toTime}`;
 
-    // Format dates with time for API
-    const fromDateTime = `${reportConfig.fromDate} ${reportConfig.fromTime}:00`;
-    const toDateTime = `${reportConfig.toDate} ${reportConfig.toTime}:59`;
-
-    const reportData = {
-      ...reportConfig,
-      selectedValueIds, // Send valueIds instead of full objects
+    // Create config object for API
+    const config = {
+      selectedValueIds: reportConfig.selectedValueIds,
       fromDateTime,
       toDateTime,
+      target: reportConfig.target
     };
 
-    // Here you would normally validate that all required selections are made
-    onRun(reportData);
+    onRun(config);
+  };
+
+  // Function to display selected items info
+  const getSelectedItemsInfo = () => {
+    if (!reportConfig.selectedItems || reportConfig.selectedItems.length === 0) {
+      return "No items selected";
+    }
+
+    const count = reportConfig.selectedItems.length;
+    const text = reportConfig.selectedText || reportConfig.selectedItems.map(item => item.text).join(", ");
+    
+    return `${count} selected: ${text}`;
   };
 
   return (

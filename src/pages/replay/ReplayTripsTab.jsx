@@ -1,6 +1,12 @@
 import React, { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { selectReplayTrips, selectReplayTripsLoading, selectSelectedTrip, setSelectedTrip } from "../../features/replaySlice";
+import toast from 'react-hot-toast';
+import { 
+  selectReplayTrips, 
+  selectReplayTripsLoading, 
+  selectSelectedTrip,
+  setSelectedTrip,
+} from "../../features/replaySlice";
 
 
 const tripFields = [
@@ -21,16 +27,45 @@ const ReplayTripsTab = ({ selectedVehicle }) => {
   const trips = useSelector(selectReplayTrips);
   const loading = useSelector(selectReplayTripsLoading);
   const selectedTrip = useSelector(selectSelectedTrip);
+  const filters = useSelector(state => state.replay.filters || {});
+  const displayMode = filters.displayMode;
 
   console.log("Trips Data:", trips);
 
   const handleTripSelect = (trip, index) => {
+    // If marker mode is active, don't allow trip selection and show toast
+    if (displayMode === 'marker') {
+      toast.error('Trip selection not available in Marker mode. Please switch to Line mode to select trips.', {
+        duration: 3000,
+        position: 'top-center',
+        style: {
+          background: '#fee2e2',
+          border: '1px solid #fecaca',
+          color: '#991b1b',
+          fontWeight: '500',
+        },
+        icon: '⚠️'
+      });
+      return;
+    }
+
     // If same trip is clicked, deselect it
     if (selectedTrip && selectedTrip.index === index) {
       dispatch(setSelectedTrip(null));
     } else {
-      // Select the new trip with index
+      // Sirf trip select karen, checkbox ko affect na karen
       dispatch(setSelectedTrip({ ...trip, index }));
+      toast.success(`Trip ${index + 1} selected successfully!`, {
+        duration: 2000,
+        position: 'top-right',
+        style: {
+          background: '#dcfce7',
+          border: '1px solid #bbf7d0',
+          color: '#166534',
+          fontWeight: '500',
+        },
+        icon: '✅'
+      });
     }
   };
 
@@ -40,6 +75,13 @@ const ReplayTripsTab = ({ selectedVehicle }) => {
       dispatch(setSelectedTrip(null));
     }
   }, [trips, selectedTrip, dispatch]);
+
+  // Monitor display mode changes
+  useEffect(() => {
+    if (displayMode === 'marker' && selectedTrip) {
+      dispatch(setSelectedTrip(null));
+    }
+  }, [dispatch, selectedTrip, displayMode]);
 
   return (
     <div className="flex-1 p-2">
@@ -76,7 +118,11 @@ const ReplayTripsTab = ({ selectedVehicle }) => {
             <div
               key={idx}
               onClick={() => handleTripSelect(trip, idx)}
-              className={`rounded-lg shadow-sm border transition-all duration-200 overflow-hidden cursor-pointer ${
+              className={`rounded-lg shadow-sm border transition-all duration-200 overflow-hidden ${
+                displayMode === 'marker' 
+                  ? 'cursor-not-allowed opacity-70' 
+                  : 'cursor-pointer'
+              } ${
                 isSelected 
                   ? 'border-[#25689f] bg-blue-50 shadow-md ring-2 ring-[#25689f]/20' 
                   : 'border-gray-200 bg-white hover:shadow-md hover:border-gray-300'

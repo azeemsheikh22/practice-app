@@ -10,6 +10,7 @@ import {
     RotateCcw,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import toast from 'react-hot-toast';
 import ReplayProgressBar from "../../components/replay/ReplayProgressBar";
 import ReplaySpeedControl from "../../components/replay/ReplaySpeedControl";
 
@@ -162,6 +163,21 @@ const ReplayControls = ({
     };
 
     const handleFiltersChange = (newFilters) => {
+        // When switching to marker mode, automatically uncheck trips
+        if (newFilters.displayMode === 'marker' && filters.displayMode !== 'marker') {
+            newFilters = {
+                ...newFilters,
+                showTripMarkers: false
+            };
+            // Also deselect any selected trip
+            dispatch({ type: 'replay/setSelectedTrip', payload: null });
+        }
+        
+        // When unchecking trip markers, deselect any selected trip
+        if (filters.showTripMarkers && !newFilters.showTripMarkers) {
+            dispatch({ type: 'replay/setSelectedTrip', payload: null });
+        }
+        
         dispatch(setFilters(newFilters));
         if (onFiltersChange) onFiltersChange(newFilters);
     };
@@ -226,7 +242,24 @@ const ReplayControls = ({
                         type="checkbox"
                         id="show-trip-markers"
                         checked={filters.showTripMarkers || false}
-                        onChange={e => handleFiltersChange({ ...filters, showTripMarkers: e.target.checked })}
+                        onChange={e => {
+                            // If trying to check trip markers in marker mode, show warning
+                            if (e.target.checked && filters.displayMode === 'marker') {
+                                toast.error('Trip markers cannot be enabled in Marker mode. Please switch to Line mode first.', {
+                                    duration: 3000,
+                                    position: 'top-center',
+                                    style: {
+                                        background: '#fee2e2',
+                                        border: '1px solid #fecaca',
+                                        color: '#991b1b',
+                                        fontWeight: '500',
+                                    },
+                                    icon: '⚠️'
+                                });
+                                return;
+                            }
+                            handleFiltersChange({ ...filters, showTripMarkers: e.target.checked });
+                        }}
                         className="mr-1 accent-[#25689f] cursor-pointer"
                         style={{ marginTop: 1 }}
                     />

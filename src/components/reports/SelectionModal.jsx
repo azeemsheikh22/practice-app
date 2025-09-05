@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Car, Users, Layers, Plus, Minus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSelector } from 'react-redux';
+import { FixedSizeList as List } from 'react-window';
 import { selectRawVehicleList, selectLoading } from '../../features/gpsTrackingSlice';
 
 const SelectionModal = ({ 
@@ -11,9 +12,21 @@ const SelectionModal = ({
   onSave,
   type = 'vehicle'  // vehicle, driver, or group
 }) => {
-  const [selectedItem, setSelectedItem] = useState(null); // Single selection
+  const [selectedItems, setSelectedItems] = useState([]); // Multi selection
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [expandedGroups, setExpandedGroups] = useState({}); // For expandable groups
+  
+  // Debounced search query update
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
   
   // Get real data and loading state from Redux
   const rawVehicles = useSelector(selectRawVehicleList);
@@ -21,7 +34,7 @@ const SelectionModal = ({
   
   // Reset selection when modal type changes
   useEffect(() => {
-    setSelectedItem(null);
+    setSelectedItems([]);
     setSearchQuery('');
     setExpandedGroups({});
   }, [type, isOpen]);
@@ -79,30 +92,41 @@ const SelectionModal = ({
 
   // Search functionality for tree (from DashboardHeader)
   const filteredTree = useMemo(() => {
-    if (!searchQuery.trim()) return treeStructure;
+    if (!debouncedSearchQuery.trim()) return treeStructure;
 
+    const searchCache = new Map();
+    
     const searchInTree = (items) => {
       return items.reduce((acc, item) => {
+        // Check cache first
+        const cacheKey = `${item.id}-${debouncedSearchQuery}`;
+        if (searchCache.has(cacheKey)) {
+          return searchCache.get(cacheKey);
+        }
+
         const matchesSearch = item.text
           .toLowerCase()
-          .includes(searchQuery.toLowerCase());
+          .includes(debouncedSearchQuery.toLowerCase());
         const filteredChildren = item.children
           ? searchInTree(item.children)
           : [];
 
+        const result = [];
         if (matchesSearch || filteredChildren.length > 0) {
-          acc.push({
+          result.push({
             ...item,
             children: filteredChildren,
           });
         }
 
-        return acc;
+        // Cache the result
+        searchCache.set(cacheKey, result);
+        return [...acc, ...result];
       }, []);
     };
 
     return searchInTree(treeStructure);
-  }, [treeStructure, searchQuery]);
+  }, [treeStructure, debouncedSearchQuery]);
 
   // Auto-expand root nodes by default
   useEffect(() => {
@@ -140,7 +164,7 @@ const SelectionModal = ({
   }, [searchQuery, groupsOnly]);
 
   // Filter data by type
-  const getFilteredItems = () => {
+  const getFilteredItems = useMemo(() => {
     if (!rawVehicles || rawVehicles.length === 0) return [];
     
     // Filter by type first
@@ -159,17 +183,18 @@ const SelectionModal = ({
         filteredByType = [];
     }
     
-    // Filter by search query (for non-group types)
-    if (searchQuery.trim()) {
+    // Filter by search query (non-group types)
+    if (debouncedSearchQuery.trim()) {
+      const searchLower = debouncedSearchQuery.toLowerCase();
       return filteredByType.filter(item => 
-        item.text.toLowerCase().includes(searchQuery.toLowerCase())
+        item.text.toLowerCase().includes(searchLower)
       );
     }
     
     return filteredByType;
-  };
+  }, [rawVehicles, type, filteredTree, debouncedSearchQuery]);
   
-  const filteredItems = getFilteredItems();
+  const filteredItems = getFilteredItems;
   
   // Toggle group expansion (from DashboardHeader)
   const handleToggleExpand = useCallback((groupId) => {
@@ -179,15 +204,22 @@ const SelectionModal = ({
     }));
   }, []);
 
-  // Single item selection - MOVED BEFORE TreeSelectItem
+  // Multi item selection
   const handleItemSelect = useCallback((item) => {
-    setSelectedItem(item);
+    setSelectedItems(prev => {
+      const isSelected = prev.some(i => i.id === item.id);
+      if (isSelected) {
+        return prev.filter(i => i.id !== item.id);
+      } else {
+        return [...prev, item];
+      }
+    });
   }, []);
 
   // Tree Item Component (matching DashboardHeader TreeSelectItem)
   const TreeSelectItem = useCallback(({ item, level = 0 }) => {
     const isExpanded = expandedGroups[item.id];
-    const isSelected = selectedItem?.id === item.id;
+    const isSelected = selectedItems.some(selected => selected.id === item.id);
     const hasChildren = item.children && item.children.length > 0;
     // const isEntireFleet = item.text === "Entire Fleet" || item.text.toLowerCase().includes("entire fleet");
 
@@ -262,41 +294,58 @@ const SelectionModal = ({
         )}
       </div>
     );
-  }, [expandedGroups, selectedItem, handleToggleExpand, handleItemSelect]);
+  }, [expandedGroups, selectedItems, handleToggleExpand, handleItemSelect]);
 
-  // Render flat list for vehicles and drivers
-  const renderFlatList = () => {
-    return filteredItems.map(item => (
+  // Render list item (for virtual scrolling)
+  const ListItem = useCallback(({ index, style }) => {
+    const item = filteredItems[index];
+    const isSelected = selectedItems.some(i => i.id === item.id);
+    
+    return (
       <div 
-        key={item.id} 
-        className={`p-3 hover:bg-gray-50 rounded-lg cursor-pointer border transition-colors ${
-          selectedItem?.id === item.id ? 'bg-blue-50 border-blue-300' : 'border-gray-200'
-        }`}
+        style={style}
+        className="flex items-center py-1 px-3 hover:bg-gray-50 cursor-pointer transition-colors"
         onClick={() => handleItemSelect(item)}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* Type icon */}
-            {item.Type === 'Vehicle' && <Car size={16} className="text-green-600" />}
-            {item.Type === 'Driver' && <Users size={16} className="text-violet-600" />}
-            
-            <div>
-              <span className="text-sm font-medium text-gray-900">{item.text}</span>
-              {item.Type === 'Vehicle' && item.VehicleReg && (
-                <div className="text-xs text-gray-500">Reg: {item.VehicleReg}</div>
-              )}
-            </div>
-          </div>
-          
-          {/* Selection indicator */}
-          {selectedItem?.id === item.id && (
-            <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
-              <div className="w-2 h-2 bg-white rounded-full"></div>
-            </div>
+        {/* Checkbox */}
+        <div className={`w-4 h-4 border-2 rounded mr-3 flex items-center justify-center ${
+          isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+        }`}>
+          {isSelected && (
+            <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M20 6L9 17l-5-5" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          )}
+        </div>
+        
+        {/* Type icon */}
+        {item.Type === 'Vehicle' && <Car size={16} className="text-green-600 mr-2" />}
+        {item.Type === 'Driver' && <Users size={16} className="text-violet-600 mr-2" />}
+        
+        {/* Text */}
+        <div className="flex-1">
+          <span className="text-sm text-gray-900">{item.text}</span>
+          {item.Type === 'Vehicle' && item.VehicleReg && (
+            <span className="text-xs text-gray-500 ml-2">({item.VehicleReg})</span>
           )}
         </div>
       </div>
-    ));
+    );
+  }, [filteredItems, selectedItems, handleItemSelect]);
+
+  // Render flat list with virtual scrolling
+  const renderFlatList = () => {
+    return (
+      <List
+        height={300}
+        itemCount={filteredItems.length}
+        itemSize={40}
+        width="100%"
+        className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+      >
+        {ListItem}
+      </List>
+    );
   };
   
   // Get title and icon based on type
@@ -328,11 +377,8 @@ const SelectionModal = ({
   
   // Handle save button click
   const handleSave = () => {
-    if (selectedItem) {
-      onSave([selectedItem]); // Return as array for consistency
-    } else {
-      onSave([]);
-    }
+    const selectedIds = selectedItems.map(item => item.valueId || item.id);
+    onSave(selectedIds, selectedItems); // Send both IDs and full items
     onClose();
   };
 
@@ -403,8 +449,8 @@ const SelectionModal = ({
                   ))}
                 </div>
               ) : (
-                // Flat list for vehicles and drivers
-                <div className="space-y-2">
+                // Flat list for vehicles and drivers with virtual scrolling
+                <div className="h-[300px]">
                   {renderFlatList()}
                 </div>
               )
@@ -425,7 +471,7 @@ const SelectionModal = ({
           {/* Footer actions */}
           <div className="flex justify-between items-center pt-4 border-t border-gray-100">
             <div className="text-sm text-gray-600">
-              {isLoading ? 'Loading...' : selectedItem ? `Selected: ${selectedItem.text}` : 'No item selected'}
+              {isLoading ? 'Loading...' : `Selected: ${selectedItems.length} items`}
             </div>
             <div className="flex space-x-3">
               <button 
@@ -436,9 +482,9 @@ const SelectionModal = ({
               </button>
               <button 
                 onClick={handleSave}
-                disabled={!selectedItem || isLoading}
+                disabled={selectedItems.length === 0 || isLoading}
                 className={`px-4 py-2 text-sm rounded transition-colors cursor-pointer ${
-                  selectedItem && !isLoading
+                  selectedItems.length > 0 && !isLoading
                     ? 'bg-[#25689f] text-white hover:bg-[#1F557F]' 
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}

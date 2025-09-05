@@ -35,22 +35,12 @@ export const generateReport = createAsyncThunk(
     try {
       const token = localStorage.getItem("token");
       const userId = localStorage.getItem("clientId");
-      
-      const { reportId, selectedValueIds, fromDateTime, toDateTime } = reportParams;
-      
+
+      const { reportId, selectedValueIds, fromDateTime, toDateTime } =
+        reportParams;
+
       // Build API URL with parameters
-      let apiUrl = `${API_BASE_URL}api/reports/ReportHeading?ReportId=${reportId}&UserId=${userId}&FromDate=${fromDateTime}&ToDate=${toDateTime}`;
-      
-      // Add vehicle/driver/group IDs to URL
-      selectedValueIds.forEach((valueId) => {
-        if (reportParams.target === 'vehicle') {
-          apiUrl += `&VehicleId=${valueId}`;
-        } else if (reportParams.target === 'driver') {
-          apiUrl += `&DriverId=${valueId}`;
-        } else if (reportParams.target === 'group') {
-          apiUrl += `&GroupId=${valueId}`;
-        }
-      })
+      let apiUrl = `${API_BASE_URL}api/reports/ReportHeading?ReportId=${reportId}&VehicleId=${selectedValueIds}&UserId=${userId}&FromDate=${fromDateTime}&ToDate=${toDateTime}`;
 
       const response = await fetch(apiUrl, {
         method: "GET",
@@ -66,7 +56,6 @@ export const generateReport = createAsyncThunk(
 
       const data = await response.json();
       return data;
-
     } catch (error) {
       console.error("Generate Report API Error:", error);
       return rejectWithValue(error.message);
@@ -124,5 +113,6 @@ const reportsSlice = createSlice({
   },
 });
 
-export const { clearReports, clearError, clearReportData } = reportsSlice.actions;
+export const { clearReports, clearError, clearReportData } =
+  reportsSlice.actions;
 export default reportsSlice.reducer;
