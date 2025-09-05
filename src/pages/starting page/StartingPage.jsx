@@ -229,12 +229,12 @@ const StartingPage = () => {
       </div>
 
       {/* Welcome Message */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 py-6">
+      <div className="bg-[#2C79B7] py-6">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold text-gray-800">
+          <h2 className="text-2xl font-bold text-white">
             Welcome, {firstName} {lastName}
           </h2>
-          <p className="text-gray-600 mt-1">
+          <p className="text-white mt-1">
             Select an option below to get started
           </p>
         </div>
@@ -273,13 +273,13 @@ const StartingPage = () => {
               >
                 <Link
                   to={item.link}
-                  className={`block p-3 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 ${item.color} h-full min-h-[90px]`}
+                  className={`block p-3 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 border border-gray-200 bg-[#2C79B7] h-full min-h-[90px]`}
                 >
                   <div className="flex flex-col items-center text-center h-full justify-center">
                     <div className="p-1.5 rounded-full bg-white shadow-sm mb-1.5">
                       <img src={item.icon.props.src} className="w-5 h-5" alt={item.icon.props.alt} />
                     </div>
-                    <h3 className="text-xs font-semibold text-gray-800 leading-tight">
+                    <h3 className="text-xs font-semibold text-white leading-tight">
                       {item.label}
                     </h3>
                   </div>
