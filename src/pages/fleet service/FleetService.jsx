@@ -3,10 +3,13 @@ import Navbar from "../../components/navber/Navbar";
 import { motion } from "framer-motion";
 import { LayoutDashboard, FileText, Shield, Car, History } from "lucide-react";
 import Reminders from "./pages/Reminders";
+import HistoryPage from "./pages/History";
+import ManageServicePlans from "./pages/ManageServicePlans";
+import FuelPurchase from "./pages/FuelPurchase";
+import UploadFuelPurchases from "./pages/UploadFuelPurchases";
 
 export default function FleetService() {
   const [activeTab, setActiveTab] = useState("reminders");
-
   const alertTabs = [
     {
       id: "reminders",
@@ -26,7 +29,7 @@ export default function FleetService() {
     {
       id: "fuel-purchase",
       label: "Fuel Purchase",
-      icon: <Car size={16} />,
+      icon: <Car size={16} />, 
     },
     {
       id: "upload-fuel",
@@ -40,29 +43,13 @@ export default function FleetService() {
       case "reminders":
         return <Reminders />;
       case "history":
-        return (
-          <div>
-            <h1>Service History Content</h1>
-          </div>
-        );
+        return <HistoryPage />;
       case "service-plans":
-        return (
-          <div>
-            <h1>Manage Service Plans Content</h1>
-          </div>
-        );
+        return <ManageServicePlans />;
       case "fuel-purchase":
-        return (
-          <div>
-            <h1>Fuel Purchase Content</h1>
-          </div>
-        );
+        return <FuelPurchase />;
       case "upload-fuel":
-        return (
-          <div>
-            <h1>Upload Fuel Purchases Content</h1>
-          </div>
-        );
+        return <UploadFuelPurchases />;
       default:
         return (
           <div>
