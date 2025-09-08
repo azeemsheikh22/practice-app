@@ -1,12 +1,20 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Route, Save, X, Menu, ChevronLeft, Settings } from "lucide-react";
+import { Route, X, Menu, ChevronLeft, Settings } from "lucide-react";
 import ScheduleTab from "./ScheduleTab";
 import { useEffect, useState } from "react";
 import Select from "react-select";
 import RoutePlanMap from "./RoutePlanMap";
 import VehicleTreeSelect from "./VehicleTreeSelect";
 import { useDispatch, useSelector } from "react-redux";
-import { initializeConnection, selectConnectionStatus, selectRawVehicleList } from "../../../features/gpsTrackingSlice";
+import {
+  initializeConnection,
+  selectConnectionStatus,
+  selectRawVehicleList,
+} from "../../../features/gpsTrackingSlice";
+import {
+  fetchRouteListForUser,
+  selectFilteredRoutes,
+} from "../../../features/routeSlice";
 
 const CreateRoutePlan = () => {
   const [activeTab, setActiveTab] = useState("route");
@@ -18,6 +26,7 @@ const CreateRoutePlan = () => {
   const [scheduleDate, setScheduleDate] = useState("");
   const [status, setStatus] = useState("Planned");
   const [comments, setComments] = useState("");
+  const routes = useSelector(selectFilteredRoutes);
 
   // Dummy data for routes and vehicles
   const dummyRoutes = [
@@ -35,10 +44,17 @@ const CreateRoutePlan = () => {
 
   const connectionStatus = useSelector(selectConnectionStatus);
 
+  // Prefer routes from Redux (selectFilteredRoutes) when available
+  const sourceRoutes = Array.isArray(routes) && routes.length > 0 ? routes : dummyRoutes;
+
   useEffect(() => {
     if (connectionStatus === "disconnected") {
       dispatch(initializeConnection(3));
     }
+  }, []);
+
+  useEffect(() => {
+    dispatch(fetchRouteListForUser());
   }, []);
 
   const handleClose = () => {
@@ -47,6 +63,9 @@ const CreateRoutePlan = () => {
 
   // Responsive sidebar toggle
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+  // Full selected route objects derived from selectedRoutes ids
+  const selectedRoutesData = sourceRoutes.filter((r) => selectedRoutes.includes(r.id));
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
@@ -114,7 +133,7 @@ const CreateRoutePlan = () => {
               setStatus={setStatus}
               comments={comments}
               setComments={setComments}
-              dummyRoutes={dummyRoutes}
+              sourceRoutes={sourceRoutes}
               dummyVehicles={dummyVehicles}
             />
           </div>
@@ -167,7 +186,7 @@ const CreateRoutePlan = () => {
                     setStatus={setStatus}
                     comments={comments}
                     setComments={setComments}
-                    dummyRoutes={dummyRoutes}
+                    sourceRoutes={sourceRoutes}
                     dummyVehicles={dummyVehicles}
                     isMobile={true}
                   />
@@ -178,7 +197,7 @@ const CreateRoutePlan = () => {
 
           {/* Main Content Area: Map */}
           <div className="col-span-1 lg:col-span-8 xl:col-span-9 h-full overflow-hidden">
-            <RoutePlanMap />
+            <RoutePlanMap selectedRoutesData={selectedRoutesData} />
           </div>
         </div>
       </motion.div>
@@ -202,14 +221,15 @@ const SidebarContent = ({
   setStatus,
   comments,
   setComments,
-  dummyRoutes,
+  sourceRoutes,
   dummyVehicles,
   isMobile = false,
 }) => {
   // For react-select multi-select
-  const routeOptions = dummyRoutes.map((route) => ({
+  // sourceRoutes is passed in from parent (Redux or fallback)
+  const routeOptions = sourceRoutes.map((route) => ({
     value: route.id,
-    label: route.name,
+    label: (route.routeName || route.name || `Route ${route.id}`).toString().trim(),
   }));
 
   const handleRouteChange = (selectedOptions) => {

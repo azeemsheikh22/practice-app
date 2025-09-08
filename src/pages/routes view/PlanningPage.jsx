@@ -1,22 +1,24 @@
 import React, { useEffect } from "react";
 // Utility to convert array of objects to CSV string
 function arrayToCSV(data, columns) {
-  const header = columns.map(col => col.header).join(",");
-  const rows = data.map(row =>
-    columns.map(col => {
-      let val = row[col.key];
-      if (val === undefined || val === null) val = "";
-      // Escape quotes
-      return `"${String(val).replace(/"/g, '""')}"`;
-    }).join(",")
+  const header = columns.map((col) => col.header).join(",");
+  const rows = data.map((row) =>
+    columns
+      .map((col) => {
+        let val = row[col.key];
+        if (val === undefined || val === null) val = "";
+        // Escape quotes
+        return `"${String(val).replace(/"/g, '""')}"`;
+      })
+      .join(",")
   );
   return [header, ...rows].join("\r\n");
 }
 
 function downloadCSV(csv, filename) {
-  const blob = new Blob([csv], { type: 'text/csv' });
+  const blob = new Blob([csv], { type: "text/csv" });
   const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const a = document.createElement("a");
   a.href = url;
   a.download = filename;
   document.body.appendChild(a);
@@ -46,19 +48,19 @@ export default function PlanningPage() {
   const planningData = routePlans || [];
   // CSV export columns (match table columns)
   const exportColumns = [
-    { key: 'planName', header: 'Plan Name' },
-    { key: 'PlanDate', header: 'Schedule Date' },
-    { key: 'TotalStops', header: 'Stops' },
-    { key: 'TotalDistance', header: 'Distance' },
-    { key: 'TotalDuration', header: 'Duration' },
-    { key: 'RouteVehicles', header: 'Vehicle' },
-    { key: 'status', header: 'Status' },
+    { key: "planName", header: "Plan Name" },
+    { key: "PlanDate", header: "Schedule Date" },
+    { key: "TotalStops", header: "Stops" },
+    { key: "TotalDistance", header: "Distance" },
+    { key: "TotalDuration", header: "Duration" },
+    { key: "RouteVehicles", header: "Vehicle" },
+    { key: "status", header: "Status" },
   ];
 
   const handleExport = () => {
     if (!planningData.length) return;
     const csv = arrayToCSV(planningData, exportColumns);
-    downloadCSV(csv, 'route-plans.csv');
+    downloadCSV(csv, "route-plans.csv");
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, {useMemo } from "react";
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -9,7 +9,11 @@ import {
   CheckCircle,
 } from "lucide-react";
 // import logo3 from "../../assets/LogoColor.png";
-import { downloadCSV, downloadExcel, downloadPDF } from "../../utils/exportUtils";
+import {
+  downloadCSV,
+  downloadExcel,
+  downloadPDF,
+} from "../../utils/exportUtils";
 
 const ReportResults = ({
   reportName,
@@ -27,13 +31,24 @@ const ReportResults = ({
 
     // Extract headers from the first detail item's reportData with dynamic widths
     const headers = [];
-    const excludedColumns = ['Fuel %', 'Fuel', 'FixedHeader', 'Play', 'CarID'];
+    // Exclude columns that should not be displayed in the report table
+    const excludedColumns = [
+      "Fuel %",
+      "Fuel",
+      "FixedHeader",
+      "Play",
+      "CarID",
+      "LatLong3",
+      "LatLong4",
+    ];
     if (detail && detail.length > 0 && detail[0].reportData) {
       detail[0].reportData.forEach((item) => {
-        if (item.col && 
-            item.col.trim() !== "" && 
-            item.col !== " " && 
-            !excludedColumns.includes(item.col)) {
+        if (
+          item.col &&
+          item.col.trim() !== "" &&
+          item.col !== " " &&
+          !excludedColumns.includes(item.col)
+        ) {
           headers.push({
             key: item.col,
             label: item.col,
@@ -47,7 +62,7 @@ const ReportResults = ({
     const vehicleGroups = [];
     let currentVehicle = null;
     let currentGroupStartIndex = 0;
-    
+
     if (detail) {
       detail.forEach((row, index) => {
         const processedRow = { id: row.rowID || index + 1 };
@@ -57,7 +72,10 @@ const ReportResults = ({
             if (item.col && item.col.trim() !== "" && item.col !== " ") {
               // Clean up HTML content and skip icon columns
               let cleanData = item.data;
-              if (typeof cleanData === "string" && cleanData.includes("<i class")) {
+              if (
+                typeof cleanData === "string" &&
+                cleanData.includes("<i class")
+              ) {
                 cleanData = "Action"; // Replace HTML icons with text
               }
               processedRow[item.col] = cleanData || "-";
@@ -66,10 +84,11 @@ const ReportResults = ({
         }
 
         // Check for vehicle change
-        const vehicleName = processedRow.Car || processedRow.Vehicle || 'Unknown Vehicle';
-        const driverName = processedRow.Driver || '';
-        const clientName = processedRow.ClientName || '';
-        
+        const vehicleName =
+          processedRow.Car || processedRow.Vehicle || "Unknown Vehicle";
+        const driverName = processedRow.Driver || "";
+        const clientName = processedRow.ClientName || "";
+
         if (currentVehicle !== vehicleName) {
           // If this is not the first vehicle, save the previous group
           if (currentVehicle !== null) {
@@ -77,27 +96,27 @@ const ReportResults = ({
               vehicle: currentVehicle,
               startIndex: currentGroupStartIndex,
               endIndex: rows.length - 1,
-              rowCount: rows.length - currentGroupStartIndex
+              rowCount: rows.length - currentGroupStartIndex,
             });
           }
-          
+
           // Start new group
           currentVehicle = vehicleName;
           currentGroupStartIndex = rows.length;
-          
+
           // Add vehicle group info
           vehicleGroups.push({
             vehicle: vehicleName,
             driver: driverName,
             client: clientName,
             startIndex: currentGroupStartIndex,
-            isNewGroup: true
+            isNewGroup: true,
           });
         }
 
         rows.push(processedRow);
       });
-      
+
       // Add the last group
       if (currentVehicle !== null && vehicleGroups.length > 0) {
         const lastGroup = vehicleGroups[vehicleGroups.length - 1];
@@ -120,15 +139,19 @@ const ReportResults = ({
     return { headers, rows, summary, vehicleGroups };
   };
 
-  const { headers, rows, summary, vehicleGroups } = useMemo(() => processReportData(), [reportData]);
+  const { headers, rows, summary, vehicleGroups } = useMemo(
+    () => processReportData(),
+    [reportData]
+  );
   const hasRealData = reportData && reportData.data && rows.length > 0;
 
-  console.log(reportData?.data)
+  console.log(reportData?.data);
 
   // Handle export functions
   const handleDownloadCSV = () => downloadCSV(rows, headers, reportName);
   const handleDownloadExcel = () => downloadExcel(rows, headers, reportName);
-  const handleDownloadPDF = () => downloadPDF(rows, headers, reportName, reportCategory, summary);
+  const handleDownloadPDF = () =>
+    downloadPDF(rows, headers, reportName, reportCategory, summary);
 
   return (
     <div className="h-auto bg-gray-50">
@@ -156,7 +179,7 @@ const ReportResults = ({
             </div>
 
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 onClick={handleDownloadExcel}
                 disabled={!hasRealData}
                 className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -164,7 +187,7 @@ const ReportResults = ({
                 <FileText size={16} />
                 <span>Excel</span>
               </button>
-              <button 
+              <button
                 onClick={handleDownloadCSV}
                 disabled={!hasRealData}
                 className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -172,7 +195,7 @@ const ReportResults = ({
                 <FileText size={16} />
                 <span>CSV</span>
               </button>
-              <button 
+              <button
                 onClick={handleDownloadPDF}
                 disabled={!hasRealData}
                 className="flex items-center gap-2 px-4 py-2 bg-[#25689f] text-white hover:bg-[#1F557F] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -224,7 +247,13 @@ const ReportResults = ({
                       <>
                         <span className="text-gray-400">•</span>
                         <Car size={16} className="text-blue-600" />
-                        <span>{vehicleGroups.filter(group => group.isNewGroup).length} vehicles</span>
+                        <span>
+                          {
+                            vehicleGroups.filter((group) => group.isNewGroup)
+                              .length
+                          }{" "}
+                          vehicles
+                        </span>
                       </>
                     )}
                   </div>
@@ -234,12 +263,19 @@ const ReportResults = ({
               {/* Summary Section */}
               {reportData?.data?.header && (
                 <div className="px-6 py-3 bg-white border-b border-gray-200">
-                  <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 auto-rows-auto`}>
+                  <div
+                    className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 auto-rows-auto`}
+                  >
                     {reportData.data.header.map((item, index) => (
-                      <div key={index} className="flex flex-col sm:flex-row items-center justify-center p-3 bg-gray-50 rounded-lg">
-                        <span className="font-medium text-gray-600 mb-1 sm:mb-0">{item.col}</span>
+                      <div
+                        key={index}
+                        className="flex flex-col sm:flex-row items-center justify-center p-3 bg-gray-50 rounded-lg"
+                      >
+                        <span className="font-medium text-gray-600 mb-1 sm:mb-0">
+                          {item.col}
+                        </span>
                         <span className="ml-2 font-bold text-[#25689f]">
-                          {item.data !== null ? item.data : 'null'}
+                          {item.data !== null ? item.data : "null"}
                         </span>
                       </div>
                     ))}
@@ -265,14 +301,20 @@ const ReportResults = ({
                   <tbody className="bg-white divide-y divide-gray-200">
                     {rows.map((row, index) => {
                       // Check if this row starts a new vehicle group
-                      const vehicleGroup = vehicleGroups.find(group => group.startIndex === index && group.isNewGroup);
-                      
+                      const vehicleGroup = vehicleGroups.find(
+                        (group) =>
+                          group.startIndex === index && group.isNewGroup
+                      );
+
                       return (
                         <React.Fragment key={row.id}>
                           {/* Vehicle Separator Header */}
                           {vehicleGroup && (
                             <tr className="bg-gradient-to-r from-[#25689f] to-[#1F557F]">
-                              <td colSpan={headers.length} className="px-4 py-3">
+                              <td
+                                colSpan={headers.length}
+                                className="px-4 py-3"
+                              >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
                                     <div className="flex items-center gap-2">
@@ -283,7 +325,10 @@ const ReportResults = ({
                                     </div>
                                     {vehicleGroup.driver && (
                                       <div className="flex items-center gap-2">
-                                        <Users size={16} className="text-white/80" />
+                                        <Users
+                                          size={16}
+                                          className="text-white/80"
+                                        />
                                         <span className="text-white/90 text-sm">
                                           {vehicleGroup.driver}
                                         </span>
@@ -297,10 +342,12 @@ const ReportResults = ({
                               </td>
                             </tr>
                           )}
-                          
+
                           {/* Regular Data Row */}
                           <tr
-                            className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                            className={
+                              index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                            }
                           >
                             {headers.map((header, colIndex) => (
                               <td
@@ -323,7 +370,9 @@ const ReportResults = ({
                                       size={16}
                                       className="text-violet-600 mr-2 flex-shrink-0"
                                     />
-                                    <span>{row[header.key] || "No Driver"}</span>
+                                    <span>
+                                      {row[header.key] || "No Driver"}
+                                    </span>
                                   </div>
                                 ) : header.key === "Distance" ? (
                                   <span className="font-medium text-blue-600 whitespace-nowrap">
@@ -355,11 +404,12 @@ const ReportResults = ({
                                 ) : header.key.includes("Location") ? (
                                   <div className="max-w-xs">
                                     <span
-                                      className="text-gray-700 block"
+                                      className="text-gray-700 block whitespace-nowrap"
                                       title={row[header.key]}
                                     >
-                                      {row[header.key].length > 30 
-                                        ? row[header.key].substring(0, 30) + "..."
+                                      {row[header.key].length > 30
+                                        ? row[header.key].substring(0, 30) +
+                                          "..."
                                         : row[header.key]}
                                     </span>
                                   </div>
@@ -377,31 +427,6 @@ const ReportResults = ({
                   </tbody>
                 </table>
               </div>
-
-              {/* Table Footer Summary - Fixed at Bottom */}
-              {summary && Object.keys(summary).length > 0 && (
-                <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 sticky bottom-0">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm text-gray-700">
-                    {Object.entries(summary).map(([key, value], index) => (
-                      <div key={index} className="text-center">
-                        <span className="font-medium">{key}:</span>
-                        <br />
-                        <strong
-                          className={`${
-                            key.includes("Distance")
-                              ? "text-blue-600"
-                              : key.includes("Time")
-                              ? "text-purple-600"
-                              : "text-green-600"
-                          }`}
-                        >
-                          {value || "N/A"}
-                        </strong>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </>
           )}
         </motion.div>

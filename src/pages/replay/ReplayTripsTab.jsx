@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import toast from 'react-hot-toast';
 import { 
@@ -29,8 +29,6 @@ const ReplayTripsTab = ({ selectedVehicle }) => {
   const selectedTrip = useSelector(selectSelectedTrip);
   const filters = useSelector(state => state.replay.filters || {});
   const displayMode = filters.displayMode;
-
-  console.log("Trips Data:", trips);
 
   const handleTripSelect = (trip, index) => {
     // If marker mode is active, don't allow trip selection and show toast
@@ -139,8 +137,8 @@ const ReplayTripsTab = ({ selectedVehicle }) => {
                     🛣️ Trip {idx+1}
                     {isSelected && <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Selected</span>}
                   </span>
-                  <span className="text-white/90 text-xs flex items-center gap-1">
-                  {trip.Driver || 'Unknown Driver'}
+                  <span className="text-white/90 text-xs" title={trip.Driver || 'Unknown Driver'}>
+                    {trip.Driver ? (trip.Driver.length > 15 ? trip.Driver.substring(0, 15) + '...' : trip.Driver) : 'Unknown Driver'}
                   </span>
                 </div>
               </div>

@@ -10,6 +10,7 @@ import {
   Layers,
 } from "lucide-react";
 import SelectionModal from "./SelectionModal";
+import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 
 const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
@@ -114,12 +115,12 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
 
   // Handle saving selections from the modal
   const handleSaveSelection = (selectedIds, items) => {
-    setReportConfig(prev => ({
+    setReportConfig((prev) => ({
       ...prev,
-      selectedItems: items,         // Store full items with details
+      selectedItems: items, // Store full items with details
       selectedValueIds: selectedIds, // Store valueIds for API
       vehicleSelected: selectedIds.length > 0,
-      selectedText: items.map(item => item.text).join(", ") // Join names for display
+      selectedText: items.map((item) => item.text).join(", "), // Join names for display
     }));
     setIsModalOpen(false);
   };
@@ -135,22 +136,10 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
       selectedValueIds: reportConfig.selectedValueIds,
       fromDateTime,
       toDateTime,
-      target: reportConfig.target
+      target: reportConfig.target,
     };
 
     onRun(config);
-  };
-
-  // Function to display selected items info
-  const getSelectedItemsInfo = () => {
-    if (!reportConfig.selectedItems || reportConfig.selectedItems.length === 0) {
-      return "No items selected";
-    }
-
-    const count = reportConfig.selectedItems.length;
-    const text = reportConfig.selectedText || reportConfig.selectedItems.map(item => item.text).join(", ");
-    
-    return `${count} selected: ${text}`;
   };
 
   return (
@@ -175,67 +164,7 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
         {/* Report Configuration Steps */}
         <div className="p-6">
           {/* Step Navigation */}
-          <div className="flex items-center justify-between mb-6 border-b border-gray-200 pb-4">
-            <button
-              className={`flex items-center gap-2 pb-2 px-1 cursor-pointer ${
-                activeStep === 1
-                  ? "text-[#25689f] border-b-2 border-[#25689f]"
-                  : "text-gray-500 hover:text-[#25689f]"
-              }`}
-              onClick={() => setActiveStep(1)}
-            >
-              <div className="w-6 h-6 rounded-full bg-[#25689f] text-white flex items-center justify-center text-sm">
-                1
-              </div>
-              <span className="font-medium">Selection</span>
-            </button>
-
-            <ChevronRight className="text-gray-400" size={20} />
-
-            <button
-              className={`flex items-center gap-2 pb-2 px-1 ${
-                !reportConfig.vehicleSelected
-                  ? "cursor-not-allowed text-gray-300"
-                  : activeStep === 2
-                  ? "text-[#25689f] border-b-2 border-[#25689f] cursor-pointer"
-                  : "text-gray-500 hover:text-[#25689f] cursor-pointer"
-              }`}
-              onClick={() => reportConfig.vehicleSelected && setActiveStep(2)}
-              disabled={!reportConfig.vehicleSelected}
-            >
-              <div
-                className={`w-6 h-6 rounded-full ${
-                  reportConfig.vehicleSelected ? "bg-[#25689f]" : "bg-gray-300"
-                } text-white flex items-center justify-center text-sm`}
-              >
-                2
-              </div>
-              <span className="font-medium">Time Frame</span>
-            </button>
-
-            <ChevronRight className="text-gray-400" size={20} />
-
-            <button
-              className={`flex items-center gap-2 pb-2 px-1 ${
-                !reportConfig.vehicleSelected
-                  ? "cursor-not-allowed text-gray-300"
-                  : activeStep === 3
-                  ? "text-[#25689f] border-b-2 border-[#25689f] cursor-pointer"
-                  : "text-gray-500 hover:text-[#25689f] cursor-pointer"
-              }`}
-              onClick={() => reportConfig.vehicleSelected && setActiveStep(3)}
-              disabled={!reportConfig.vehicleSelected}
-            >
-              <div
-                className={`w-6 h-6 rounded-full ${
-                  reportConfig.vehicleSelected ? "bg-[#25689f]" : "bg-gray-300"
-                } text-white flex items-center justify-center text-sm`}
-              >
-                3
-              </div>
-              <span className="font-medium">Options</span>
-            </button>
-          </div>
+          {/* Step header removed - showing inline Time Frame with heading */}
 
           {/* Step Content */}
           <div className="space-y-6">
@@ -246,255 +175,271 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                  <span className="text-[#25689f]">1</span>
-                  Run this report for:
-                </h3>
-
-                <div className="space-y-3 ml-4">
-                  {/* Vehicle Selection */}
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="vehicle-select"
-                      name="target"
-                      value="vehicle"
-                      checked={reportConfig.target === "vehicle"}
-                      onChange={handleRadioChange}
-                      className="form-radio text-[#25689f] h-4 w-4 cursor-pointer"
-                    />
-                    <label
-                      htmlFor="vehicle-select"
-                      className="flex items-center gap-2 text-gray-700 cursor-pointer"
-                    >
-                      <Car size={16} className="text-green-600" />
-                      Select Vehicle(s)
-                    </label>
-
-                    {reportConfig.target === "vehicle" && (
-                      <button
-                        className={`ml-4 px-3 py-1 text-sm rounded-md cursor-pointer ${
-                          reportConfig.vehicleSelected
-                            ? "bg-green-100 text-green-700 border border-green-200"
-                            : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
-                        }`}
-                        onClick={openSelectionModal}
-                      >
-                        {reportConfig.vehicleSelected ? "✓ Selected" : "Select"}
-                      </button>
-                    )}
+                <div className="grid grid-cols-12 gap-4 items-center">
+                  <div className="col-span-12 md:col-span-6">
+                    <h3 className="font-bold text-gray-700 flex items-center gap-2">
+                      <span className="text-[#25689f]">1</span>
+                      Run this report for:
+                    </h3>
                   </div>
 
-                  {/* Driver Selection */}
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="driver-select"
-                      name="target"
-                      value="driver"
-                      checked={reportConfig.target === "driver"}
-                      onChange={handleRadioChange}
-                      className="form-radio text-[#25689f] h-4 w-4 cursor-pointer"
-                    />
-                    <label
-                      htmlFor="driver-select"
-                      className="flex items-center gap-2 text-gray-700 cursor-pointer"
-                    >
-                      <Users size={16} className="text-violet-600" />
-                      Select Driver(s)
-                    </label>
-
-                    {reportConfig.target === "driver" && (
-                      <button
-                        className={`ml-4 px-3 py-1 text-sm rounded-md cursor-pointer ${
-                          reportConfig.vehicleSelected
-                            ? "bg-green-100 text-green-700 border border-green-200"
-                            : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
-                        }`}
-                        onClick={openSelectionModal}
-                      >
-                        {reportConfig.vehicleSelected ? "✓ Selected" : "Select"}
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Group Selection */}
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      id="group-select"
-                      name="target"
-                      value="group"
-                      checked={reportConfig.target === "group"}
-                      onChange={handleRadioChange}
-                      className="form-radio text-[#25689f] h-4 w-4 cursor-pointer"
-                    />
-                    <label
-                      htmlFor="group-select"
-                      className="flex items-center gap-2 text-gray-700 cursor-pointer"
-                    >
-                      <Layers size={16} className="text-blue-600" />
-                      Select Group(s)
-                    </label>
-
-                    {reportConfig.target === "group" && (
-                      <button
-                        className={`ml-4 px-3 py-1 text-sm rounded-md cursor-pointer ${
-                          reportConfig.vehicleSelected
-                            ? "bg-green-100 text-green-700 border border-green-200"
-                            : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
-                        }`}
-                        onClick={openSelectionModal}
-                      >
-                        {reportConfig.vehicleSelected ? "✓ Selected" : "Select"}
-                      </button>
-                    )}
+                  <div className="col-span-12 md:col-span-6">
+                    <h3 className="font-bold text-gray-700 flex items-center gap-2 md:justify-start justify-start">
+                      <span className="w-6 h-6 rounded-full  text-[#25689f] flex items-center justify-center font-semibold">
+                        2
+                      </span>
+                      <span className="text-gray-700">Time Frame</span>
+                    </h3>
                   </div>
                 </div>
 
-                <div className="flex mt-6 justify-end">
-                  <button
-                    className="flex items-center gap-1 px-4 py-2 bg-[#25689f] text-white rounded-md hover:bg-[#1F557F] transition-colors cursor-pointer"
-                    onClick={() => setActiveStep(2)}
-                    disabled={!reportConfig.vehicleSelected}
-                  >
-                    Next <ChevronRight size={16} />
-                  </button>
+                <div className="grid grid-cols-12 gap-6">
+                  {/* Left: Selection Controls */}
+                  <div className="col-span-12 md:col-span-6 space-y-3">
+                    {/* Vehicle Selection */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id="vehicle-select"
+                        name="target"
+                        value="vehicle"
+                        checked={reportConfig.target === "vehicle"}
+                        onChange={handleRadioChange}
+                        className="form-radio text-[#25689f] h-4 w-4 cursor-pointer"
+                      />
+                      <label
+                        htmlFor="vehicle-select"
+                        className="flex items-center gap-2 text-gray-700 cursor-pointer"
+                      >
+                        <Car size={16} className="text-green-600" />
+                        Select Vehicle(s)
+                      </label>
+
+                      {reportConfig.target === "vehicle" && (
+                        <button
+                          className={`ml-4 px-3 py-1 text-sm rounded-md cursor-pointer ${
+                            reportConfig.vehicleSelected
+                              ? "bg-green-100 text-green-700 border border-green-200"
+                              : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
+                          }`}
+                          onClick={openSelectionModal}
+                        >
+                          {reportConfig.vehicleSelected
+                            ? "✓ Selected"
+                            : "Select"}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Driver Selection */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id="driver-select"
+                        name="target"
+                        value="driver"
+                        checked={reportConfig.target === "driver"}
+                        onChange={handleRadioChange}
+                        className="form-radio text-[#25689f] h-4 w-4 cursor-pointer"
+                      />
+                      <label
+                        htmlFor="driver-select"
+                        className="flex items-center gap-2 text-gray-700 cursor-pointer"
+                      >
+                        <Users size={16} className="text-violet-600" />
+                        Select Driver(s)
+                      </label>
+
+                      {reportConfig.target === "driver" && (
+                        <button
+                          className={`ml-4 px-3 py-1 text-sm rounded-md cursor-pointer ${
+                            reportConfig.vehicleSelected
+                              ? "bg-green-100 text-green-700 border border-green-200"
+                              : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
+                          }`}
+                          onClick={openSelectionModal}
+                        >
+                          {reportConfig.vehicleSelected
+                            ? "✓ Selected"
+                            : "Select"}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Group Selection */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id="group-select"
+                        name="target"
+                        value="group"
+                        checked={reportConfig.target === "group"}
+                        onChange={handleRadioChange}
+                        className="form-radio text-[#25689f] h-4 w-4 cursor-pointer"
+                      />
+                      <label
+                        htmlFor="group-select"
+                        className="flex items-center gap-2 text-gray-700 cursor-pointer"
+                      >
+                        <Layers size={16} className="text-blue-600" />
+                        Select Group(s)
+                      </label>
+
+                      {reportConfig.target === "group" && (
+                        <button
+                          className={`ml-4 px-3 py-1 text-sm rounded-md cursor-pointer ${
+                            reportConfig.vehicleSelected
+                              ? "bg-green-100 text-green-700 border border-green-200"
+                              : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
+                          }`}
+                          onClick={openSelectionModal}
+                        >
+                          {reportConfig.vehicleSelected
+                            ? "✓ Selected"
+                            : "Select"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Time Frame Controls (moved from Step 2) */}
+                  <div className="col-span-12 md:col-span-6">
+                    <select
+                      value={reportConfig.timeFrame}
+                      onChange={(e) => handleTimeFrameChange(e.target.value)}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#25689f] focus:border-[#25689f] outline-none cursor-pointer"
+                    >
+                      <option value="today">Today</option>
+                      <option value="yesterday">Yesterday</option>
+                      <option value="thisWeek">This Week</option>
+                      <option value="lastWeek">Last Week</option>
+                      <option value="last7Days">Last 7 Days</option>
+                      <option value="last15Days">Last 15 Days</option>
+                      <option value="other">Other</option>
+                    </select>
+
+                    {reportConfig.timeFrame === "other" && (
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            From Date
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="date"
+                              value={reportConfig.fromDate}
+                              onChange={(e) =>
+                                handleSelectionChange(
+                                  "fromDate",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 text-sm focus:ring-[#25689f] focus:border-[#25689f] outline-none cursor-pointer"
+                            />
+                            <Calendar
+                              className="absolute left-3 top-2.5 text-gray-400"
+                              size={16}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            To Date
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="date"
+                              value={reportConfig.toDate}
+                              onChange={(e) =>
+                                handleSelectionChange("toDate", e.target.value)
+                              }
+                              className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 text-sm focus:ring-[#25689f] focus:border-[#25689f] outline-none cursor-pointer"
+                            />
+                            <Calendar
+                              className="absolute left-3 top-2.5 text-gray-400"
+                              size={16}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            From Time
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="time"
+                              value={reportConfig.fromTime}
+                              onChange={(e) =>
+                                handleSelectionChange(
+                                  "fromTime",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 text-sm focus:ring-[#25689f] focus:border-[#25689f] outline-none cursor-pointer"
+                            />
+                            <Clock
+                              className="absolute left-3 top-2.5 text-gray-400"
+                              size={16}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            To Time
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="time"
+                              value={reportConfig.toTime}
+                              onChange={(e) =>
+                                handleSelectionChange("toTime", e.target.value)
+                              }
+                              className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 text-sm focus:ring-[#25689f] focus:border-[#25689f] outline-none cursor-pointer"
+                            />
+                            <Clock
+                              className="absolute left-3 top-2.5 text-gray-400"
+                              size={16}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Next Button */}
+                    <div className="mt-6 flex justify-end">
+                      <button
+                        onClick={() => {
+                          if (!reportConfig.vehicleSelected) {
+                            toast.error(
+                              "Please select at least one item before proceeding",
+                              {
+                                duration: 3000,
+                              }
+                            );
+                            return;
+                          }
+                          setActiveStep(2);
+                        }}
+                        className={`flex items-center gap-1 px-4 py-2 rounded-md transition-colors cursor-pointer ${
+                          reportConfig.vehicleSelected
+                            ? "bg-[#25689f] text-white hover:bg-[#1F557F]"
+                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                      >
+                        Next <ChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </motion.div>
             )}
+
+            {/* Step 2 removed - Time Frame moved into Step 1 */}
 
             {activeStep === 2 && (
-              <motion.div
-                className="space-y-6"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                  <span className="text-[#25689f]">2</span>
-                  Select report time frame:
-                </h3>
-
-                <div className="space-y-3 ml-4">
-                  <select
-                    value={reportConfig.timeFrame}
-                    onChange={(e) => handleTimeFrameChange(e.target.value)}
-                    className="w-60 border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-[#25689f] focus:border-[#25689f] outline-none cursor-pointer"
-                  >
-                    <option value="today">Today</option>
-                    <option value="yesterday">Yesterday</option>
-                    <option value="thisWeek">This Week</option>
-                    <option value="lastWeek">Last Week</option>
-                    <option value="last7Days">Last 7 Days</option>
-                    <option value="last15Days">Last 15 Days</option>
-                    <option value="other">Other</option>
-                  </select>
-
-                  {reportConfig.timeFrame === "other" && (
-                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          From Date
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="date"
-                            value={reportConfig.fromDate}
-                            onChange={(e) =>
-                              handleSelectionChange("fromDate", e.target.value)
-                            }
-                            className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 text-sm focus:ring-[#25689f] focus:border-[#25689f] outline-none cursor-pointer"
-                          />
-                          <Calendar
-                            className="absolute left-3 top-2.5 text-gray-400"
-                            size={16}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          To Date
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="date"
-                            value={reportConfig.toDate}
-                            onChange={(e) =>
-                              handleSelectionChange("toDate", e.target.value)
-                            }
-                            className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 text-sm focus:ring-[#25689f] focus:border-[#25689f] outline-none cursor-pointer"
-                          />
-                          <Calendar
-                            className="absolute left-3 top-2.5 text-gray-400"
-                            size={16}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          From Time
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="time"
-                            value={reportConfig.fromTime}
-                            onChange={(e) =>
-                              handleSelectionChange("fromTime", e.target.value)
-                            }
-                            className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 text-sm focus:ring-[#25689f] focus:border-[#25689f] outline-none cursor-pointer"
-                          />
-                          <Clock
-                            className="absolute left-3 top-2.5 text-gray-400"
-                            size={16}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          To Time
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="time"
-                            value={reportConfig.toTime}
-                            onChange={(e) =>
-                              handleSelectionChange("toTime", e.target.value)
-                            }
-                            className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 text-sm focus:ring-[#25689f] focus:border-[#25689f] outline-none cursor-pointer"
-                          />
-                          <Clock
-                            className="absolute left-3 top-2.5 text-gray-400"
-                            size={16}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex mt-6 justify-between">
-                    <button
-                      className="flex items-center gap-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors cursor-pointer"
-                      onClick={() => setActiveStep(1)}
-                    >
-                      <ChevronDown size={16} /> Back
-                    </button>
-
-                    <button
-                      className="flex items-center gap-1 px-4 py-2 bg-[#25689f] text-white rounded-md hover:bg-[#1F557F] transition-colors cursor-pointer"
-                      onClick={() => setActiveStep(3)}
-                    >
-                      Next <ChevronRight size={16} />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {activeStep === 3 && (
               <motion.div
                 className="space-y-6"
                 initial={{ opacity: 0, y: 20 }}
@@ -502,7 +447,7 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
                 transition={{ duration: 0.3 }}
               >
                 <h3 className="font-bold text-gray-700 flex items-center gap-2">
-                  <span className="text-[#25689f]">3</span>
+                  <span className="text-[#25689f]">2</span>
                   Ready to Generate Report
                 </h3>
 
@@ -623,7 +568,7 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
                   <div className="flex mt-8 justify-between items-center">
                     <button
                       className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors cursor-pointer"
-                      onClick={() => setActiveStep(2)}
+                      onClick={() => setActiveStep(1)}
                     >
                       <ChevronDown size={16} />
                       Back
