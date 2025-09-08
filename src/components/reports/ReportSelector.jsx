@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 const ReportSelector = ({
   reportCategories,
@@ -9,7 +9,7 @@ const ReportSelector = ({
   const [expandedCategories, setExpandedCategories] = useState({});
 
   // Maximum items to show before expand button
-  const MAX_ITEMS_PREVIEW = 4;
+  const MAX_ITEMS_PREVIEW = 5;
 
   const toggleExpand = (categoryName) => {
     setExpandedCategories((prev) => ({
@@ -84,33 +84,34 @@ const ReportSelector = ({
                         <div>
                           <ul className="space-y-2">
                             {displayedReports.map((report) => (
-                              <li key={report} className="group">
-                                <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
-                                  <button className="text-gray-400 hover:text-yellow-500 transition-colors">
-                                    <svg
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
-                                      strokeWidth={1.5}
-                                      stroke="currentColor"
-                                      className="w-4 h-4"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M11.48 3.499a.562.562 0 011.04 0l2.036 4.125a.563.563 0 00.424.308l4.542.662c.48.07.67.66.324.998l-3.28 3.2a.563.563 0 00-.162.5l.774 4.516a.563.563 0 01-.818.593l-4.053-2.13a.563.563 0 00-.524 0l-4.053 2.13a.563.563 0 01-.818-.593l.774-4.516a.563.563 0 00-.162-.5l-3.28-3.2a.563.563 0 01.324-.998l4.542-.662a.563.563 0 00.424-.308l2.036-4.125z"
-                                      />
-                                    </svg>
-                                  </button>
-                                  <span
-                                    className="text-gray-700 text-sm font-medium cursor-pointer hover:text-[#25689f] transition-colors flex-1"
-                                    onClick={() =>
-                                      onSelectReport(report, category.name)
-                                    }
+                              <li
+                                key={report}
+                                className="flex items-center gap-2 group"
+                              >
+                                <button className="text-gray-400 hover:text-[#25689f] transition-colors">
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.5}
+                                    stroke="currentColor"
+                                    className="w-5 h-5"
                                   >
-                                    {report}
-                                  </span>
-                                </div>
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M11.48 3.499a.562.562 0 011.04 0l2.036 4.125a.563.563 0 00.424.308l4.542.662c.48.07.67.66.324.998l-3.28 3.2a.563.563 0 00-.162.5l.774 4.516a.563.563 0 01-.818.593l-4.053-2.13a.563.563 0 00-.524 0l-4.053 2.13a.563.563 0 01-.818-.593l.774-4.516a.563.563 0 00-.162-.5l-3.28-3.2a.563.563 0 01.324-.998l4.542-.662a.563.563 0 00.424-.308l2.036-4.125z"
+                                    />
+                                  </svg>
+                                </button>
+                                <span
+                                  className="text-gray-700 text-sm font-medium cursor-pointer hover:text-[#25689f] transition-colors hover:underline flex-1"
+                                  onClick={() =>
+                                    onSelectReport(report, category.name)
+                                  }
+                                >
+                                  {report}
+                                </span>
                               </li>
                             ))}
                           </ul>
@@ -182,7 +183,7 @@ const ReportSelector = ({
                 const hasMoreCustom = customReports.length > MAX_ITEMS_PREVIEW;
 
                 return (
-                  <div className="bg-gradient-to-br from-white to-purple-50 border border-purple-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
+                  <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden">
                     {/* Card Header */}
                     <div className="bg-gradient-to-r from-[#25689f] to-[#1F557F] text-white p-4">
                       <h3 className="text-md font-semibold flex items-center gap-2">
@@ -194,31 +195,32 @@ const ReportSelector = ({
                     <div className="p-4">
                       <ul className="space-y-2">
                         {displayedCustomReports.map((report) => (
-                          <li key={report} className="group">
-                            <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50  transition-colors">
-                              <button className="text-gray-400 hover:text-yellow-500 transition-colors">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  strokeWidth={1.5}
-                                  stroke="currentColor"
-                                  className="w-4 h-4"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M11.48 3.499a.562.562 0 011.04 0l2.036 4.125a.563.563 0 00.424.308l4.542.662c.48.07.67.66.324.998l-3.28 3.2a.563.563 0 00-.162.5l.774 4.516a.563.563 0 01-.818.593l-4.053-2.13a.563.563 0 00-.524 0l-4.053 2.13a.563.563 0 01-.818-.593l.774-4.516a.563.563 0 00-.162-.5l-3.28-3.2a.563.563 0 01.324-.998l4.542-.662a.563.563 0 00.424-.308l2.036-4.125z"
-                                  />
-                                </svg>
-                              </button>
-                              <span
-                                className="text-gray-700 text-sm font-medium cursor-pointer hover:text-[#25689f] transition-colors flex-1"
-                                onClick={() => onSelectReport(report, "Custom")}
+                          <li
+                            key={report}
+                            className="flex items-center gap-2 group"
+                          >
+                            <button className="text-gray-400 hover:text-[#25689f] transition-colors">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                className="w-5 h-5"
                               >
-                                {report}
-                              </span>
-                            </div>
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M11.48 3.499a.562.562 0 011.04 0l2.036 4.125a.563.563 0 00.424.308l4.542.662c.48.07.67.66.324.998l-3.28 3.2a.563.563 0 00-.162.5l.774 4.516a.563.563 0 01-.818.593l-4.053-2.13a.563.563 0 00-.524 0l-4.053 2.13a.563.563 0 01-.818-.593l.774-4.516a.563.563 0 00-.162-.5l-3.28-3.2a.563.563 0 01.324-.998l4.542-.662a.563.563 0 00.424-.308l2.036-4.125z"
+                                />
+                              </svg>
+                            </button>
+                            <span
+                              className="text-gray-700 text-sm font-medium cursor-pointer hover:text-[#25689f] transition-colors hover:underline flex-1"
+                              onClick={() => onSelectReport(report, "Custom")}
+                            >
+                              {report}
+                            </span>
                           </li>
                         ))}
                       </ul>

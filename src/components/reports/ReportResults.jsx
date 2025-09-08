@@ -26,12 +26,8 @@ const ReportResults = ({
     if (!reportData || !reportData.data) {
       return { headers: [], rows: [], summary: null, vehicleGroups: [] };
     }
-
     const { header, detail } = reportData.data;
-
-    // Extract headers from the first detail item's reportData with dynamic widths
     const headers = [];
-    // Exclude columns that should not be displayed in the report table
     const excludedColumns = [
       "Fuel %",
       "Fuel",
@@ -40,6 +36,7 @@ const ReportResults = ({
       "CarID",
       "LatLong3",
       "LatLong4",
+      "Driver Name",
     ];
     if (detail && detail.length > 0 && detail[0].reportData) {
       detail[0].reportData.forEach((item) => {

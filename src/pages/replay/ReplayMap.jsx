@@ -12,11 +12,10 @@ import ReplayAdvancedOptionsModal from "./ReplayAdvancedOptionsModal";
 import ReplayGeofenceManager from "./ReplayGeofenceManager";
 import { useSelector, useDispatch } from "react-redux";
 import {
-  setCurrentReplayIndex,
   selectCurrentReplayIndex,
-  selectReplayTrips,
   selectSelectedTrip,
   selectGetReplayCount,
+  setCurrentReplayIndex,
 } from "../../features/replaySlice";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -1357,6 +1356,10 @@ const ReplayMap = forwardRef(
         let nextIdx = Math.ceil(floatIdx);
         if (idx < 0) idx = 0;
         if (nextIdx >= replayData.length) nextIdx = replayData.length - 1;
+        
+        // Update current replay index in Redux store for table highlighting
+        dispatch(setCurrentReplayIndex(idx));
+        
         const p1 = replayData[idx];
         const p2 = replayData[nextIdx];
         let lat = p1.latitude;

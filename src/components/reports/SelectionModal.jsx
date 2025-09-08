@@ -10,9 +10,10 @@ const SelectionModal = ({
   isOpen, 
   onClose, 
   onSave,
-  type = 'vehicle'  // vehicle, driver, or group
+  type = 'vehicle',  // vehicle, driver, or group
+  initialSelectedItems = [],
 }) => {
-  const [selectedItems, setSelectedItems] = useState([]); // Multi selection
+  const [selectedItems, setSelectedItems] = useState(initialSelectedItems); // Multi selection
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [expandedGroups, setExpandedGroups] = useState({}); // For expandable groups
@@ -34,10 +35,10 @@ const SelectionModal = ({
   
   // Reset selection when modal type changes
   useEffect(() => {
-    setSelectedItems([]);
+    setSelectedItems(initialSelectedItems);
     setSearchQuery('');
     setExpandedGroups({});
-  }, [type, isOpen]);
+  }, [type, isOpen, initialSelectedItems]);
   
   // Filter only groups (no vehicles) for tree structure
   const groupsOnly = useMemo(() => {
@@ -392,8 +393,40 @@ const SelectionModal = ({
     document.body.appendChild(modalRoot);
   }
 
+  // Select All handler
+  const handleSelectAll = () => {
+    if (type === 'group') {
+      // For groups, flatten all group nodes
+      const flattenTree = (nodes) => {
+        let all = [];
+        nodes.forEach((node) => {
+          all.push(node);
+          if (node.children && node.children.length > 0) {
+            all = all.concat(flattenTree(node.children));
+          }
+        });
+        return all;
+      };
+      setSelectedItems(flattenTree(filteredItems));
+    } else {
+      setSelectedItems(filteredItems);
+    }
+  };
+
+  // Deselect All handler
+  const handleDeselectAll = () => {
+    setSelectedItems([]);
+  };
+
+  // Overlay click closes modal
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return createPortal(
-    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={handleOverlayClick}>
       <motion.div 
         className="relative w-full max-w-md bg-white rounded-lg overflow-hidden shadow-xl z-10 mx-4"
         initial={{ opacity: 0, scale: 0.95 }}
@@ -401,6 +434,7 @@ const SelectionModal = ({
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
         style={{ maxHeight: '80vh' }}
+        onClick={e => e.stopPropagation()}
       >
         {/* Modal header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
@@ -470,28 +504,41 @@ const SelectionModal = ({
           </div>
           {/* Footer actions */}
           <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-            <div className="text-sm text-gray-600">
-              {isLoading ? 'Loading...' : `Selected: ${selectedItems.length} items`}
-            </div>
-            <div className="flex space-x-3">
-              <button 
-                onClick={onClose}
-                className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleSave}
-                disabled={selectedItems.length === 0 || isLoading}
-                className={`px-4 py-2 text-sm rounded transition-colors cursor-pointer ${
-                  selectedItems.length > 0 && !isLoading
-                    ? 'bg-[#25689f] text-white hover:bg-[#1F557F]' 
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            <div className="flex gap-6">
+              <button
+                onClick={handleSelectAll}
+                disabled={isLoading || filteredItems.length === 0}
+                className={`bg-transparent text-sm font-semibold text-[#25689f] underline underline-offset-4 px-0 py-0 transition-colors cursor-pointer ${
+                  filteredItems.length > 0 && !isLoading
+                    ? 'hover:text-[#1F557F]'
+                    : 'text-gray-400 cursor-not-allowed'
                 }`}
               >
-                {isLoading ? 'Loading...' : 'Save'}
+                Select All
+              </button>
+              <button
+                onClick={handleDeselectAll}
+                disabled={isLoading || selectedItems.length === 0}
+                className={`bg-transparent text-sm font-semibold text-[#25689f] underline underline-offset-4 px-0 py-0 transition-colors cursor-pointer ${
+                  selectedItems.length > 0 && !isLoading
+                    ? 'hover:text-[#1F557F]'
+                    : 'text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Deselect All
               </button>
             </div>
+            <button 
+              onClick={handleSave}
+              disabled={selectedItems.length === 0 || isLoading}
+              className={`px-4 py-2 text-sm rounded transition-colors cursor-pointer ${
+                selectedItems.length > 0 && !isLoading
+                  ? 'bg-[#25689f] text-white hover:bg-[#1F557F]' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {isLoading ? 'Loading...' : 'Save'}
+            </button>
           </div>
         </div>
       </motion.div>

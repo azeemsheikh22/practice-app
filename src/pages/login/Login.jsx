@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import backgroundImg from "../../assets/background-img.jpg";
+import backgroundImg2 from "../../assets/background-imgsss.jpg";
+import backgroundImg3 from "../../assets/sdsd.jpg";
 import logo from "../../assets/LogoColor.png";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
@@ -10,6 +12,9 @@ import ForgotPasswordModal from "./ForgotPasswordModal";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [bgIndex, setBgIndex] = useState(0);
+  const bgImages = [backgroundImg, backgroundImg2, backgroundImg3];
+  const sliderInterval = useRef(null);
   const [isForgotPasswordModalOpen, setIsForgotPasswordModalOpen] =
     useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,12 +30,10 @@ const Login = () => {
     if (token) {
       navigate("/");
     }
-    
     // Load saved credentials if remember me was checked
     const savedUsername = localStorage.getItem("savedUsername");
     const savedPassword = localStorage.getItem("savedPassword");
     const wasRemembered = localStorage.getItem("rememberMe") === "true";
-    
     if (wasRemembered && savedUsername) {
       setFormData({
         username: savedUsername,
@@ -38,6 +41,13 @@ const Login = () => {
       });
       setRememberMe(true);
     }
+    // Start background slider
+    sliderInterval.current = setInterval(() => {
+      setBgIndex((prev) => (prev + 1) % bgImages.length);
+    }, 4000);
+    return () => {
+      clearInterval(sliderInterval.current);
+    };
   }, [token, navigate]);
 
   // Create axios instance with base URL
@@ -83,20 +93,16 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!formData.username || !formData.password) {
       notify("Please enter both username and password", "error");
       return;
     }
-
     setIsLoading(true);
-
     try {
       const response = await api.post("api/auth/login", {
         email: formData.username,
         password: formData.password,
       });
-
       const {
         token,
         userId,
@@ -106,8 +112,6 @@ const Login = () => {
         lastName,
         groupLogo,
       } = response.data;
-
-      // Save login data
       localStorage.setItem("token", token);
       localStorage.setItem("clientId", userId);
       localStorage.setItem("userTypeId", userTypeId);
@@ -115,13 +119,9 @@ const Login = () => {
       localStorage.setItem("firstName", firstName);
       localStorage.setItem("lastName", lastName);
       localStorage.setItem("groupLogo", groupLogo);
-      
-      // Save login time for session management
       const loginTime = new Date().getTime();
       localStorage.setItem("loginTime", loginTime.toString());
       localStorage.setItem("lastActivityTime", loginTime.toString());
-      
-      // Handle Remember Me functionality
       if (rememberMe) {
         localStorage.setItem("savedUsername", formData.username);
         localStorage.setItem("savedPassword", formData.password);
@@ -131,9 +131,6 @@ const Login = () => {
         localStorage.removeItem("savedPassword");
         localStorage.removeItem("rememberMe");
       }
-      
-      console.log("Login time saved:", new Date(loginTime).toLocaleString());
-
       if (token) {
         const newConnection = new signalR.HubConnectionBuilder()
           .withUrl(`${import.meta.env.VITE_API_BASE_URL}gpstracking`, {
@@ -141,7 +138,6 @@ const Login = () => {
           })
           .withAutomaticReconnect()
           .build();
-
         try {
           await newConnection.start();
           console.log("SignalR Connected");
@@ -151,9 +147,7 @@ const Login = () => {
           notify("WebSocket connection failed, but login successful", "error");
         }
       }
-
       notify("Login successful!", "success");
-
       window.location.href = "/";
     } catch (error) {
       console.error("Login error:", error);
@@ -176,7 +170,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center relative bg-gray-50 overflow-hidden">
       {/* Toast notifications - top center */}
       <Toaster
         position="top-center"
@@ -190,27 +184,34 @@ const Login = () => {
         }}
       />
 
-      {/* Background Image with Overlay */}
-      <div
-        className="absolute inset-0 z-0 bg-cover bg-center"
-        style={{
-          backgroundImage: `url(${backgroundImg})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        <div className="absolute inset-0"></div>
+      {/* Animated Background Slider */}
+      <div className="absolute inset-0 z-0 w-full h-full">
+        {bgImages.map((img, i) => (
+          <div
+            key={i}
+            className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${bgIndex === i ? "opacity-100" : "opacity-0"}`}
+            style={{
+              backgroundImage: `url(${img})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              filter: "blur(2px) brightness(0.8)",
+              zIndex: 0,
+            }}
+          />
+        ))}
+        {/* Overlay for glass effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#25689f]/30 to-[#1F557F]/30 backdrop-blur-sm"></div>
       </div>
 
-      {/* Login Form Container */}
-      <div className="z-10 w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-2xl mx-4 relative overflow-hidden">
+      {/* Login Form Container - Glassmorphism */}
+      <div className="z-10 w-full max-w-md p-8 space-y-8 rounded-2xl shadow-2xl mx-4 relative overflow-hidden bg-white/60 backdrop-blur-lg border border-white/30">
         {/* Decorative element */}
         <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full"></div>
         <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-primary/5 rounded-full"></div>
 
         {/* Logo */}
         <div className="flex justify-center relative">
-          <img src={logo} alt="Company Logo" className="h-16 w-auto" />
+          <img src={logo} alt="Company Logo" className="h-16 w-auto drop-shadow-lg" />
         </div>
 
         <h2 className="text-center text-2xl font-bold text-gray-800 tracking-tight">
@@ -240,7 +241,7 @@ const Login = () => {
                   onChange={handleChange}
                   required
                   autoComplete="username email"
-                  className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                  className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm bg-white/80 backdrop-blur-md"
                   placeholder="Enter your username or email"
                   disabled={isLoading}
                 />
@@ -264,7 +265,7 @@ const Login = () => {
                   onChange={handleChange}
                   required
                   autoComplete="current-password"
-                  className="appearance-none relative block w-full px-3 py-3 pr-12 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                  className="appearance-none relative block w-full px-3 py-3 pr-12 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-primary focus:border-primary sm:text-sm bg-white/80 backdrop-blur-md"
                   placeholder="Enter your password"
                   disabled={isLoading}
                 />
@@ -298,7 +299,7 @@ const Login = () => {
           <div>
             <button
               type="submit"
-              className={`group relative cursor-pointer w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-200 ${
+              className={`group relative cursor-pointer w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gradient-to-r from-[#25689f] to-[#1F557F] hover:from-[#1F557F] hover:to-[#184567] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-200 ${
                 isLoading ? "opacity-70 cursor-not-allowed" : ""
               }`}
               disabled={isLoading}
@@ -312,6 +313,7 @@ const Login = () => {
               {isLoading ? "Signing in..." : "Sign in"}
             </button>
           </div>
+
         </form>
 
         {/* Footer */}

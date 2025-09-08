@@ -13,6 +13,7 @@ import SelectionModal from "./SelectionModal";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 
+
 const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
   const [activeStep, setActiveStep] = useState(1);
   const [reportConfig, setReportConfig] = useState({
@@ -27,7 +28,10 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
     toTime: "23:59",
   });
 
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // Track last selection for modal
+  const [lastSelection, setLastSelection] = useState([]);
 
   // Function to handle selection changes
   const handleSelectionChange = (field, value) => {
@@ -110,6 +114,7 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
 
   // Handle opening the selection modal
   const openSelectionModal = () => {
+    setLastSelection(reportConfig.selectedItems);
     setIsModalOpen(true);
   };
 
@@ -122,6 +127,7 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
       vehicleSelected: selectedIds.length > 0,
       selectedText: items.map((item) => item.text).join(", "), // Join names for display
     }));
+    setLastSelection(items);
     setIsModalOpen(false);
   };
 
@@ -216,18 +222,25 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
                       </label>
 
                       {reportConfig.target === "vehicle" && (
-                        <button
-                          className={`ml-4 px-3 py-1 text-sm rounded-md cursor-pointer ${
-                            reportConfig.vehicleSelected
-                              ? "bg-green-100 text-green-700 border border-green-200"
-                              : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
-                          }`}
-                          onClick={openSelectionModal}
-                        >
-                          {reportConfig.vehicleSelected
-                            ? "✓ Selected"
-                            : "Select"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className={`ml-0 px-3 py-1 text-sm rounded-md cursor-pointer ${
+                              reportConfig.vehicleSelected
+                                ? "bg-green-100 text-green-700 border border-green-200"
+                                : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
+                            }`}
+                            onClick={openSelectionModal}
+                          >
+                            {reportConfig.vehicleSelected
+                              ? "✓ Selected"
+                              : "Select"}
+                          </button>
+                          {reportConfig.selectedItems.length > 0 && (
+                            <span className="text-xs text-gray-600 font-semibold ml-2">
+                              {reportConfig.selectedItems.length} vehicle{reportConfig.selectedItems.length > 1 ? "s" : ""} selected
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -251,18 +264,25 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
                       </label>
 
                       {reportConfig.target === "driver" && (
-                        <button
-                          className={`ml-4 px-3 py-1 text-sm rounded-md cursor-pointer ${
-                            reportConfig.vehicleSelected
-                              ? "bg-green-100 text-green-700 border border-green-200"
-                              : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
-                          }`}
-                          onClick={openSelectionModal}
-                        >
-                          {reportConfig.vehicleSelected
-                            ? "✓ Selected"
-                            : "Select"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className={`ml-0 px-3 py-1 text-sm rounded-md cursor-pointer ${
+                              reportConfig.vehicleSelected
+                                ? "bg-green-100 text-green-700 border border-green-200"
+                                : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
+                            }`}
+                            onClick={openSelectionModal}
+                          >
+                            {reportConfig.vehicleSelected
+                              ? "✓ Selected"
+                              : "Select"}
+                          </button>
+                          {reportConfig.selectedItems.length > 0 && (
+                            <span className="text-xs text-gray-600 font-semibold ml-2">
+                              {reportConfig.selectedItems.length} driver{reportConfig.selectedItems.length > 1 ? "s" : ""} selected
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
 
@@ -286,18 +306,25 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
                       </label>
 
                       {reportConfig.target === "group" && (
-                        <button
-                          className={`ml-4 px-3 py-1 text-sm rounded-md cursor-pointer ${
-                            reportConfig.vehicleSelected
-                              ? "bg-green-100 text-green-700 border border-green-200"
-                              : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
-                          }`}
-                          onClick={openSelectionModal}
-                        >
-                          {reportConfig.vehicleSelected
-                            ? "✓ Selected"
-                            : "Select"}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className={`ml-0 px-3 py-1 text-sm rounded-md cursor-pointer ${
+                              reportConfig.vehicleSelected
+                                ? "bg-green-100 text-green-700 border border-green-200"
+                                : "bg-[#25689f]/10 text-[#25689f] hover:bg-[#25689f]/20 border border-[#25689f]/20"
+                            }`}
+                            onClick={openSelectionModal}
+                          >
+                            {reportConfig.vehicleSelected
+                              ? "✓ Selected"
+                              : "Select"}
+                          </button>
+                          {reportConfig.selectedItems.length > 0 && (
+                            <span className="text-xs text-gray-600 font-semibold ml-2">
+                              {reportConfig.selectedItems.length} group{reportConfig.selectedItems.length > 1 ? "s" : ""} selected
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -636,6 +663,7 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveSelection}
         type={reportConfig.target}
+        initialSelectedItems={lastSelection}
       />
     </div>
   );
