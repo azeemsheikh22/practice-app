@@ -35,7 +35,7 @@ const LiveDashboardHeader = () => {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className=" rounded-lg px-3 py-1"
+        className=" rounded-lg py-1"
       >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           {/* Left Section - More Compact */}
@@ -56,7 +56,7 @@ const LiveDashboardHeader = () => {
               <div className="text-lg font-bold text-[#D52B1E]">
                 {totalVehicles}
               </div>
-              <div className="text-xs text-gray-600 text-center ">
+              <div className="text-xs text-black text-center ">
                 Total Vehicles
               </div>
             </div>
