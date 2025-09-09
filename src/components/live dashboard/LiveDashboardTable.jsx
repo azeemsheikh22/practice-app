@@ -34,28 +34,24 @@ const LiveDashboardTable = () => {
           color: "text-green-600",
           bgColor: "bg-green-100",
           borderColor: "border-green-200",
-          icon: <Navigation className="w-3 h-3" />,
         };
       case "Stop":
         return {
           color: "text-red-600",
           bgColor: "bg-red-100",
           borderColor: "border-red-200",
-          icon: <AlertTriangle className="w-3 h-3" />,
         };
       case "Idle":
         return {
           color: "text-yellow-600",
           bgColor: "bg-yellow-100",
           borderColor: "border-yellow-200",
-          icon: <Clock className="w-3 h-3" />,
         };
       default:
         return {
           color: "text-gray-600",
           bgColor: "bg-gray-100",
           borderColor: "border-gray-200",
-          icon: <Activity className="w-3 h-3" />,
         };
     }
   };
@@ -70,12 +66,9 @@ const LiveDashboardTable = () => {
     };
 
     return (
-      <div className="flex items-center space-x-2">
-        <Gauge className={`w-4 h-4 ${getSpeedColor(speed)}`} />
-        <span className={`font-medium ${getSpeedColor(speed)}`}>
-          {speed} km/h
-        </span>
-      </div>
+      <span className={`font-medium ${getSpeedColor(speed)}`}>
+        {speed} km/h
+      </span>
     );
   };
 
@@ -157,9 +150,8 @@ const LiveDashboardTable = () => {
           const statusDisplay = getStatusDisplay(status);
           return (
             <div
-              className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-medium border ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor}`}
+              className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor}`}
             >
-              {statusDisplay.icon}
               <span>{status}</span>
             </div>
           );
@@ -222,12 +214,9 @@ const LiveDashboardTable = () => {
         accessorKey: "sim",
         header: "Sim #",
         cell: ({ getValue }) => (
-          <div className="flex items-center space-x-1">
-            <Phone className="w-3 h-3 text-gray-500" />
-            <span className="text-sm font-mono text-gray-700">
-              {getValue()}
-            </span>
-          </div>
+          <span className="text-sm font-mono text-gray-700">
+            {getValue()}
+          </span>
         ),
         size: 140,
       },
@@ -248,55 +237,60 @@ const LiveDashboardTable = () => {
   });
 
   return (
-    <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden my-5">
-      {/* Table Header with Search */}
-      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          {/* Left side - Title */}
-          <div className="flex items-center space-x-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Live Vehicles ({searchFilteredData.length})
-            </h3>
-            {activeFilter && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                  Filtered by: {activeFilter}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Right side - Search */}
+    <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+      {/* Simple Table Header like in image */}
+      <div className="px-4 py-2 border-b border-gray-200 bg-white">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center space-x-2">
+            <button
+              className="px-3 py-1 text-sm  bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300 rounded-sm  cursor-pointer transition-all duration-300"
+              onClick={() => {/* TODO: CSV export logic */}}
+            >
+              CSV
+            </button>
+            <button
+              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300 rounded-sm cursor-pointer transition-all duration-300"
+              onClick={() => {/* TODO: Excel export logic */}}
+            >
+              Excel
+            </button>
+            <button
+              className="px-3 py-1 text-sm  bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border border-yellow-300 rounded-sm cursor-pointer transition-all duration-300"
+              onClick={() => {/* TODO: Refresh logic */}}
+            >
+              Refresh
+            </button>
+          </div>
+          <div className="flex items-center space-x-3">
             <input
               type="text"
-              placeholder="Search vehicles..."
+              placeholder="Search vehicles, drivers, locations..."
               value={globalFilter}
               onChange={(e) => setGlobalFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D52B1E] focus:border-transparent text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm w-80"
             />
           </div>
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table exactly like in image */}
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-100">
+          <thead className="bg-blue-900 text-white">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b border-gray-200"
+                    className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider"
                     style={{ width: header.getSize() }}
                   >
                     {header.isPlaceholder ? null : (
                       <div
                         className={
                           header.column.getCanSort()
-                            ? "cursor-pointer select-none flex items-center gap-2 hover:text-gray-900"
-                            : ""
+                            ? "cursor-pointer select-none flex items-center gap-1 hover:text-gray-200"
+                            : "flex items-center gap-1"
                         }
                         onClick={header.column.getToggleSortingHandler()}
                       >
@@ -306,10 +300,12 @@ const LiveDashboardTable = () => {
                         )}
                         {header.column.getCanSort() && (
                           <ChevronDown
-                            className={`w-4 h-4 transition-transform ${
+                            className={`w-3 h-3 transition-transform ${
                               header.column.getIsSorted() === "desc"
                                 ? "rotate-180"
-                                : ""
+                                : header.column.getIsSorted() === "asc"
+                                ? ""
+                                : "text-gray-400"
                             }`}
                           />
                         )}
@@ -324,15 +320,17 @@ const LiveDashboardTable = () => {
             {table.getRowModel().rows.map((row, index) => (
               <motion.tr
                 key={row.id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 2 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.02 }}
-                className="hover:bg-gray-50 transition-colors"
+                transition={{ delay: index * 0.01 }}
+                className={`${
+                  index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                } hover:bg-blue-50 transition-colors`}
               >
                 {row.getVisibleCells().map((cell) => (
                   <td
                     key={cell.id}
-                    className="px-4 py-4 whitespace-nowrap text-sm text-gray-900"
+                    className="px-3 py-2 text-xs border-r border-gray-200 last:border-r-0"
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
@@ -343,19 +341,19 @@ const LiveDashboardTable = () => {
         </table>
       </div>
 
-      {/* No Data State */}
+      {/* Simple No Data State */}
       {searchFilteredData.length === 0 && (
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-8">
           <div className="text-center">
-            <div className="text-gray-500 text-lg font-medium mb-2">
+            <div className="text-gray-600 text-base font-medium mb-1">
               No vehicles found
             </div>
-            <div className="text-gray-400 text-sm">
+            <div className="text-gray-500 text-sm">
               {globalFilter
-                ? "Try adjusting your search"
+                ? `No results for "${globalFilter}"`
                 : activeFilter
-                ? `No vehicles match the "${activeFilter}" filter`
-                : "No vehicles available"}
+                ? `No vehicles with status "${activeFilter}"`
+                : "No vehicle data available"}
             </div>
           </div>
         </div>

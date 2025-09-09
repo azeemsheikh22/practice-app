@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Calendar,
   Clock,
@@ -13,10 +13,11 @@ import SelectionModal from "./SelectionModal";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 
-
-const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
+const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel, initialConfig }) => {
   const [activeStep, setActiveStep] = useState(1);
-  const [reportConfig, setReportConfig] = useState({
+  
+  // Move defaultConfig outside of useState to avoid re-creation
+  const defaultConfig = useMemo(() => ({
     target: "vehicle",
     vehicleSelected: false,
     selectedItems: [],
@@ -26,12 +27,41 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
     toDate: new Date().toISOString().split("T")[0],
     fromTime: "00:00",
     toTime: "23:59",
+  }), []);
+
+  const [reportConfig, setReportConfig] = useState(() => {
+    if (initialConfig && initialConfig.selectedValueIds?.length > 0) {
+      return {
+        ...defaultConfig,
+        ...initialConfig,
+        vehicleSelected: initialConfig?.selectedValueIds?.length > 0
+      };
+    }
+    return defaultConfig;
   });
 
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   // Track last selection for modal
   const [lastSelection, setLastSelection] = useState([]);
+  // Track if modal should reset or maintain current state
+  const [shouldResetModal, setShouldResetModal] = useState(false);
+
+  // Update reportConfig when initialConfig changes (for Edit functionality)
+  useEffect(() => {
+    if (initialConfig && initialConfig.selectedValueIds?.length > 0) {
+      setReportConfig({
+        ...defaultConfig,
+        ...initialConfig,
+        vehicleSelected: initialConfig?.selectedValueIds?.length > 0
+      });
+      // Also update lastSelection for modal
+      if (initialConfig.selectedItems && initialConfig.selectedItems.length > 0) {
+        setLastSelection(initialConfig.selectedItems);
+        setShouldResetModal(true);
+      }
+    }
+  }, [initialConfig, defaultConfig]);
 
   // Function to handle selection changes
   const handleSelectionChange = (field, value) => {
@@ -114,7 +144,7 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
 
   // Handle opening the selection modal
   const openSelectionModal = () => {
-    setLastSelection(reportConfig.selectedItems);
+    setShouldResetModal(false);
     setIsModalOpen(true);
   };
 
@@ -127,7 +157,10 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
       vehicleSelected: selectedIds.length > 0,
       selectedText: items.map((item) => item.text).join(", "), // Join names for display
     }));
+    // Only update lastSelection when user actually saves
     setLastSelection(items);
+    // Reset the modal reset flag
+    setShouldResetModal(false);
     setIsModalOpen(false);
   };
 
@@ -137,14 +170,20 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
     const fromDateTime = `${reportConfig.fromDate}T${reportConfig.fromTime}`;
     const toDateTime = `${reportConfig.toDate}T${reportConfig.toTime}`;
 
-    // Create config object for API
+    // Create config object for API - include all data
     const config = {
       selectedValueIds: reportConfig.selectedValueIds,
+      selectedItems: reportConfig.selectedItems, // Include this for Edit functionality
       fromDateTime,
       toDateTime,
       target: reportConfig.target,
+      timeFrame: reportConfig.timeFrame,
+      fromDate: reportConfig.fromDate,
+      toDate: reportConfig.toDate,
+      fromTime: reportConfig.fromTime,
+      toTime: reportConfig.toTime,
+      vehicleSelected: reportConfig.vehicleSelected
     };
-
     onRun(config);
   };
 
@@ -664,6 +703,7 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel }) => {
         onSave={handleSaveSelection}
         type={reportConfig.target}
         initialSelectedItems={lastSelection}
+        shouldReset={shouldResetModal}
       />
     </div>
   );

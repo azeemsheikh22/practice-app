@@ -28,24 +28,11 @@ const CreateRoutePlan = () => {
   const [comments, setComments] = useState("");
   const routes = useSelector(selectFilteredRoutes);
 
-  // Dummy data for routes and vehicles
-  const dummyRoutes = [
-    { id: 1, name: "Motorway~ M1_UP" },
-    { id: 2, name: "Motorway~ M1_DN" },
-    { id: 3, name: "Motorway~ M2_UP" },
-    { id: 4, name: "Motorway~ M2_DN" },
-    { id: 5, name: "Motorway~ M3_UP" },
-  ];
-  const dummyVehicles = [
-    { id: 1, name: "Vehicle 1" },
-    { id: 2, name: "Vehicle 2" },
-    { id: 3, name: "Vehicle 3" },
-  ];
 
   const connectionStatus = useSelector(selectConnectionStatus);
 
-  // Prefer routes from Redux (selectFilteredRoutes) when available
-  const sourceRoutes = Array.isArray(routes) && routes.length > 0 ? routes : dummyRoutes;
+  // Use only Redux routes
+  const sourceRoutes = Array.isArray(routes) ? routes : [];
 
   useEffect(() => {
     if (connectionStatus === "disconnected") {
@@ -134,7 +121,6 @@ const CreateRoutePlan = () => {
               comments={comments}
               setComments={setComments}
               sourceRoutes={sourceRoutes}
-              dummyVehicles={dummyVehicles}
             />
           </div>
 
@@ -187,7 +173,6 @@ const CreateRoutePlan = () => {
                     comments={comments}
                     setComments={setComments}
                     sourceRoutes={sourceRoutes}
-                    dummyVehicles={dummyVehicles}
                     isMobile={true}
                   />
                 </motion.div>

@@ -21,6 +21,7 @@ const ReportResults = ({
   reportData,
   isLoading,
   onBack,
+  onEdit,
 }) => {
   const processReportData = () => {
     if (!reportData || !reportData.data) {
@@ -142,7 +143,7 @@ const ReportResults = ({
   );
   const hasRealData = reportData && reportData.data && rows.length > 0;
 
-  console.log(reportData?.data);
+  // console.log(reportData?.data);
 
   // Handle export functions
   const handleDownloadCSV = () => downloadCSV(rows, headers, reportName);
@@ -176,6 +177,12 @@ const ReportResults = ({
             </div>
 
             <div className="flex items-center gap-3">
+              <button
+                onClick={onEdit}
+                className="flex items-center gap-2 px-4 py-2 text-[#25689f] hover:text-[#1F557F] border border-[#25689f] hover:border-[#1F557F] rounded-lg transition-colors cursor-pointer"
+              >
+                <span>Edit</span>
+              </button>
               <button
                 onClick={handleDownloadExcel}
                 disabled={!hasRealData}

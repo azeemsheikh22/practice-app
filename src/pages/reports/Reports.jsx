@@ -40,14 +40,6 @@ const Reports = () => {
     }
   }, []);
 
-
-  // Monitor errors
-  useEffect(() => {
-    if (error) {
-      console.error("Reports Error:", error);
-    }
-  }, [error]);
-
   // Transform API data into categories and custom reports
   const groupedReports = React.useMemo(() => {
     if (!Array.isArray(reports)) return { categories: [], customReports: [] };
@@ -92,15 +84,12 @@ const Reports = () => {
 
   // Handler for report execution
   const handleRunReport = (config) => {
-    
-    // Store config for results page
     setReportConfig(config);
     
     // Find the report ID from the reports list
     const reportInfo = reports.find(r => r.RptName === selectedReport);
     
     if (!reportInfo) {
-      console.error("Report not found in reports list:", selectedReport);
       alert("Report not found. Please try again.");
       return;
     }
@@ -136,6 +125,9 @@ const Reports = () => {
           reportData={reportData}
           isLoading={generateLoading}
           onBack={handleBackToSetup}
+          onEdit={() => {
+            setCurrentView("setup");
+          }}
         />
       ) : (
         <div className="w-full max-w-[1800px] mx-auto px-2 sm:px-4 lg:px-6 py-4 flex flex-col lg:flex-row gap-6">
@@ -154,10 +146,12 @@ const Reports = () => {
                   <span className="text-sm font-medium">Back to Reports</span>
                 </button>
                 <ReportSetup
+                  key={`${selectedReport}-${currentView}-${reportConfig ? JSON.stringify(reportConfig.selectedValueIds) : 'new'}`}
                   selectedReport={selectedReport}
                   selectedCategory={selectedCategory}
                   onRun={handleRunReport}
                   onCancel={handleBackToSelection}
+                  initialConfig={reportConfig}
                 />
               </div>
             ) : (

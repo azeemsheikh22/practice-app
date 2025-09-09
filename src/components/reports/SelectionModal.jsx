@@ -1,23 +1,27 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import { X, Car, Users, Layers, Plus, Minus } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useSelector } from 'react-redux';
-import { FixedSizeList as List } from 'react-window';
-import { selectRawVehicleList, selectLoading } from '../../features/gpsTrackingSlice';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { X, Car, Users, Layers, Plus, Minus } from "lucide-react";
+import { motion } from "framer-motion";
+import { useSelector } from "react-redux";
+import { FixedSizeList as List } from "react-window";
+import {
+  selectRawVehicleList,
+  selectLoading,
+} from "../../features/gpsTrackingSlice";
 
-const SelectionModal = ({ 
-  isOpen, 
-  onClose, 
+const SelectionModal = ({
+  isOpen,
+  onClose,
   onSave,
-  type = 'vehicle',  // vehicle, driver, or group
+  type = "vehicle", // vehicle, driver, or group
   initialSelectedItems = [],
+  shouldReset = false,
 }) => {
   const [selectedItems, setSelectedItems] = useState(initialSelectedItems); // Multi selection
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [expandedGroups, setExpandedGroups] = useState({}); // For expandable groups
-  
+
   // Debounced search query update
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -28,18 +32,22 @@ const SelectionModal = ({
       clearTimeout(handler);
     };
   }, [searchQuery]);
-  
+
   // Get real data and loading state from Redux
   const rawVehicles = useSelector(selectRawVehicleList);
   const isLoading = useSelector(selectLoading);
-  
-  // Reset selection when modal type changes
+
+  // Reset selection when modal opens or type changes
   useEffect(() => {
-    setSelectedItems(initialSelectedItems);
-    setSearchQuery('');
-    setExpandedGroups({});
-  }, [type, isOpen, initialSelectedItems]);
-  
+    if (isOpen) {
+      if (shouldReset || selectedItems.length === 0) {
+        setSelectedItems(initialSelectedItems || []);
+      }
+      setSearchQuery("");
+      setExpandedGroups({});
+    }
+  }, [type, isOpen, initialSelectedItems, shouldReset]);
+
   // Filter only groups (no vehicles) for tree structure
   const groupsOnly = useMemo(() => {
     if (!rawVehicles || rawVehicles.length === 0) return [];
@@ -78,7 +86,7 @@ const SelectionModal = ({
             const aOrder = a.orderby || 0;
             const bOrder = b.orderby || 0;
             if (aOrder !== bOrder) return aOrder - bOrder;
-            return (a.text || '').localeCompare(b.text || '');
+            return (a.text || "").localeCompare(b.text || "");
           });
           node.children.forEach(sortChildren);
         }
@@ -96,7 +104,7 @@ const SelectionModal = ({
     if (!debouncedSearchQuery.trim()) return treeStructure;
 
     const searchCache = new Map();
-    
+
     const searchInTree = (items) => {
       return items.reduce((acc, item) => {
         // Check cache first
@@ -133,7 +141,7 @@ const SelectionModal = ({
   useEffect(() => {
     if (treeStructure.length > 0) {
       const rootNodes = treeStructure.filter((item) => item.parent === "#");
-      
+
       if (rootNodes.length > 0) {
         setExpandedGroups((prev) => {
           const newExpanded = { ...prev };
@@ -167,36 +175,36 @@ const SelectionModal = ({
   // Filter data by type
   const getFilteredItems = useMemo(() => {
     if (!rawVehicles || rawVehicles.length === 0) return [];
-    
+
     // Filter by type first
     let filteredByType = [];
     switch (type) {
-      case 'vehicle':
-        filteredByType = rawVehicles.filter(item => item.Type === 'Vehicle');
+      case "vehicle":
+        filteredByType = rawVehicles.filter((item) => item.Type === "Vehicle");
         break;
-      case 'driver':
-        filteredByType = rawVehicles.filter(item => item.Type === 'Driver');
+      case "driver":
+        filteredByType = rawVehicles.filter((item) => item.Type === "Driver");
         break;
-      case 'group':
+      case "group":
         // For groups, return tree structure with search applied
         return filteredTree;
       default:
         filteredByType = [];
     }
-    
+
     // Filter by search query (non-group types)
     if (debouncedSearchQuery.trim()) {
       const searchLower = debouncedSearchQuery.toLowerCase();
-      return filteredByType.filter(item => 
+      return filteredByType.filter((item) =>
         item.text.toLowerCase().includes(searchLower)
       );
     }
-    
+
     return filteredByType;
   }, [rawVehicles, type, filteredTree, debouncedSearchQuery]);
-  
+
   const filteredItems = getFilteredItems;
-  
+
   // Toggle group expansion (from DashboardHeader)
   const handleToggleExpand = useCallback((groupId) => {
     setExpandedGroups((prev) => ({
@@ -207,10 +215,20 @@ const SelectionModal = ({
 
   // Multi item selection
   const handleItemSelect = useCallback((item) => {
-    setSelectedItems(prev => {
-      const isSelected = prev.some(i => i.id === item.id);
+    setSelectedItems((prev) => {
+      const isSelected = prev.some(
+        (i) =>
+          i.id === item.id ||
+          i.valueId === item.valueId ||
+          (i.valueId && item.valueId && i.valueId === item.valueId)
+      );
       if (isSelected) {
-        return prev.filter(i => i.id !== item.id);
+        return prev.filter(
+          (i) =>
+            i.id !== item.id &&
+            i.valueId !== item.valueId &&
+            !(i.valueId && item.valueId && i.valueId === item.valueId)
+        );
       } else {
         return [...prev, item];
       }
@@ -218,121 +236,156 @@ const SelectionModal = ({
   }, []);
 
   // Tree Item Component (matching DashboardHeader TreeSelectItem)
-  const TreeSelectItem = useCallback(({ item, level = 0 }) => {
-    const isExpanded = expandedGroups[item.id];
-    const isSelected = selectedItems.some(selected => selected.id === item.id);
-    const hasChildren = item.children && item.children.length > 0;
-    // const isEntireFleet = item.text === "Entire Fleet" || item.text.toLowerCase().includes("entire fleet");
+  const TreeSelectItem = useCallback(
+    ({ item, level = 0 }) => {
+      const isExpanded = expandedGroups[item.id];
+      const isSelected = selectedItems.some(
+        (selected) =>
+          selected.id === item.id ||
+          selected.valueId === item.valueId ||
+          (selected.valueId &&
+            item.valueId &&
+            selected.valueId === item.valueId)
+      );
+      const hasChildren = item.children && item.children.length > 0;
 
-    return (
-      <div key={item.id}>
-        <div
-          onClick={() => handleItemSelect(item)}
-          className={`flex items-center py-2 px-3 hover:bg-gray-50 cursor-pointer rounded-md transition-colors select-none ${
-            isSelected ? "bg-blue-50 border border-blue-300" : ""
-          }`}
-          style={{ paddingLeft: `${level * 20 + 12}px` }}
-        >
-          {/* Expand/Collapse Button */}
-          {hasChildren && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleToggleExpand(item.id);
-              }}
-              className="mr-2 p-0.5 hover:bg-gray-200 rounded transition-colors cursor-pointer"
-            >
-              {isExpanded ? (
-                <Minus size={14} className="text-gray-600" />
-              ) : (
-                <Plus size={14} className="text-gray-600" />
-              )}
-            </button>
-          )}
-
-          {/* Selection Indicator (Radio button style like DashboardHeader) */}
-          <div className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center transition-colors ${
-            isSelected
-              ? "border-blue-600 bg-blue-600"
-              : "border-gray-300 hover:border-blue-600"
-          }`}>
-            {isSelected && (
-              <div className="w-2 h-2 bg-white rounded-full"></div>
+      return (
+        <div key={item.id}>
+          <div
+            onClick={() => handleItemSelect(item)}
+            className={`flex items-center py-2 px-3 hover:bg-gray-50 cursor-pointer rounded-md transition-colors select-none ${
+              isSelected ? "bg-blue-50 border border-blue-300" : ""
+            }`}
+            style={{ paddingLeft: `${level * 20 + 12}px` }}
+          >
+            {/* Expand/Collapse Button */}
+            {hasChildren && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggleExpand(item.id);
+                }}
+                className="mr-2 p-0.5 hover:bg-gray-200 rounded transition-colors cursor-pointer"
+              >
+                {isExpanded ? (
+                  <Minus size={14} className="text-gray-600" />
+                ) : (
+                  <Plus size={14} className="text-gray-600" />
+                )}
+              </button>
             )}
-          </div>
 
-          {/* Group Icon - Hide for Entire Fleet */}
-          {/* {!isEntireFleet && (
+            {/* Selection Indicator (Radio button style like DashboardHeader) */}
+            <div
+              className={`w-4 h-4 rounded-full border-2 mr-3 flex items-center justify-center transition-colors ${
+                isSelected
+                  ? "border-blue-600 bg-blue-600"
+                  : "border-gray-300 hover:border-blue-600"
+              }`}
+            >
+              {isSelected && (
+                <div className="w-2 h-2 bg-white rounded-full"></div>
+              )}
+            </div>
+
+            {/* Group Icon - Hide for Entire Fleet */}
+            {/* {!isEntireFleet && (
             <Layers size={16} className="text-blue-600 mr-2" />
           )} */}
 
-          {/* Group Name */}
-          <span className={`text-sm font-medium flex-1 select-none ${
-            isSelected ? "text-blue-600" : "text-gray-700"
-          }`}>
-            {item.text}
-          </span>
+            {/* Group Name */}
+            <span
+              className={`text-sm font-medium flex-1 select-none ${
+                isSelected ? "text-blue-600" : "text-gray-700"
+              }`}
+            >
+              {item.text}
+            </span>
 
-          {/* Children Count - Hide for Entire Fleet */}
-          {/* {hasChildren && !isEntireFleet && (
+            {/* Children Count - Hide for Entire Fleet */}
+            {/* {hasChildren && !isEntireFleet && (
             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full ml-2">
               {item.children.length}
             </span>
           )} */}
-        </div>
-
-        {/* Children */}
-        {hasChildren && isExpanded && (
-          <div className="ml-2">
-            {item.children.map((child) => (
-              <TreeSelectItem
-                key={child.id}
-                item={child}
-                level={level + 1}
-              />
-            ))}
           </div>
-        )}
-      </div>
-    );
-  }, [expandedGroups, selectedItems, handleToggleExpand, handleItemSelect]);
+
+          {/* Children */}
+          {hasChildren && isExpanded && (
+            <div className="ml-2">
+              {item.children.map((child) => (
+                <TreeSelectItem key={child.id} item={child} level={level + 1} />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    },
+    [expandedGroups, selectedItems, handleToggleExpand, handleItemSelect]
+  );
 
   // Render list item (for virtual scrolling)
-  const ListItem = useCallback(({ index, style }) => {
-    const item = filteredItems[index];
-    const isSelected = selectedItems.some(i => i.id === item.id);
-    
-    return (
-      <div 
-        style={style}
-        className="flex items-center py-1 px-3 hover:bg-gray-50 cursor-pointer transition-colors"
-        onClick={() => handleItemSelect(item)}
-      >
-        {/* Checkbox */}
-        <div className={`w-4 h-4 border-2 rounded mr-3 flex items-center justify-center ${
-          isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
-        }`}>
-          {isSelected && (
-            <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M20 6L9 17l-5-5" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+  const ListItem = useCallback(
+    ({ index, style }) => {
+      const item = filteredItems[index];
+      const isSelected = selectedItems.some(
+        (i) =>
+          i.id === item.id ||
+          i.valueId === item.valueId ||
+          (i.valueId && item.valueId && i.valueId === item.valueId)
+      );
+
+      return (
+        <div
+          style={style}
+          className="flex items-center py-1 px-3 hover:bg-gray-50 cursor-pointer transition-colors"
+          onClick={() => handleItemSelect(item)}
+        >
+          {/* Checkbox */}
+          <div
+            className={`w-4 h-4 border-2 rounded mr-3 flex items-center justify-center ${
+              isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300"
+            }`}
+          >
+            {isSelected && (
+              <svg
+                className="w-3 h-3 text-white"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  d="M20 6L9 17l-5-5"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </div>
+
+          {/* Type icon */}
+          {item.Type === "Vehicle" && (
+            <Car size={16} className="text-green-600 mr-2" />
           )}
-        </div>
-        
-        {/* Type icon */}
-        {item.Type === 'Vehicle' && <Car size={16} className="text-green-600 mr-2" />}
-        {item.Type === 'Driver' && <Users size={16} className="text-violet-600 mr-2" />}
-        
-        {/* Text */}
-        <div className="flex-1">
-          <span className="text-sm text-gray-900">{item.text}</span>
-          {item.Type === 'Vehicle' && item.VehicleReg && (
-            <span className="text-xs text-gray-500 ml-2">({item.VehicleReg})</span>
+          {item.Type === "Driver" && (
+            <Users size={16} className="text-violet-600 mr-2" />
           )}
+
+          {/* Text */}
+          <div className="flex-1">
+            <span className="text-sm text-gray-900">{item.text}</span>
+            {item.Type === "Vehicle" && item.VehicleReg && (
+              <span className="text-xs text-gray-500 ml-2">
+                ({item.VehicleReg})
+              </span>
+            )}
+          </div>
         </div>
-      </div>
-    );
-  }, [filteredItems, selectedItems, handleItemSelect]);
+      );
+    },
+    [filteredItems, selectedItems, handleItemSelect]
+  );
 
   // Render flat list with virtual scrolling
   const renderFlatList = () => {
@@ -348,37 +401,37 @@ const SelectionModal = ({
       </List>
     );
   };
-  
+
   // Get title and icon based on type
   const getTitle = () => {
-    switch(type) {
-      case 'vehicle':
-        return 'Select Vehicle from your fleet';
-      case 'driver':
-        return 'Select Driver from your fleet';
-      case 'group':
-        return 'Select Group from your fleet';
+    switch (type) {
+      case "vehicle":
+        return "Select Vehicle from your fleet";
+      case "driver":
+        return "Select Driver from your fleet";
+      case "group":
+        return "Select Group from your fleet";
       default:
-        return 'Select Item';
+        return "Select Item";
     }
   };
-  
+
   const getIcon = () => {
-    switch(type) {
-      case 'vehicle':
+    switch (type) {
+      case "vehicle":
         return <Car size={20} className="text-green-600" />;
-      case 'driver':
+      case "driver":
         return <Users size={20} className="text-violet-600" />;
-      case 'group':
+      case "group":
         return <Layers size={20} className="text-blue-600" />;
       default:
         return null;
     }
   };
-  
+
   // Handle save button click
   const handleSave = () => {
-    const selectedIds = selectedItems.map(item => item.valueId || item.id);
+    const selectedIds = selectedItems.map((item) => item.valueId || item.id);
     onSave(selectedIds, selectedItems); // Send both IDs and full items
     onClose();
   };
@@ -386,16 +439,16 @@ const SelectionModal = ({
   if (!isOpen) return null;
 
   // Use modal-root for overlay, fallback to document.body
-  let modalRoot = document.getElementById('modal-root');
+  let modalRoot = document.getElementById("modal-root");
   if (!modalRoot) {
-    modalRoot = document.createElement('div');
-    modalRoot.setAttribute('id', 'modal-root');
+    modalRoot = document.createElement("div");
+    modalRoot.setAttribute("id", "modal-root");
     document.body.appendChild(modalRoot);
   }
 
   // Select All handler
   const handleSelectAll = () => {
-    if (type === 'group') {
+    if (type === "group") {
       // For groups, flatten all group nodes
       const flattenTree = (nodes) => {
         let all = [];
@@ -426,21 +479,26 @@ const SelectionModal = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={handleOverlayClick}>
-      <motion.div 
+    <div
+      className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={handleOverlayClick}
+    >
+      <motion.div
         className="relative w-full max-w-md bg-white rounded-lg overflow-hidden shadow-xl z-10 mx-4"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        style={{ maxHeight: '80vh' }}
-        onClick={e => e.stopPropagation()}
+        style={{ maxHeight: "80vh" }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Modal header */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {getIcon()}
-            <h3 className="text-lg font-semibold text-gray-800">{getTitle()}</h3>
+            <h3 className="text-lg font-semibold text-gray-800">
+              {getTitle()}
+            </h3>
           </div>
           <button
             onClick={onClose}
@@ -452,7 +510,9 @@ const SelectionModal = ({
         <div className="p-6 max-h-[70vh] overflow-y-auto">
           {/* Search box */}
           <div className="mb-4 flex items-center">
-            <label htmlFor="search" className="mr-2 font-medium text-gray-700">Search:</label>
+            <label htmlFor="search" className="mr-2 font-medium text-gray-700">
+              Search:
+            </label>
             <input
               id="search"
               type="text"
@@ -462,7 +522,7 @@ const SelectionModal = ({
               placeholder={`Search ${type}s...`}
             />
           </div>
-          
+
           {/* Item list */}
           <div className="space-y-1 mb-4 max-h-[300px] overflow-y-auto">
             {isLoading ? (
@@ -470,23 +530,25 @@ const SelectionModal = ({
               <div className="py-12 text-center">
                 <div className="flex flex-col items-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#25689f] mb-4"></div>
-                  <div className="text-gray-500 font-medium">Loading {type}s...</div>
-                  <div className="text-gray-400 text-sm mt-1">Please wait while we fetch your data</div>
+                  <div className="text-gray-500 font-medium">
+                    Loading {type}s...
+                  </div>
+                  <div className="text-gray-400 text-sm mt-1">
+                    Please wait while we fetch your data
+                  </div>
                 </div>
               </div>
             ) : filteredItems.length > 0 ? (
-              type === 'group' ? (
+              type === "group" ? (
                 // Tree view for groups (using TreeSelectItem from DashboardHeader)
                 <div className="space-y-1">
-                  {filteredItems.map(item => (
+                  {filteredItems.map((item) => (
                     <TreeSelectItem key={item.id} item={item} />
                   ))}
                 </div>
               ) : (
                 // Flat list for vehicles and drivers with virtual scrolling
-                <div className="h-[300px]">
-                  {renderFlatList()}
-                </div>
+                <div className="h-[300px]">{renderFlatList()}</div>
               )
             ) : (
               <div className="py-8 text-center">
@@ -496,7 +558,9 @@ const SelectionModal = ({
                     No {type}s found
                   </div>
                   <div className="text-gray-400 text-sm mt-1">
-                    {searchQuery ? `No ${type}s match "${searchQuery}"` : `No ${type}s available in your fleet`}
+                    {searchQuery
+                      ? `No ${type}s match "${searchQuery}"`
+                      : `No ${type}s available in your fleet`}
                   </div>
                 </div>
               </div>
@@ -510,8 +574,8 @@ const SelectionModal = ({
                 disabled={isLoading || filteredItems.length === 0}
                 className={`bg-transparent text-sm font-semibold text-[#25689f] underline underline-offset-4 px-0 py-0 transition-colors cursor-pointer ${
                   filteredItems.length > 0 && !isLoading
-                    ? 'hover:text-[#1F557F]'
-                    : 'text-gray-400 cursor-not-allowed'
+                    ? "hover:text-[#1F557F]"
+                    : "text-gray-400 cursor-not-allowed"
                 }`}
               >
                 Select All
@@ -521,23 +585,22 @@ const SelectionModal = ({
                 disabled={isLoading || selectedItems.length === 0}
                 className={`bg-transparent text-sm font-semibold text-[#25689f] underline underline-offset-4 px-0 py-0 transition-colors cursor-pointer ${
                   selectedItems.length > 0 && !isLoading
-                    ? 'hover:text-[#1F557F]'
-                    : 'text-gray-400 cursor-not-allowed'
+                    ? "hover:text-[#1F557F]"
+                    : "text-gray-400 cursor-not-allowed"
                 }`}
               >
                 Deselect All
               </button>
             </div>
-            <button 
+            <button
               onClick={handleSave}
-              disabled={selectedItems.length === 0 || isLoading}
               className={`px-4 py-2 text-sm rounded transition-colors cursor-pointer ${
                 selectedItems.length > 0 && !isLoading
-                  ? 'bg-[#25689f] text-white hover:bg-[#1F557F]' 
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  ? "bg-[#25689f] text-white hover:bg-[#1F557F]"
+                  : "bg-[#25689f] text-white hover:bg-[#1F557F]"
               }`}
             >
-              {isLoading ? 'Loading...' : 'Save'}
+              {isLoading ? "Loading..." : "Save"}
             </button>
           </div>
         </div>
