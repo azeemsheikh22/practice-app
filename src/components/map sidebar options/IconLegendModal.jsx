@@ -1,4 +1,4 @@
-import React from "react";
+
 import { X } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -11,20 +11,26 @@ const IconLegendModal = ({ isOpen, onClose }) => {
   // If modal is not open, don't render anything
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 flex items-center justify-center z-[906]">
-      {/* Black overlay with slight transparency */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      ></div>
+  // Overlay click closes modal unless clicking inside modal
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
-      <motion.div 
+  return (
+    <div
+      className="fixed inset-0 flex items-center justify-center z-[906] bg-black/40 backdrop-blur-sm"
+      onClick={handleOverlayClick}
+    >
+      <motion.div
         className="relative w-full max-w-2xl bg-white rounded-lg shadow-xl z-10 mx-4"
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
+        style={{ maxHeight: "80vh" }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Modal header */}
         <div className="px-6 py-4 border-b border-gray-200">
@@ -54,7 +60,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
                   <div className="text-sm text-gray-600">Vehicle is currently moving in the direction of the arrow</div>
                 </div>
               </div>
-              
               {/* Stopped Vehicle */}
               <div className="flex items-start">
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center mr-3">
@@ -65,7 +70,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
                   <div className="text-sm text-gray-600">Vehicle is currently stopped at that location</div>
                 </div>
               </div>
-              
               {/* Idle Vehicle */}
               <div className="flex items-start">
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center mr-3">
@@ -76,7 +80,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
                   <div className="text-sm text-gray-600">Vehicle is currently idling at that location</div>
                 </div>
               </div>
-              
               {/* Privacy Mode */}
               <div className="flex items-start">
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center mr-3">
@@ -89,7 +92,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
                   <div className="text-sm text-gray-600">Vehicle has entered into privacy mode</div>
                 </div>
               </div>
-              
               {/* Towing */}
               <div className="flex items-start">
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center mr-3">
@@ -102,7 +104,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
                   <div className="text-sm text-gray-600">Vehicle is currently being towed</div>
                 </div>
               </div>
-              
               {/* Panic */}
               <div className="flex items-start">
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center mr-3">
@@ -115,7 +116,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
                   <div className="text-sm text-gray-600">A panic alert has been triggered for this vehicle</div>
                 </div>
               </div>
-              
               {/* Vehicle Clustering */}
               <div className="flex items-start">
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center mr-3">
@@ -130,7 +130,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-          
           {/* Places Section */}
           <div className="mb-6">
             <h4 className="font-medium text-gray-800 mb-3 border-b pb-1">Places</h4>
@@ -145,7 +144,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
                   <div className="text-sm text-gray-600">Geofence location (customizable group category icon)</div>
                 </div>
               </div>
-              
               {/* Suggested Geofences */}
               <div className="flex items-start">
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center mr-3">
@@ -158,7 +156,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-          
           {/* Garmin Stops Section */}
           <div>
             <h4 className="font-medium text-gray-800 mb-3 border-b pb-1">Garmin Stops</h4>
@@ -175,7 +172,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
                   <div className="text-sm text-gray-600">Garmin stop has a vehicle en route</div>
                 </div>
               </div>
-              
               {/* Completed */}
               <div className="flex items-start">
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center mr-3">
@@ -188,7 +184,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
                   <div className="text-sm text-gray-600">Garmin stop has been completed</div>
                 </div>
               </div>
-              
               {/* Pending */}
               <div className="flex items-start">
                 <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center mr-3">
@@ -203,7 +198,6 @@ const IconLegendModal = ({ isOpen, onClose }) => {
               </div>
             </div>
           </div>
-
           {/* Close button */}
           <div className="flex justify-end mt-6 pt-4 border-t border-gray-100">
             <button

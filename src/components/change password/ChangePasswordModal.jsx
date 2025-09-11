@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Eye, EyeOff, X } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -82,20 +82,27 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
   // If modal is not open, don't render anything
   if (!isOpen) return null;
 
-  return (
-    <motion.div
-      className="fixed inset-0 flex items-center justify-center z-[840]"
-      initial={{ opacity: 0, y: -50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{duration: 0.4}}
-    >
-      {/* Black overlay with slight transparency - same as ForgotPasswordModal */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      ></div>
+  // Overlay click closes modal unless clicking inside modal
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
-      <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl overflow-hidden z-10 mx-4">
+  return (
+    <div
+      className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      onClick={handleOverlayClick}
+    >
+      <motion.div
+        className="relative w-full max-w-md bg-white rounded-lg overflow-hidden shadow-xl z-10 mx-4"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        style={{ maxHeight: "80vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Decorative elements similar to ForgotPasswordModal */}
         <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full"></div>
         <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-primary/5 rounded-full"></div>
@@ -114,10 +121,7 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
         </div>
 
         <div className="p-6 relative">
-          <p className="text-sm text-gray-600 mb-6">
-            Please enter your current password and a new password to update your
-            credentials.
-          </p>
+
 
           {/* Error message */}
           {error && (
@@ -297,8 +301,8 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
             </div>
           </form>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+    </div>
   );
 };
 

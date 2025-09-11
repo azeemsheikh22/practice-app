@@ -13,7 +13,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { fetchGeofences } from "../../features/geofenceSlice";
 import { saveAs } from "file-saver";
 
-
 function exportToCSV(data, filename = "geofences.csv") {
   if (!data || data.length === 0) return;
   // Custom header labels for better CSV format
@@ -184,7 +183,9 @@ const AddressDisplay = ({ address }) => {
 
 // Edit button handler
 const handleEditGeofence = (item) => {
-  const url = `/#/create-geofence?type=edit&id=${item?.id}&geofenceName=${encodeURIComponent(item.geofenceName)}`;
+  const url = `/#/create-geofence?type=edit&id=${
+    item?.id
+  }&geofenceName=${encodeURIComponent(item.geofenceName)}`;
 
   const newWindow = window.open(
     url,
@@ -200,9 +201,9 @@ const handleEditGeofence = (item) => {
 };
 
 const handleViewMatrix = (item) => {
-  const url = `/#/geofence-matrix?geofenceId=${item?.id}&geofenceName=${encodeURIComponent(
-    item.geofenceName
-  )}`;
+  const url = `/#/geofence-matrix?geofenceId=${
+    item?.id
+  }&geofenceName=${encodeURIComponent(item.geofenceName)}`;
 
   const newWindow = window.open(
     url,
@@ -227,7 +228,6 @@ export default function GeofenceTable() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [showScrollHelper, setShowScrollHelper] = useState(false);
   const tableContainerRef = useRef(null);
 
   const dispatch = useDispatch();
@@ -271,21 +271,6 @@ export default function GeofenceTable() {
   const visibleData = useMemo(() => {
     return filteredData.slice(0, visibleCount);
   }, [filteredData, visibleCount]);
-
-  // Check if horizontal scroll is needed
-  useEffect(() => {
-    const checkScrollNeed = () => {
-      if (tableContainerRef.current) {
-        const { scrollWidth, clientWidth } = tableContainerRef.current;
-        setShowScrollHelper(scrollWidth > clientWidth);
-      }
-    };
-
-    checkScrollNeed();
-    window.addEventListener("resize", checkScrollNeed);
-
-    return () => window.removeEventListener("resize", checkScrollNeed);
-  }, [visibleData]);
 
   // Horizontal scroll handlers
   const handleMouseDown = (e) => {
@@ -500,7 +485,7 @@ export default function GeofenceTable() {
 
           {/* Category Filter - Compact */}
           <div className="flex items-center gap-2 min-w-[180px]">
-            <div style={{ width: '220px', position: 'relative', zIndex: 400 }}>
+            <div style={{ width: "220px", position: "relative", zIndex: 400 }}>
               <Select
                 options={categories.map((cat) => ({ value: cat, label: cat }))}
                 value={{ value: categoryFilter, label: categoryFilter }}
@@ -510,26 +495,26 @@ export default function GeofenceTable() {
                 styles={{
                   control: (base) => ({
                     ...base,
-                    minHeight: '36px',
-                    fontSize: '13px',
-                    borderColor: '#d1d5db',
-                    boxShadow: 'none',
-                    background: '#fff',
+                    minHeight: "36px",
+                    fontSize: "13px",
+                    borderColor: "#d1d5db",
+                    boxShadow: "none",
+                    background: "#fff",
                   }),
                   menu: (base) => ({
                     ...base,
                     zIndex: 2000,
-                    fontSize: '13px',
+                    fontSize: "13px",
                   }),
                   option: (base, state) => ({
                     ...base,
-                    fontSize: '13px',
-                    backgroundColor: state.isFocused ? '#e0e7ff' : '#fff',
-                    color: '#222',
+                    fontSize: "13px",
+                    backgroundColor: state.isFocused ? "#e0e7ff" : "#fff",
+                    color: "#222",
                   }),
                   singleValue: (base) => ({
                     ...base,
-                    fontSize: '13px',
+                    fontSize: "13px",
                   }),
                   menuPortal: (base) => ({
                     ...base,
@@ -543,18 +528,6 @@ export default function GeofenceTable() {
           </div>
         </div>
       </div>
-
-      {/* Scroll Helper */}
-      {showScrollHelper && (
-        <div className="px-4 py-1.5 bg-blue-50 border-b border-blue-200">
-          <div className="flex items-center gap-2 text-blue-700">
-            <GripHorizontal size={12} />
-            <span className="text-xs">
-              Drag horizontally or use scroll to view all columns
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Table Container */}
       <div

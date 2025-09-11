@@ -373,7 +373,7 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-[905]">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
 
       <motion.div
         className="relative w-full max-w-4xl bg-white rounded-lg shadow-xl z-10 mx-4 max-h-[85vh] flex flex-col"

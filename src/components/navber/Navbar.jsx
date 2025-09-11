@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 // import logo from "../../assets/logo.png";
 import logo3 from "../../assets/LogoColor.png";
 // import logo2 from "../../assets/logo2.png";
@@ -31,11 +31,19 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import ChangePasswordModal from "../change password/ChangePasswordModal";
 
 const Navbar = () => {
+  // Helper for mobile navigation
+  const handleMobileNav = (to) => {
+    setMobileMenuOpen(false);
+    if (to && to !== "#") {
+      navigate(to);
+    }
+  };
   const dispatch = useDispatch();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] =
+    useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -57,8 +65,9 @@ const Navbar = () => {
       setIsFullscreen(!!document.fullscreenElement);
     };
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   useEffect(() => {
@@ -90,11 +99,11 @@ const Navbar = () => {
   // ✅ Fullscreen toggle function
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
+      document.documentElement.requestFullscreen().catch((err) => {
         console.log(`Error attempting to enable fullscreen: ${err.message}`);
       });
     } else {
-      document.exitFullscreen().catch(err => {
+      document.exitFullscreen().catch((err) => {
         console.log(`Error attempting to exit fullscreen: ${err.message}`);
       });
     }
@@ -124,7 +133,9 @@ const Navbar = () => {
                   <span className="text-base lg:text-sm font-semibold text-gray-800">
                     {firstName} {lastName}
                   </span>
-                  <span className="text-sm lg:text-xs text-gray-500">Welcome back</span>
+                  <span className="text-sm lg:text-xs text-gray-500">
+                    Welcome back
+                  </span>
                 </div>
               </div>
 
@@ -180,33 +191,29 @@ const Navbar = () => {
                   active={isActive("/routesview")}
                   openInNewTab={true}
                 />
-
-                {/* <NavItem
-                  icon={<img src={menuIcon6} className="w-[18px] h-[18px]" />}
-                  label="Scheduler"
-                  to="#"
-                  active={isActive("/scheduler")}
-                  openInNewTab={true}
-                /> */}
               </div>
             </div>
 
             <div className="flex items-center">
               {/* ✅ Fullscreen Toggle Button - Desktop Only */}
-              <div className="hidden xl:block mr-3">
+              <div className="hidden xl:block">
                 <button
                   onClick={toggleFullscreen}
                   className="p-2.5 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 cursor-pointer transition-colors"
                   title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
                 >
-                  {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
+                  {isFullscreen ? (
+                    <Minimize size={20} />
+                  ) : (
+                    <Maximize size={20} />
+                  )}
                 </button>
               </div>
 
-              <button className="p-2.5 rounded-full text-white bg-black cursor-pointer relative">
+              {/* <button className="p-2.5 rounded-full text-white bg-black cursor-pointer relative">
                 <Bell size={20} />
                 <span className="absolute top-2 right-2 bg-red-500 rounded-full w-2.5 h-2.5 border-2 border-white"></span>
-              </button>
+              </button> */}
 
               <div className="ml-4 relative" ref={dropdownRef}>
                 <button
@@ -240,13 +247,11 @@ const Navbar = () => {
                           </div>
                         </div>
 
-
                         <DropdownItem
                           icon={<Shield size={18} />}
                           label="Admin"
                           to="/admin/menu"
                         />
-
 
                         <DropdownItem
                           icon={<User size={18} />}
@@ -341,48 +346,42 @@ const Navbar = () => {
                     label="Live Map"
                     to="/live-map"
                     active={isActive("/live-map")}
-                    onClick={() => setMobileMenuOpen(false)}
-                    openInNewTab={true}
+                    onClick={() => handleMobileNav("/live-map")}
                   />
                   <MobileNavItem
                     icon={<img src={menuIcon9} className="w-5 h-5" />}
                     label="Dashboard"
                     to="/dashboard"
                     active={isActive("/dashboard")}
-                    onClick={() => setMobileMenuOpen(false)}
-                    openInNewTab={true}
+                    onClick={() => handleMobileNav("/dashboard")}
                   />
                   <MobileNavItem
                     icon={<img src={menuIcon7} className="w-5 h-5" />}
                     label="Geofence"
                     to="/geofence"
                     active={isActive("/geofence")}
-                    onClick={() => setMobileMenuOpen(false)}
-                    openInNewTab={true}
+                    onClick={() => handleMobileNav("/geofence")}
                   />
                   <MobileNavItem
                     icon={<img src={menuIcon3} className="w-5 h-5" />}
                     label="Replay"
                     to="/replay"
                     active={isActive("/replay")}
-                    onClick={() => setMobileMenuOpen(false)}
-                    openInNewTab={true}
+                    onClick={() => handleMobileNav("/replay")}
                   />
                   <MobileNavItem
                     icon={<img src={menuIcon5} className="w-5 h-5" />}
                     label="Alerts"
                     to="/alerts"
                     active={isActive("/alerts")}
-                    onClick={() => setMobileMenuOpen(false)}
-                    openInNewTab={true}
+                    onClick={() => handleMobileNav("/alerts")}
                   />
                   <MobileNavItem
                     icon={<img src={menuIcon2} className="w-5 h-5" />}
                     label="Reports"
                     to="/reports"
                     active={isActive("/reports")}
-                    onClick={() => setMobileMenuOpen(false)}
-                    openInNewTab={true}
+                    onClick={() => handleMobileNav("/reports")}
                   />
 
                   <MobileNavItem
@@ -390,33 +389,13 @@ const Navbar = () => {
                     label="Routes"
                     to="/routesview"
                     active={isActive("/routesview")}
-                    onClick={() => setMobileMenuOpen(false)}
-                    openInNewTab={true}
+                    onClick={() => handleMobileNav("/routesview")}
                   />
-                  {/* <MobileNavItem
-                    icon={<img src={menuIcon6} className="w-5 h-5" />}
-                    label="Scheduler"
-                    to="#"
-                    active={isActive("/scheduler")}
-                    onClick={() => setMobileMenuOpen(false)}
-                    openInNewTab={true}
-                  /> */}
-
-
-                  <MobileNavItem
-                    icon={<Shield className="w-5 h-5" />}
-                    label="Admin"
-                    to="/admin/menu"
-                    active={isActive("/admin/menu")}
-                    onClick={() => setMobileMenuOpen(false)}
-                    openInNewTab={true}
-                  />
-
                 </div>
 
                 {/* Mobile Menu Footer */}
                 <div className="border-t border-gray-200 p-4 mt-auto">
-                <div className="flex items-center space-x-3 mb-4">
+                  <div className="flex items-center space-x-3 mb-4">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
                       {(firstName?.[0] || "") + (lastName?.[0] || "")}
                     </div>
@@ -424,21 +403,23 @@ const Navbar = () => {
                       <p className="text-sm lg:text-xs font-medium text-gray-900">
                         {firstName} {lastName}
                       </p>
-                      <p className="text-xs lg:text-[10px] text-gray-500">Logged in user</p>
+                      <p className="text-xs lg:text-[10px] text-gray-500">
+                        Logged in user
+                      </p>
                     </div>
                   </div>
 
                   <div className="space-y-1">
                     <button
                       onClick={handleChangePasswordClick}
-                    className="flex items-center w-full px-3 py-2 text-sm lg:text-xs text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                      className="flex items-center w-full px-3 py-2 text-sm lg:text-xs text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                     >
                       <Lock size={16} className="mr-3" />
                       Change Password
                     </button>
                     <button
                       onClick={handleLogout}
-                    className="flex items-center w-full px-3 py-2 text-sm lg:text-xs text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                      className="flex items-center w-full px-3 py-2 text-sm lg:text-xs text-red-600 hover:bg-red-50 rounded-md transition-colors"
                     >
                       <LogOut size={16} className="mr-3" />
                       Logout
@@ -467,10 +448,11 @@ const NavItem = ({ icon, label, to, active = false, openInNewTab = false }) => (
     to={to}
     target={openInNewTab ? "_blank" : "_self"}
     rel={openInNewTab ? "noopener noreferrer" : undefined}
-    className={`flex flex-col items-center px-4 py-2 text-[13px] lg:text-[11px] font-medium mx-0.5 text-dark ${active
-      ? "border-b-3 border-primary"
-      : "border-b-3 border-transparent hover:bg-gray-50"
-      } transition-colors duration-200`}
+    className={`flex flex-col items-center px-4 py-2 text-[13px] lg:text-[11px] font-medium mx-0.5 text-dark ${
+      active
+        ? "border-b-3 border-primary"
+        : "border-b-3 border-transparent hover:bg-gray-50"
+    } transition-colors duration-200`}
   >
     <div className="mb-1">{icon}</div>
     <span>{label}</span>
@@ -484,7 +466,7 @@ const MobileNavItem = ({
   to,
   active = false,
   onClick,
-  openInNewTab = false,
+  openInNewTab = false, // not used anymore for mobile
 }) => {
   const handleClick = (e) => {
     if (to === "#") {
@@ -492,17 +474,11 @@ const MobileNavItem = ({
       onClick();
       return;
     }
-
-    if (openInNewTab) {
-      e.preventDefault();
-      window.open(to, '_blank');
-      onClick();
-    } else {
-      onClick();
-    }
+    onClick();
   };
 
-  const baseClasses = "flex items-center px-4 py-3 text-sm font-medium transition-colors cursor-pointer border-l-4";
+  const baseClasses =
+    "flex items-center px-4 py-3 text-sm font-medium transition-colors cursor-pointer border-l-4";
   const activeClasses = active
     ? "bg-primary/10 text-primary border-primary"
     : "text-gray-700 hover:bg-gray-50 hover:text-primary border-transparent hover:border-primary/30";
@@ -516,9 +492,6 @@ const MobileNavItem = ({
       >
         <span className="mr-3">{icon}</span>
         {label}
-        {openInNewTab && (
-          <span className="ml-auto text-xs text-gray-400">↗</span>
-        )}
       </button>
     );
   }
@@ -562,4 +535,3 @@ const DropdownItem = ({ icon, label, onClick, to }) => {
 };
 
 export default Navbar;
-

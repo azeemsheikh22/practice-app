@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Route, Save, X, Menu, ChevronLeft, Settings } from "lucide-react";
 import RouteMap from "./RouteMap";
@@ -257,8 +257,6 @@ const CreateRoute = () => {
       routeData,
       timestamp: new Date().toISOString(),
     };
-
-    console.log("Save complete route data:", completeData);
     setIsSidebarOpen(false);
   };
 
@@ -588,29 +586,6 @@ const CreateRoute = () => {
         </div>
       </motion.div>
 
-      {/* Mobile Status Bar - Compact */}
-      {routeData && (
-        <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          className="lg:hidden fixed bottom-16 left-3 right-3 bg-[#25689f] text-white p-2.5 rounded-md shadow-lg z-30"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
-              <span className="text-xs font-medium">✅ Route Calculated</span>
-            </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleSidebar}
-              className="text-xs bg-white/20 px-2 py-0.5 rounded-full hover:bg-white/30 transition-colors"
-            >
-              Settings
-            </motion.button>
-          </div>
-        </motion.div>
-      )}
     </div>
   );
 };
@@ -619,7 +594,6 @@ const CreateRoute = () => {
 const SidebarContent = ({
   routeForm,
   setRouteForm,
-  routeData,
   handleSave,
   handleClearAll,
   handleOptimizeRoute,

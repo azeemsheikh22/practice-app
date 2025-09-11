@@ -58,15 +58,25 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
       } else if (geofenceData.length > 0) {
         setSelectedGeofenceIds(new Set(geofenceData.map((g) => g.id)));
       }
-      
+
       if (Array.isArray(showCategories) && showCategories.length > 0) {
-        setSelectedCategories(new Set(showCategories.map((c) => c.Categoryname)));
+        setSelectedCategories(
+          new Set(showCategories.map((c) => c.Categoryname))
+        );
       } else if (categoryData.length > 0) {
         setSelectedCategories(new Set(categoryData.map((c) => c.Categoryname)));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, geofenceData, categoryData, showGeofences, showCategories, geofences, categories]);
+  }, [
+    isOpen,
+    geofenceData,
+    categoryData,
+    showGeofences,
+    showCategories,
+    geofences,
+    categories,
+  ]);
 
   const handleSelectAll = () => {
     if (activeTab === "geofence") {
@@ -158,20 +168,21 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
     } else if (activeTab === "category") {
       // Filter geofences based on selected categories
       const selectedCategoryNames = Array.from(selectedCategories);
-      
+
       const filteredGeofencesByCategory = geofenceData.filter((geofence) => {
         // Use Categoryname field (with lowercase 'n')
-        const categoryMatch = selectedCategoryNames.includes(geofence.Categoryname);
+        const categoryMatch = selectedCategoryNames.includes(
+          geofence.Categoryname
+        );
         return categoryMatch;
       });
-    
-      
+
       // Update showGeofences with filtered geofences (not categories)
       dispatch({
         type: "replay/setShowGeofences",
         payload: filteredGeofencesByCategory,
       });
-      
+
       // Also update showCategories for reference
       const selectedCategoriesArray = categoryData.filter((c) =>
         selectedCategories.has(c.Categoryname)
@@ -188,7 +199,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
   const modalContent = (
     <div className="fixed inset-0 flex items-center justify-center z-[9999]">
       <div
-        className="absolute inset-0 bg-black/60 z-[9998]"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm z-[9998]"
         onClick={onClose}
       ></div>
       <motion.div
@@ -219,7 +230,6 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
               onClick={() => {
                 setActiveTab("geofence");
                 setSearchTerm("");
-          
               }}
               className={`flex-1 cursor-pointer py-1.5 px-3 text-sm font-medium rounded-md transition-colors ${
                 activeTab === "geofence"
@@ -233,7 +243,6 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
               onClick={() => {
                 setActiveTab("category");
                 setSearchTerm("");
-              
               }}
               className={`flex-1 cursor-pointer py-1.5 px-3 text-sm font-medium rounded-md transition-colors ${
                 activeTab === "category"
@@ -259,7 +268,6 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-              
                 }}
                 className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#25689f] focus:border-transparent"
               />
