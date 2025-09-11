@@ -130,21 +130,25 @@ const Reports = () => {
           }}
         />
       ) : (
-        <div className="w-full max-w-[1800px] mx-auto px-2 sm:px-4 lg:px-6 py-4 flex flex-col lg:flex-row gap-6">
-          {/* Sidebar */}
-          <ReportSidebar onAction={handleSidebarAction} />
+        <div className="w-full mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4">
+          {/* Mobile and Desktop Layout */}
+          <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+            {/* Sidebar - Mobile: Hamburger button, Desktop: Fixed sidebar */}
+            <div className="lg:w-64 lg:flex-shrink-0">
+              <ReportSidebar onAction={handleSidebarAction} />
+            </div>
 
-          {/* Main Content */}
-          <main className="flex-1 min-w-0">
-            {currentView === "setup" ? (
-              <div className="relative mb-4 animate-fadeIn">
-                <button
-                  onClick={handleBackToSelection}
-                  className="absolute top-0 left-0 mt-[-40px] flex items-center gap-1 text-[#25689f] hover:text-[#1F557F] transition-colors animate-slideInFromLeft"
-                >
-                  <ArrowLeft size={16} />
-                  <span className="text-sm font-medium">Back to Reports</span>
-                </button>
+            {/* Main Content */}
+            <main className="flex-1 min-w-0">
+              {currentView === "setup" ? (
+                <div className="relative mb-4 animate-fadeIn">
+                  <button
+                    onClick={handleBackToSelection}
+                    className="flex items-center gap-1 text-[#25689f] hover:text-[#1F557F] transition-colors animate-slideInFromLeft mb-4 lg:absolute lg:top-0 lg:left-0 lg:mt-[-40px] lg:mb-0"
+                  >
+                    <ArrowLeft size={16} />
+                    <span className="text-sm font-medium">Back to Reports</span>
+                  </button>
                 <ReportSetup
                   key={`${selectedReport}-${currentView}-${reportConfig ? JSON.stringify(reportConfig.selectedValueIds) : 'new'}`}
                   selectedReport={selectedReport}
@@ -175,11 +179,7 @@ const Reports = () => {
                   </div>
                 )}
 
-    
-
-     
-
-                <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 animate-fadeIn">
+                <div className="bg-white rounded-xl shadow-md border border-gray-200 p-3 sm:p-6 animate-fadeIn">
                   <ReportSelector
                     reportCategories={groupedReports.categories}
                     customReports={groupedReports.customReports}
@@ -188,7 +188,8 @@ const Reports = () => {
                 </div>
               </>
             )}
-          </main>
+            </main>
+          </div>
         </div>
       )}
     </div>

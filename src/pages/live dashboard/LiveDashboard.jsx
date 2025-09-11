@@ -9,7 +9,6 @@ const LiveDashboard = () => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // Initialize dashboard with static data from slice
     dispatch(initializeDashboard());
   }, [dispatch]);
 

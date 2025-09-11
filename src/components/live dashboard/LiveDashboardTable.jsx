@@ -1,13 +1,8 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
-  Clock,
-  Gauge,
-  Phone,
   ChevronDown,
-  Navigation,
-  Activity,
-  AlertTriangle,
+  MessageSquare,
 } from "lucide-react";
 import {
   useReactTable,
@@ -17,9 +12,12 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import { useSelector } from "react-redux";
+import ActionModal from "./ActionModal";
 
 const LiveDashboardTable = () => {
   const [globalFilter, setGlobalFilter] = useState("");
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
 
   // Get filtered vehicles from Redux
   const { filteredVehicles = [], activeFilter = null } = useSelector(
@@ -64,35 +62,33 @@ const LiveDashboardTable = () => {
       if (speed <= 60) return "text-yellow-600";
       return "text-red-600";
     };
-
     return (
-      <span className={`font-medium ${getSpeedColor(speed)}`}>
+      <span className={`font-medium text-xs ${getSpeedColor(speed)}`}>
         {speed} km/h
       </span>
     );
   };
 
-  // Location component with truncation
+  // Location component bina truncation ke, font size chota
   const LocationDisplay = ({ location }) => {
-    const [showFull, setShowFull] = useState(false);
-    const maxLength = 20;
+    return <span className="text-xs text-gray-700">{location}</span>;
+  };
 
-    if (location.length <= maxLength) {
-      return <span className="text-sm text-gray-700">{location}</span>;
-    }
+  // Action button component
+  const ActionButton = ({ vehicle }) => {
+    const handleActionClick = () => {
+      setSelectedVehicle(vehicle);
+      setActionModalOpen(true);
+    };
 
     return (
-      <div className="space-y-1">
-        <span className="text-sm text-gray-700">
-          {showFull ? location : `${location.substring(0, maxLength)}...`}
-        </span>
-        <button
-          onClick={() => setShowFull(!showFull)}
-          className="text-xs text-[#D52B1E] hover:text-[#B8241A] font-medium"
-        >
-          {showFull ? "Show Less" : "Show More"}
-        </button>
-      </div>
+      <button
+        onClick={handleActionClick}
+        className="inline-flex cursor-pointer items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-full transition-colors"
+        title="Add Action"
+      >
+        <MessageSquare size={16} />
+      </button>
     );
   };
 
@@ -118,7 +114,7 @@ const LiveDashboardTable = () => {
         accessorKey: "group",
         header: "Group",
         cell: ({ getValue }) => (
-          <div className="text-sm text-gray-700">
+          <div className="text-xs text-gray-700">
             {getValue() || <span className="text-gray-400">-</span>}
           </div>
         ),
@@ -128,7 +124,7 @@ const LiveDashboardTable = () => {
         accessorKey: "vehicle",
         header: "Vehicle",
         cell: ({ getValue }) => (
-          <div className="font-semibold text-gray-900">{getValue()}</div>
+          <div className="font-semibold text-xs text-gray-900">{getValue()}</div>
         ),
         size: 150,
       },
@@ -136,7 +132,7 @@ const LiveDashboardTable = () => {
         accessorKey: "driver",
         header: "Driver",
         cell: ({ getValue }) => (
-          <div className="text-sm text-gray-700">
+          <div className="text-xs text-gray-700">
             {getValue() || <span className="text-gray-400 italic">-</span>}
           </div>
         ),
@@ -152,7 +148,7 @@ const LiveDashboardTable = () => {
             <div
               className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium border ${statusDisplay.bgColor} ${statusDisplay.color} ${statusDisplay.borderColor}`}
             >
-              <span>{status}</span>
+              <span className="text-xs">{status}</span>
             </div>
           );
         },
@@ -162,7 +158,7 @@ const LiveDashboardTable = () => {
         accessorKey: "lastUpdate",
         header: "Last Update",
         cell: ({ getValue }) => (
-          <div className="text-sm text-gray-600 font-mono">{getValue()}</div>
+          <div className="text-xs text-gray-600 font-mono">{getValue()}</div>
         ),
         size: 180,
       },
@@ -182,7 +178,7 @@ const LiveDashboardTable = () => {
         accessorKey: "todayTravel",
         header: "Today Travel",
         cell: ({ getValue }) => (
-          <div className="text-sm font-medium text-gray-700">{getValue()}</div>
+          <div className="text-xs font-medium text-gray-700">{getValue()}</div>
         ),
         size: 120,
       },
@@ -190,7 +186,7 @@ const LiveDashboardTable = () => {
         accessorKey: "cdDuration",
         header: "CD Duration",
         cell: ({ getValue }) => (
-          <div className="text-sm font-medium text-gray-700">{getValue()}</div>
+          <div className="text-xs font-medium text-gray-700">{getValue()}</div>
         ),
         size: 120,
       },
@@ -198,7 +194,7 @@ const LiveDashboardTable = () => {
         accessorKey: "restDuration",
         header: "Rest Duration",
         cell: ({ getValue }) => (
-          <div className="text-sm font-medium text-gray-700">{getValue()}</div>
+          <div className="text-xs font-medium text-gray-700">{getValue()}</div>
         ),
         size: 120,
       },
@@ -206,7 +202,7 @@ const LiveDashboardTable = () => {
         accessorKey: "currentSpot",
         header: "Current Spot",
         cell: ({ getValue }) => (
-          <div className="text-sm text-gray-700">{getValue()}</div>
+          <div className="text-xs text-gray-700">{getValue()}</div>
         ),
         size: 120,
       },
@@ -214,11 +210,18 @@ const LiveDashboardTable = () => {
         accessorKey: "sim",
         header: "Sim #",
         cell: ({ getValue }) => (
-          <span className="text-sm font-mono text-gray-700">
+          <span className="text-xs font-mono text-gray-700">
             {getValue()}
           </span>
         ),
         size: 140,
+      },
+      {
+        id: "action",
+        header: "Action",
+        cell: ({ row }) => <ActionButton vehicle={row.original} />,
+        size: 80,
+        enableSorting: false,
       },
     ],
     []
@@ -358,6 +361,13 @@ const LiveDashboardTable = () => {
           </div>
         </div>
       )}
+      
+      {/* Action Modal */}
+      <ActionModal
+        isOpen={actionModalOpen}
+        onClose={() => setActionModalOpen(false)}
+        vehicleData={selectedVehicle}
+      />
     </div>
   );
 };

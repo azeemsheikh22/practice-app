@@ -152,68 +152,93 @@ const ReportResults = ({
     downloadPDF(rows, headers, reportName, reportCategory, summary);
 
   return (
-    <div className="h-auto bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-4">
+        <div className="w-full px-2 sm:px-4 lg:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 sm:py-4 gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
               <button
                 onClick={onBack}
-                className="flex items-center gap-2 text-[#25689f] hover:text-[#1F557F] transition-colors cursor-pointer"
+                className="flex items-center gap-1 sm:gap-2 text-[#25689f] hover:text-[#1F557F] transition-colors cursor-pointer text-sm sm:text-base"
               >
-                <ArrowLeft size={20} />
-                <span className="font-medium">Back to Setup</span>
+                <ArrowLeft size={16} className="sm:w-5 sm:h-5" />
+                <span className="font-medium hidden sm:inline">Back to Setup</span>
+                <span className="font-medium sm:hidden">Back</span>
               </button>
-              <div className="h-6 w-px bg-gray-300"></div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
+              <div className="h-4 sm:h-6 w-px bg-gray-300"></div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                   {reportName}
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm text-gray-600 truncate">
                   Category: {reportCategory}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* Action Buttons - Mobile: Stacked, Desktop: Horizontal */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <button
                 onClick={onEdit}
-                className="flex items-center gap-2 px-4 py-2 text-[#25689f] hover:text-[#1F557F] border border-[#25689f] hover:border-[#1F557F] rounded-lg transition-colors cursor-pointer"
+                className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 text-[#25689f] hover:text-[#1F557F] border border-[#25689f] hover:border-[#1F557F] rounded-lg transition-colors cursor-pointer text-sm sm:text-base"
               >
                 <span>Edit</span>
               </button>
-              <button
-                onClick={handleDownloadExcel}
-                disabled={!hasRealData}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FileText size={16} />
-                <span>Excel</span>
-              </button>
-              <button
-                onClick={handleDownloadCSV}
-                disabled={!hasRealData}
-                className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FileText size={16} />
-                <span>CSV</span>
-              </button>
-              <button
-                onClick={handleDownloadPDF}
-                disabled={!hasRealData}
-                className="flex items-center gap-2 px-4 py-2 bg-[#25689f] text-white hover:bg-[#1F557F] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download size={16} />
-                <span>PDF</span>
-              </button>
+              
+              {/* Export buttons - Hidden on mobile, shown on larger screens */}
+              <div className="hidden sm:flex items-center gap-2">
+                <button
+                  onClick={handleDownloadExcel}
+                  disabled={!hasRealData}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  <FileText size={14} className="sm:w-4 sm:h-4" />
+                  <span>Excel</span>
+                </button>
+                <button
+                  onClick={handleDownloadCSV}
+                  disabled={!hasRealData}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  <FileText size={14} className="sm:w-4 sm:h-4" />
+                  <span>CSV</span>
+                </button>
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={!hasRealData}
+                  className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-[#25689f] text-white hover:bg-[#1F557F] rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  <Download size={14} className="sm:w-4 sm:h-4" />
+                  <span>PDF</span>
+                </button>
+              </div>
+              
+              {/* Mobile: Single export dropdown */}
+              <div className="sm:hidden relative">
+                <select
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === 'excel') handleDownloadExcel();
+                    else if (value === 'csv') handleDownloadCSV();
+                    else if (value === 'pdf') handleDownloadPDF();
+                    e.target.value = '';
+                  }}
+                  disabled={!hasRealData}
+                  className="w-full px-3 py-2 bg-[#25689f] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm appearance-none cursor-pointer"
+                >
+                  <option value="">Export Options</option>
+                  <option value="excel">Download Excel</option>
+                  <option value="csv">Download CSV</option>
+                  <option value="pdf">Download PDF</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
       </div>
-
       {/* Main Content - Full Width */}
-      <div className="w-full p-4">
+      <div className="w-full p-2 sm:p-4">
         <motion.div
           className="bg-white rounded-xl shadow-sm border border-gray-200"
           initial={{ opacity: 0, y: 20 }}
@@ -221,36 +246,38 @@ const ReportResults = ({
           transition={{ duration: 0.3 }}
         >
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#25689f] mb-4"></div>
-              <p className="text-gray-600 mb-2">Generating your report...</p>
-              <p className="text-sm text-gray-500">
+            <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
+              <div className="animate-spin rounded-full h-8 sm:h-12 w-8 sm:w-12 border-b-2 border-[#25689f] mb-4"></div>
+              <p className="text-gray-600 mb-2 text-sm sm:text-base text-center">Generating your report...</p>
+              <p className="text-xs sm:text-sm text-gray-500 text-center">
                 This may take a few moments
               </p>
             </div>
           ) : !hasRealData ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <FileText size={48} className="text-gray-400 mb-4" />
-              <p className="text-gray-600 mb-2">No report data available</p>
-              <p className="text-sm text-gray-500">
+            <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
+              <FileText size={32} className="sm:w-12 sm:h-12 text-gray-400 mb-4" />
+              <p className="text-gray-600 mb-2 text-sm sm:text-base text-center">No report data available</p>
+              <p className="text-xs sm:text-sm text-gray-500 text-center">
                 Please generate a report to view data
               </p>
             </div>
           ) : (
             <>
               {/* Table Header - Fixed */}
-              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
+              <div className="bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">
                     Report Data
                   </h3>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <CheckCircle size={16} className="text-green-600" />
-                    <span>Showing {rows.length} records</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm text-gray-600">
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <CheckCircle size={14} className="sm:w-4 sm:h-4 text-green-600" />
+                      <span>Showing {rows.length} records</span>
+                    </div>
                     {vehicleGroups.length > 0 && (
-                      <>
-                        <span className="text-gray-400">•</span>
-                        <Car size={16} className="text-blue-600" />
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        <span className="text-gray-400 hidden sm:inline">•</span>
+                        <Car size={14} className="sm:w-4 sm:h-4 text-blue-600" />
                         <span>
                           {
                             vehicleGroups.filter((group) => group.isNewGroup)
@@ -258,7 +285,7 @@ const ReportResults = ({
                           }{" "}
                           vehicles
                         </span>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -266,19 +293,17 @@ const ReportResults = ({
 
               {/* Summary Section */}
               {reportData?.data?.header && (
-                <div className="px-6 py-3 bg-white border-b border-gray-200">
-                  <div
-                    className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 auto-rows-auto`}
-                  >
+                <div className="px-3 sm:px-6 py-3 bg-white border-b border-gray-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     {reportData.data.header.map((item, index) => (
                       <div
                         key={index}
-                        className="flex flex-col sm:flex-row items-center justify-center p-3 bg-gray-50 rounded-lg"
+                        className="flex flex-col items-center justify-center p-2 sm:p-3 bg-gray-50 rounded-lg"
                       >
-                        <span className="font-medium text-gray-600 mb-1 sm:mb-0">
+                        <span className="font-medium text-gray-600 text-xs sm:text-sm text-center mb-1">
                           {item.col}
                         </span>
-                        <span className="ml-2 font-bold text-[#25689f]">
+                        <span className="font-bold text-[#25689f] text-sm sm:text-base">
                           {item.data !== null ? item.data : "null"}
                         </span>
                       </div>
@@ -287,15 +312,15 @@ const ReportResults = ({
                 </div>
               )}
 
-              {/* Table Container */}
-              <div className="overflow-auto max-h-[400px]">
-                <table className="w-full divide-y divide-gray-200">
+              {/* Table Container - Mobile: Horizontal scroll, Desktop: Fixed height */}
+              <div className="overflow-auto max-h-[300px] sm:max-h-[400px]">
+                <table className="w-full divide-y divide-gray-200 min-w-[600px]">
                   <thead className="bg-gray-50 sticky top-0 z-5">
                     <tr>
                       {headers.map((header, index) => (
                         <th
                           key={index}
-                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                          className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                         >
                           {header.label}
                         </th>
@@ -317,29 +342,20 @@ const ReportResults = ({
                             <tr className="bg-gradient-to-r from-[#25689f] to-[#1F557F]">
                               <td
                                 colSpan={headers.length}
-                                className="px-4 py-3"
+                                className="px-2 sm:px-4 py-2 sm:py-3"
                               >
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2">
-                                      <Car size={20} className="text-white" />
-                                      <span className="text-white font-bold text-base">
-                                        {vehicleGroup.vehicle}
-                                      </span>
-                                    </div>
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                                    <span className="text-white font-bold text-sm sm:text-base">
+                                      {vehicleGroup.vehicle}
+                                    </span>
                                     {vehicleGroup.driver && (
-                                      <div className="flex items-center gap-2">
-                                        <Users
-                                          size={16}
-                                          className="text-white/80"
-                                        />
-                                        <span className="text-white/90 text-sm">
-                                          {vehicleGroup.driver}
-                                        </span>
-                                      </div>
+                                      <span className="text-white/90 text-xs sm:text-sm">
+                                        {vehicleGroup.driver}
+                                      </span>
                                     )}
                                   </div>
-                                  <div className="text-white/80 text-sm">
+                                  <div className="text-white/80 text-xs sm:text-sm">
                                     {vehicleGroup.client}
                                   </div>
                                 </div>
@@ -356,28 +372,12 @@ const ReportResults = ({
                             {headers.map((header, colIndex) => (
                               <td
                                 key={colIndex}
-                                className="px-4 py-3 text-sm text-gray-900"
+                                className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900"
                               >
                                 {header.key === "Car" && row[header.key] ? (
-                                  <div className="flex items-center whitespace-nowrap">
-                                    <Car
-                                      size={16}
-                                      className="text-green-600 mr-2 flex-shrink-0"
-                                    />
-                                    <span className="font-medium">
-                                      {row[header.key]}
-                                    </span>
-                                  </div>
+                                  <span className="font-medium">{row[header.key]}</span>
                                 ) : header.key === "Driver" ? (
-                                  <div className="flex items-center whitespace-nowrap">
-                                    <Users
-                                      size={16}
-                                      className="text-violet-600 mr-2 flex-shrink-0"
-                                    />
-                                    <span>
-                                      {row[header.key] || "No Driver"}
-                                    </span>
-                                  </div>
+                                  <span>{row[header.key] || "No Driver"}</span>
                                 ) : header.key === "Distance" ? (
                                   <span className="font-medium text-blue-600 whitespace-nowrap">
                                     {row[header.key]}{" "}
