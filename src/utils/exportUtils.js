@@ -1,6 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import logo from "../assets/LogoColor.png";
 
 // Download CSV function
 export const downloadCSV = (rows, headers, reportName) => {
@@ -61,54 +62,34 @@ export const downloadPDF = (rows, headers, reportName, reportCategory, summary) 
 
   // Header drawing function (called on each page)
   const drawHeader = (docInstance) => {
-    // Logo/text header
+    // Logo header
     try {
+      // Increase logo size for better visibility
+      let maxW = 65, maxH = 15;
+      let drawW = maxW, drawH = maxH;
+      docInstance.addImage(logo, 'PNG', 8, 8, drawW, drawH);
+    } catch (e) {
+      // fallback to text
       docInstance.setFontSize(18);
       docInstance.setTextColor(37, 104, 159);
       docInstance.setFont('helvetica', 'bold');
-      docInstance.text('TELOGIX', 20, 18);
-
-      docInstance.setFontSize(9);
-      docInstance.setTextColor(100, 100, 100);
-      docInstance.setFont('helvetica', 'normal');
-      docInstance.text('GPS Tracking Solutions', 20, 24);
-    } catch (e) {
-      // ignore
+      docInstance.text('TELOGIX', 8, 10);
     }
 
     // Right side details
     docInstance.setFontSize(11);
     docInstance.setTextColor(51, 51, 51);
     docInstance.setFont('helvetica', 'bold');
-    docInstance.text(reportName, pageWidth - 20, 18, { align: 'right' });
+    docInstance.text(reportName, pageWidth - 8, 10, { align: 'right' });
 
     docInstance.setFontSize(8);
     docInstance.setTextColor(100, 100, 100);
     docInstance.setFont('helvetica', 'normal');
-    docInstance.text(`Category: ${reportCategory}`, pageWidth - 20, 24, { align: 'right' });
-    docInstance.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 20, 30, { align: 'right' });
-    docInstance.text(`Total Records: ${rows.length}`, pageWidth - 20, 36, { align: 'right' });
-
-    // Separator line
-    docInstance.setDrawColor(37, 104, 159);
-    docInstance.setLineWidth(0.5);
-    docInstance.line(20, 40, pageWidth - 20, 40);
+    docInstance.text(`Category: ${reportCategory}`, pageWidth - 8, 16, { align: 'right' });
+    docInstance.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 8, 22, { align: 'right' });
+    docInstance.text(`Total Records: ${rows.length}`, pageWidth - 8, 28, { align: 'right' });
   };
 
-  // Footer drawing function (called on each page)
-  const drawFooter = (docInstance, pageNumber, pageCount) => {
-    const footerY = pageHeight - 12;
-    docInstance.setDrawColor(220, 220, 220);
-    docInstance.setLineWidth(0.2);
-    docInstance.line(20, footerY - 6, pageWidth - 20, footerY - 6);
-
-    docInstance.setFontSize(8);
-    docInstance.setTextColor(100, 100, 100);
-    docInstance.setFont('helvetica', 'normal');
-    docInstance.text('© Telogix GPS Tracking System', 20, footerY);
-    docInstance.text(`Page ${pageNumber} of ${pageCount}`, pageWidth / 2, footerY, { align: 'center' });
-    docInstance.text(new Date().toLocaleDateString(), pageWidth - 20, footerY, { align: 'right' });
-  };
 
   // Prepare table data
   const tableHeaders = headers.map(h => h.label);
@@ -138,7 +119,7 @@ export const downloadPDF = (rows, headers, reportName, reportCategory, summary) 
     doc.setFontSize(11);
     doc.setTextColor(37, 104, 159);
     doc.setFont('helvetica', 'bold');
-    doc.text('Report Summary', 20, 46);
+    doc.text('Report Summary', 8, 36); // margin left 8, top 36
 
     doc.setFontSize(9);
     doc.setTextColor(80, 80, 80);
@@ -146,8 +127,8 @@ export const downloadPDF = (rows, headers, reportName, reportCategory, summary) 
 
     const entries = Object.entries(summary);
     entries.forEach(([key, value], i) => {
-      const x = 20 + (i % 3) * 70;
-      const y = 52 + Math.floor(i / 3) * 10;
+      const x = 8 + (i % 3) * 70;
+      const y = 42 + Math.floor(i / 3) * 10;
       const textValue = value === '0' ? 'N/A' : value;
       let suffix = '';
       if (key.toLowerCase().includes('speed')) suffix = ' km/h';
@@ -157,7 +138,7 @@ export const downloadPDF = (rows, headers, reportName, reportCategory, summary) 
     });
 
     // leave space for summary
-    startY = 72;
+    startY = 62;
   }
 
   // Use autoTable to render the table and let it manage pagination automatically
@@ -165,7 +146,20 @@ export const downloadPDF = (rows, headers, reportName, reportCategory, summary) 
     head: [tableHeaders],
     body: tableData,
     startY,
-    margin: { left: 20, right: 20, bottom: 30 },
+  margin: { left: 5, right: 5, top: 5, bottom: 5 },
+    pageBreak: 'auto',
+    didDrawPage: function (data) {
+      if (data.pageNumber === 1) {
+        drawHeader(doc);
+        // No extra top margin for first page (table header should be close to summary)
+      } else {
+        // Add top margin before table header on subsequent pages only
+        doc.setPage(data.pageNumber);
+        doc.setFontSize(8);
+        doc.setTextColor(255,255,255);
+        doc.text(' ', 8, 16); // 16mm from top for a little space
+      }
+    },
     styles: {
       fontSize: 8,
       cellPadding: 2,
@@ -189,11 +183,11 @@ export const downloadPDF = (rows, headers, reportName, reportCategory, summary) 
       1: { cellWidth: 40, halign: 'left' }
     },
     didDrawPage: function (data) {
-      // Show full header only on first page; footer on every page
+      // Show full header only on first page; no footer
       if (data.pageNumber === 1) {
         drawHeader(doc);
       }
-      drawFooter(doc, data.pageNumber, data.pageCount);
+      // Footer removed as per user request
     }
   });
 

@@ -76,7 +76,12 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel, initia
       ...reportConfig,
       target: e.target.value,
       vehicleSelected: false,
+      selectedItems: [],
+      selectedValueIds: [],
+      selectedText: "",
     });
+    setLastSelection([]);
+    setShouldResetModal(true);
   };
 
   const handleTimeFrameChange = (value) => {

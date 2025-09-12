@@ -4,11 +4,9 @@ import {
   ArrowLeft,
   Download,
   FileText,
-  Users,
   Car,
   CheckCircle,
 } from "lucide-react";
-// import logo3 from "../../assets/LogoColor.png";
 import {
   downloadCSV,
   downloadExcel,
@@ -264,20 +262,20 @@ const ReportResults = ({
           ) : (
             <>
               {/* Table Header - Fixed */}
-              <div className="bg-gray-50 px-3 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+              <div className="bg-gray-50 px-3 sm:px-6 py-2 sm:py-3 border-b border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                  <h3 className="text-sm sm:text-base font-semibold text-gray-900">
                     Report Data
                   </h3>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-xs sm:text-sm text-gray-600">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-[10px] sm:text-xs text-gray-600">
                     <div className="flex items-center gap-1 sm:gap-2">
-                      <CheckCircle size={14} className="sm:w-4 sm:h-4 text-green-600" />
+                      <CheckCircle size={12} className="sm:w-3 sm:h-3 text-green-600" />
                       <span>Showing {rows.length} records</span>
                     </div>
                     {vehicleGroups.length > 0 && (
                       <div className="flex items-center gap-1 sm:gap-2">
                         <span className="text-gray-400 hidden sm:inline">•</span>
-                        <Car size={14} className="sm:w-4 sm:h-4 text-blue-600" />
+                        <Car size={12} className="sm:w-3 sm:h-3 text-blue-600" />
                         <span>
                           {
                             vehicleGroups.filter((group) => group.isNewGroup)
@@ -293,17 +291,17 @@ const ReportResults = ({
 
               {/* Summary Section */}
               {reportData?.data?.header && (
-                <div className="px-3 sm:px-6 py-3 bg-white border-b border-gray-200">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div className="px-3 sm:px-6 py-2 bg-white border-b border-gray-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
                     {reportData.data.header.map((item, index) => (
                       <div
                         key={index}
-                        className="flex flex-col items-center justify-center p-2 sm:p-3 bg-gray-50 rounded-lg"
+                        className="flex flex-col items-center justify-center p-1 sm:p-2 bg-gray-50 rounded-lg"
                       >
-                        <span className="font-medium text-gray-600 text-xs sm:text-sm text-center mb-1">
+                        <span className="font-medium text-gray-600 text-[10px] sm:text-xs text-center mb-1">
                           {item.col}
                         </span>
-                        <span className="font-bold text-[#25689f] text-sm sm:text-base">
+                        <span className="font-bold text-[#25689f] text-xs sm:text-sm">
                           {item.data !== null ? item.data : "null"}
                         </span>
                       </div>
@@ -313,14 +311,14 @@ const ReportResults = ({
               )}
 
               {/* Table Container - Mobile: Horizontal scroll, Desktop: Fixed height */}
-              <div className="overflow-auto max-h-[300px] sm:max-h-[400px]">
+              <div className="overflow-auto max-h-[300px] sm:max-h-[450px]">
                 <table className="w-full divide-y divide-gray-200 min-w-[600px]">
                   <thead className="bg-gray-50 sticky top-0 z-5">
                     <tr>
                       {headers.map((header, index) => (
                         <th
                           key={index}
-                          className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                          className="px-2 sm:px-3 py-1 sm:py-2 text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap"
                         >
                           {header.label}
                         </th>
@@ -342,20 +340,20 @@ const ReportResults = ({
                             <tr className="bg-gradient-to-r from-[#25689f] to-[#1F557F]">
                               <td
                                 colSpan={headers.length}
-                                className="px-2 sm:px-4 py-2 sm:py-3"
+                                className="px-2 sm:px-3 py-1 sm:py-2"
                               >
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                                    <span className="text-white font-bold text-sm sm:text-base">
+                                    <span className="text-white font-bold text-xs sm:text-sm">
                                       {vehicleGroup.vehicle}
                                     </span>
                                     {vehicleGroup.driver && (
-                                      <span className="text-white/90 text-xs sm:text-sm">
+                                      <span className="text-white/90 text-[10px] sm:text-xs">
                                         {vehicleGroup.driver}
                                       </span>
                                     )}
                                   </div>
-                                  <div className="text-white/80 text-xs sm:text-sm">
+                                  <div className="text-white/80 text-[10px] sm:text-xs">
                                     {vehicleGroup.client}
                                   </div>
                                 </div>
@@ -372,7 +370,7 @@ const ReportResults = ({
                             {headers.map((header, colIndex) => (
                               <td
                                 key={colIndex}
-                                className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900"
+                                className="px-2 sm:px-3 py-1 sm:py-2 text-[10px] sm:text-xs text-gray-900"
                               >
                                 {header.key === "Car" && row[header.key] ? (
                                   <span className="font-medium">{row[header.key]}</span>

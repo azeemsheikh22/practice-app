@@ -1,4 +1,3 @@
-import React from "react";
 import PreventionMap from "./PreventionMap";
 import Navbar from "../../components/navber/Navbar";
 import { Car, User, Navigation, ParkingCircle, Clock, MapPin, Settings } from "lucide-react";

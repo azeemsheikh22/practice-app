@@ -15,7 +15,6 @@ import { useDispatch } from "react-redux";
 import { clearConnection } from "../../features/gpsTrackingSlice";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Bell,
   Menu,
   X,
   User,
