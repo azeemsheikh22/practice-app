@@ -8,10 +8,14 @@ const VehicleTreeSelect = ({ value = [], onChange, placeholder = "Select vehicle
   const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef(null);
 
-  // Initialize selectedVehicles from value prop
+  // Initialize selectedVehicles from value prop, only if changed
   useEffect(() => {
     if (Array.isArray(value)) {
-      setSelectedVehicles(value);
+      // Shallow compare arrays
+      const isSame = value.length === selectedVehicles.length && value.every((v, i) => v === selectedVehicles[i]);
+      if (!isSame) {
+        setSelectedVehicles(value);
+      }
     }
   }, [value]);
 

@@ -4,6 +4,8 @@ import ScheduleTab from "./ScheduleTab";
 import { useEffect, useState } from "react";
 import Select from "react-select";
 import RoutePlanMap from "./RoutePlanMap";
+import StopLogTab from "./StopLogTab";
+import DeviationsTab from "./DeviationsTab";
 import VehicleTreeSelect from "./VehicleTreeSelect";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -20,6 +22,8 @@ import axios from "axios";
 
 const CreateRoutePlan = () => {
   const routesLoading = useSelector(state => state.route.loading);
+  // Main content tabs: map, stoplog, deviations
+  const [mainTab, setMainTab] = useState("map"); // 'map' by default
   const [activeTab, setActiveTab] = useState("route");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const dispatch = useDispatch();
@@ -132,7 +136,7 @@ const CreateRoutePlan = () => {
           </div>
         </div>
       )}
-      {/* Header */}
+      {/* Header with main tabs on right */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -158,6 +162,31 @@ const CreateRoutePlan = () => {
               </h1>
             </div>
           </div>
+          {/* Main tabs on right: Stop Log & Deviations only in edit mode */}
+          <div className="flex items-center gap-2">
+            <button
+              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200 focus:outline-none ${mainTab === "map" ? "bg-[#25689f]/10 text-[#25689f] shadow" : "text-gray-700 hover:bg-gray-100"}`}
+              onClick={() => setMainTab("map")}
+            >
+              Map
+            </button>
+            {isEdit && (
+              <>
+                <button
+                  className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200 focus:outline-none ${mainTab === "stoplog" ? "bg-[#25689f]/10 text-[#25689f] shadow" : "text-gray-700 hover:bg-gray-100"}`}
+                  onClick={() => setMainTab("stoplog")}
+                >
+                  Stop Log
+                </button>
+                <button
+                  className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200 focus:outline-none ${mainTab === "deviations" ? "bg-[#25689f]/10 text-[#25689f] shadow" : "text-gray-700 hover:bg-gray-100"}`}
+                  onClick={() => setMainTab("deviations")}
+                >
+                  Deviations
+                </button>
+              </>
+            )}
+          </div>
           <div className="flex items-center">
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -171,7 +200,7 @@ const CreateRoutePlan = () => {
         </div>
       </motion.div>
 
-      {/* Main Content */}
+      {/* Main Content: switch by mainTab */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -256,9 +285,15 @@ const CreateRoutePlan = () => {
             )}
           </AnimatePresence>
 
-          {/* Main Content Area: Map */}
+          {/* Main Content Area: switch by mainTab, StopLogTab/DeviationsTab only in edit mode */}
           <div className="col-span-1 lg:col-span-8 xl:col-span-9 h-full overflow-hidden">
-            <RoutePlanMap selectedRoutesData={selectedRoutesData} />
+            {mainTab === "map" && <RoutePlanMap selectedRoutesData={selectedRoutesData} />}
+            {mainTab === "stoplog" && (
+              isEdit ? <StopLogTab /> : <div className="flex items-center justify-center h-full text-lg text-gray-400">Stop Log only available in edit mode.</div>
+            )}
+            {mainTab === "deviations" && (
+              isEdit ? <DeviationsTab /> : <div className="flex items-center justify-center h-full text-lg text-gray-400">Deviations only available in edit mode.</div>
+            )}
           </div>
         </div>
       </motion.div>

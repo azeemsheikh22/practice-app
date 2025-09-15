@@ -15,7 +15,6 @@ function arrayToCSV(data, columns) {
   );
   return [header, ...rows].join("\r\n");
 }
-
 function downloadCSV(csv, filename) {
   const blob = new Blob([csv], { type: "text/csv" });
   const url = window.URL.createObjectURL(blob);
