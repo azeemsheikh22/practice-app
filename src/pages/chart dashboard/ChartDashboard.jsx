@@ -1,27 +1,25 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Responsive, WidthProvider } from "react-grid-layout";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, RotateCcw, Settings } from "lucide-react";
 import Navbar from "../../components/navber/Navbar";
 import DashboardHeader from "./DashboardHeader";
-
-// Chart Components
 import SpeedingViolationsGauge from "../../components/charts/SpeedingViolationsGauge";
 import DistanceTraveledChart from "../../components/charts/DistanceTraveledChart";
 import SpeedingTrendChart from "../../components/charts/SpeedingTrendChart";
 import SpeedingSeverityChart from "../../components/charts/SpeedingSeverityChart";
 import SafetyScoreChart from "../../components/charts/SafetyScoreChart";
 import TotalDistanceGauge from "../../components/charts/TotalDistanceGauge";
-
-// Chart Settings Component
 import ChartSettings from "../../components/charts/ChartSettings";
-
-// CSS imports
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import "../../styles/ChartDashboard.css";
 import { useDispatch, useSelector } from "react-redux";
-import { initializeConnection, selectConnectionStatus } from "../../features/gpsTrackingSlice";
+import {
+  initializeConnection,
+  selectConnectionStatus,
+} from "../../features/gpsTrackingSlice";
+import { fetchDashboardCategoriesForUser, selectDashboardCategories } from "../../features/chartApiSlice";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -30,12 +28,19 @@ export default function ChartDashboard() {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const dispatch = useDispatch();
   const connectionStatus = useSelector(selectConnectionStatus);
+  const dashboardCategories = useSelector(selectDashboardCategories);
+
+
 
   useEffect(() => {
     // Only initialize if not already connected
     if (connectionStatus === "disconnected") {
       dispatch(initializeConnection(3));
     }
+  }, []);
+
+  useEffect(() => {
+    dispatch(fetchDashboardCategoriesForUser());
   }, []);
 
   // Chart visibility state
@@ -269,6 +274,7 @@ export default function ChartDashboard() {
         onPrint={handlePrint}
         onExportExcel={handleExportExcel}
         onExportCSV={handleExportCSV}
+        dashboardCategories={dashboardCategories}
       />
 
       {/* Dashboard Controls */}
@@ -315,32 +321,7 @@ export default function ChartDashboard() {
 
       {/* Main Dashboard Content */}
       <div className="p-4">
-        {selectedReport && selectedGroup ? (
-          <div className="mb-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-blue-900">
-                    {selectedReport.label} Dashboard
-                  </h2>
-                  <p className="text-sm text-blue-700">
-                    Showing data for:{" "}
-                    <span className="font-medium">{selectedGroup.text}</span>
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-blue-600">
-                    Active Charts:{" "}
-                    {Object.values(chartVisibility).filter(Boolean).length} /{" "}
-                    {Object.keys(chartDefinitions).length}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          ""
-        )}
+
 
         {/* Responsive Grid Layout */}
         <div className="overflow-hidden">
