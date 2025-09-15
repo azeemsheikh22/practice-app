@@ -1,6 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Route, X, Menu, ChevronLeft, Settings } from "lucide-react";
-import ScheduleTab from "./ScheduleTab";
+import { Route, X, Menu, ChevronLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import Select from "react-select";
 import RoutePlanMap from "./RoutePlanMap";
@@ -21,10 +20,9 @@ import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 
 const CreateRoutePlan = () => {
-  const routesLoading = useSelector(state => state.route.loading);
+  const routesLoading = useSelector((state) => state.route.loading);
   // Main content tabs: map, stoplog, deviations
   const [mainTab, setMainTab] = useState("map"); // 'map' by default
-  const [activeTab, setActiveTab] = useState("route");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const dispatch = useDispatch();
   const [planName, setPlanName] = useState("");
@@ -65,14 +63,16 @@ const CreateRoutePlan = () => {
 
   const isEdit = searchParams.get("edit") === "true";
   const routePlanId = searchParams.get("id");
-  
+
   // Store API vehicle IDs for later matching
   const [apiVehicleIds, setApiVehicleIds] = useState([]);
-  
+
   // Get vehicle tree data
   const rawVehicleList = useSelector(selectRawVehicleList);
   const vehicleTreeData = Array.isArray(rawVehicleList)
-    ? rawVehicleList.filter((item) => item.Type === "Vehicle" || item.Type === "Group")
+    ? rawVehicleList.filter(
+        (item) => item.Type === "Vehicle" || item.Type === "Group"
+      )
     : [];
 
   useEffect(() => {
@@ -95,13 +95,29 @@ const CreateRoutePlan = () => {
           if (data && data.RoutePlan) {
             setPlanName(data.RoutePlan.planName || "");
             setComments(data.RoutePlan.comments || "");
-            setStatus(data.RoutePlan.status === "P" ? "Planned" : data.RoutePlan.status === "IP" ? "InProcess" : data.RoutePlan.status === "C" ? "Completed" : "Planned");
-            setScheduleDate(data.RoutePlan.PlanDate ? data.RoutePlan.PlanDate.slice(0, 16) : ""); // yyyy-MM-ddTHH:mm
-            setSelectedRoutes(data.RoutePlan.RouteId ? [parseInt(data.RoutePlan.RouteId)] : []);
+            setStatus(
+              data.RoutePlan.status === "P"
+                ? "Planned"
+                : data.RoutePlan.status === "IP"
+                ? "InProcess"
+                : data.RoutePlan.status === "C"
+                ? "Completed"
+                : "Planned"
+            );
+            setScheduleDate(
+              data.RoutePlan.PlanDate
+                ? data.RoutePlan.PlanDate.slice(0, 16)
+                : ""
+            ); // yyyy-MM-ddTHH:mm
+            setSelectedRoutes(
+              data.RoutePlan.RouteId ? [parseInt(data.RoutePlan.RouteId)] : []
+            );
           }
           // Store vehicle car IDs from API response
           if (data && data.Vehicles && Array.isArray(data.Vehicles)) {
-            const carIds = data.Vehicles.map(v => v.carid ? v.carid.toString() : "");
+            const carIds = data.Vehicles.map((v) =>
+              v.carid ? v.carid.toString() : ""
+            );
             setApiVehicleIds(carIds);
           }
         })
@@ -110,15 +126,21 @@ const CreateRoutePlan = () => {
         });
     }
   }, [isEdit, routePlanId]);
-  
+
   // Match API vehicle IDs with vehicleTreeData when both are available (only on initial load)
   useEffect(() => {
-    if (apiVehicleIds.length > 0 && vehicleTreeData.length > 0 && selectedVehicles.length === 0) {
+    if (
+      apiVehicleIds.length > 0 &&
+      vehicleTreeData.length > 0 &&
+      selectedVehicles.length === 0
+    ) {
       // Find vehicles where valueId matches carid from API
       const selectedIds = vehicleTreeData
-        .filter(v => apiVehicleIds.includes(v.valueId ? v.valueId.toString() : ""))
-        .map(v => v.id);
-      setSelectedVehicles(prev => [...prev, ...selectedIds]);
+        .filter((v) =>
+          apiVehicleIds.includes(v.valueId ? v.valueId.toString() : "")
+        )
+        .map((v) => v.id);
+      setSelectedVehicles((prev) => [...prev, ...selectedIds]);
     }
   }, [apiVehicleIds, vehicleTreeData]);
 
@@ -128,11 +150,29 @@ const CreateRoutePlan = () => {
       {routesLoading && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-lg shadow-lg px-8 py-6 flex flex-col items-center gap-3">
-            <svg className="animate-spin h-8 w-8 text-[#25689f] mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            <svg
+              className="animate-spin h-8 w-8 text-[#25689f] mb-2"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              ></path>
             </svg>
-            <span className="text-[#25689f] font-semibold text-lg">Loading routes...</span>
+            <span className="text-[#25689f] font-semibold text-lg">
+              Loading routes...
+            </span>
           </div>
         </div>
       )}
@@ -165,7 +205,11 @@ const CreateRoutePlan = () => {
           {/* Main tabs on right: Stop Log & Deviations only in edit mode */}
           <div className="flex items-center gap-2">
             <button
-              className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200 focus:outline-none ${mainTab === "map" ? "bg-[#25689f]/10 text-[#25689f] shadow" : "text-gray-700 hover:bg-gray-100"}`}
+              className={`px-4 py-1.5 cursor-pointer rounded-md text-sm font-semibold transition-all duration-200 focus:outline-none ${
+                mainTab === "map"
+                  ? "bg-[#25689f]/10 text-[#25689f] shadow"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
               onClick={() => setMainTab("map")}
             >
               Map
@@ -173,13 +217,21 @@ const CreateRoutePlan = () => {
             {isEdit && (
               <>
                 <button
-                  className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200 focus:outline-none ${mainTab === "stoplog" ? "bg-[#25689f]/10 text-[#25689f] shadow" : "text-gray-700 hover:bg-gray-100"}`}
+                  className={`px-4 py-1.5 cursor-pointer rounded-md text-sm font-semibold transition-all duration-200 focus:outline-none ${
+                    mainTab === "stoplog"
+                      ? "bg-[#25689f]/10 text-[#25689f] shadow"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
                   onClick={() => setMainTab("stoplog")}
                 >
                   Stop Log
                 </button>
                 <button
-                  className={`px-4 py-1.5 rounded-md text-sm font-semibold transition-all duration-200 focus:outline-none ${mainTab === "deviations" ? "bg-[#25689f]/10 text-[#25689f] shadow" : "text-gray-700 hover:bg-gray-100"}`}
+                  className={`px-4 py-1.5 cursor-pointer rounded-md text-sm font-semibold transition-all duration-200 focus:outline-none ${
+                    mainTab === "deviations"
+                      ? "bg-[#25689f]/10 text-[#25689f] shadow"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
                   onClick={() => setMainTab("deviations")}
                 >
                   Deviations
@@ -211,8 +263,6 @@ const CreateRoutePlan = () => {
           {/* Desktop Sidebar */}
           <div className="hidden lg:block lg:col-span-4 xl:col-span-3 bg-white overflow-auto shadow-sm border-r border-gray-200">
             <SidebarContent
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
               planName={planName}
               setPlanName={setPlanName}
               selectedRoutes={selectedRoutes}
@@ -263,8 +313,7 @@ const CreateRoutePlan = () => {
                   </div>
 
                   <SidebarContent
-                    activeTab={activeTab}
-                    setActiveTab={setActiveTab}
+              
                     planName={planName}
                     setPlanName={setPlanName}
                     selectedRoutes={selectedRoutes}
@@ -287,13 +336,25 @@ const CreateRoutePlan = () => {
 
           {/* Main Content Area: switch by mainTab, StopLogTab/DeviationsTab only in edit mode */}
           <div className="col-span-1 lg:col-span-8 xl:col-span-9 h-full overflow-hidden">
-            {mainTab === "map" && <RoutePlanMap selectedRoutesData={selectedRoutesData} />}
-            {mainTab === "stoplog" && (
-              isEdit ? <StopLogTab /> : <div className="flex items-center justify-center h-full text-lg text-gray-400">Stop Log only available in edit mode.</div>
+            {mainTab === "map" && (
+              <RoutePlanMap selectedRoutesData={selectedRoutesData} />
             )}
-            {mainTab === "deviations" && (
-              isEdit ? <DeviationsTab /> : <div className="flex items-center justify-center h-full text-lg text-gray-400">Deviations only available in edit mode.</div>
-            )}
+            {mainTab === "stoplog" &&
+              (isEdit ? (
+                <StopLogTab />
+              ) : (
+                <div className="flex items-center justify-center h-full text-lg text-gray-400">
+                  Stop Log only available in edit mode.
+                </div>
+              ))}
+            {mainTab === "deviations" &&
+              (isEdit ? (
+                <DeviationsTab />
+              ) : (
+                <div className="flex items-center justify-center h-full text-lg text-gray-400">
+                  Deviations only available in edit mode.
+                </div>
+              ))}
           </div>
         </div>
       </motion.div>
@@ -303,8 +364,6 @@ const CreateRoutePlan = () => {
 
 // SidebarContent component for sidebar fields and tabs
 const SidebarContent = ({
-  activeTab,
-  setActiveTab,
   planName,
   setPlanName,
   selectedRoutes,
@@ -318,7 +377,6 @@ const SidebarContent = ({
   comments,
   setComments,
   sourceRoutes,
-  dummyVehicles,
   isMobile = false,
 }) => {
   // For react-select multi-select
@@ -349,129 +407,100 @@ const SidebarContent = ({
 
   return (
     <div className="h-full flex flex-col">
-      {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 bg-gray-50 p-1 m-4 rounded-lg">
-        <button
-          onClick={() => setActiveTab("route")}
-          className={`cursor-pointer flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
-            activeTab === "route"
-              ? "bg-white text-[#25689f] shadow-sm"
-              : "text-gray-600 hover:text-gray-800"
-          }`}
-        >
-          <Route size={16} className="mr-2" />
-          Route
-        </button>
-        <button
-          onClick={() => setActiveTab("schedule")}
-          className={`cursor-pointer flex-1 flex items-center justify-center px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
-            activeTab === "schedule"
-              ? "bg-white text-[#25689f] shadow-sm"
-              : "text-gray-600 hover:text-gray-800"
-          }`}
-        >
-          <Settings size={16} className="mr-2" />
-          Schedule
-        </button>
-      </div>
-
       {/* Tab Content */}
-      <div className="flex-1 px-4 pb-4 overflow-y-auto">
-        {activeTab === "route" && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Plan Name
-              </label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f] placeholder-gray-400"
-                value={planName}
-                onChange={(e) => setPlanName(e.target.value)}
-                placeholder="Enter plan name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Route
-              </label>
-              <Select
-                isMulti={false}
-                options={routeOptions}
-                value={
-                  routeOptions.find((opt) => selectedRoutes[0] === opt.value) ||
-                  null
-                }
-                onChange={handleRouteChange}
-                classNamePrefix="react-select"
-                placeholder="Select route..."
-                styles={{
-                  control: (base, state) => ({
-                    ...base,
-                    borderRadius: "0.5rem",
-                    borderColor: state.isFocused ? "#1e4a6f" : "#d1d5db",
-                    boxShadow: state.isFocused
-                      ? "0 0 0 2px #1e4a6f33"
-                      : undefined,
-                    minHeight: "40px",
-                  }),
-                  placeholder: (base) => ({ ...base, color: "#9ca3af" }),
-                }}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Vehicles
-              </label>
-              <VehicleTreeSelect
-                value={selectedVehicles}
-                onChange={handleVehicleTreeChange}
-                placeholder="Select vehicles"
-                multiple={true}
-                treeData={vehicleTreeData}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Schedule Date
-              </label>
-              <input
-                type="datetime-local"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f] placeholder-gray-400"
-                value={scheduleDate}
-                onChange={(e) => setScheduleDate(e.target.value)}
-                placeholder="Select date and time"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Status
-              </label>
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f] placeholder-gray-400"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="Planned">Planned</option>
-                <option value="InProcess">In Process</option>
-                <option value="Completed">Completed</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Comments
-              </label>
-              <textarea
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f] placeholder-gray-400"
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
-                rows={3}
-                placeholder="Enter comments (optional)"
-              />
-            </div>
+      <div className="flex-1 px-4 py-4 overflow-y-auto">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Plan Name
+            </label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f] placeholder-gray-400"
+              value={planName}
+              onChange={(e) => setPlanName(e.target.value)}
+              placeholder="Enter plan name"
+            />
           </div>
-        )}
-        {activeTab === "schedule" && <ScheduleTab />}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Route
+            </label>
+            <Select
+              isMulti={false}
+              options={routeOptions}
+              value={
+                routeOptions.find((opt) => selectedRoutes[0] === opt.value) ||
+                null
+              }
+              onChange={handleRouteChange}
+              classNamePrefix="react-select"
+              placeholder="Select route..."
+              styles={{
+                control: (base, state) => ({
+                  ...base,
+                  borderRadius: "0.5rem",
+                  borderColor: state.isFocused ? "#1e4a6f" : "#d1d5db",
+                  boxShadow: state.isFocused
+                    ? "0 0 0 2px #1e4a6f33"
+                    : undefined,
+                  minHeight: "40px",
+                }),
+                placeholder: (base) => ({ ...base, color: "#9ca3af" }),
+              }}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Vehicles
+            </label>
+            <VehicleTreeSelect
+              value={selectedVehicles}
+              onChange={handleVehicleTreeChange}
+              placeholder="Select vehicles"
+              multiple={true}
+              treeData={vehicleTreeData}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Schedule Date
+            </label>
+            <input
+              type="datetime-local"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f] placeholder-gray-400"
+              value={scheduleDate}
+              onChange={(e) => setScheduleDate(e.target.value)}
+              placeholder="Select date and time"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Status
+            </label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f] placeholder-gray-400"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
+              <option value="Planned">Planned</option>
+              <option value="InProcess">In Process</option>
+              <option value="Completed">Completed</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Comments
+            </label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e4a6f] focus:border-[#1e4a6f] placeholder-gray-400"
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+              rows={3}
+              placeholder="Enter comments (optional)"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Footer Buttons */}
