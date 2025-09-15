@@ -15,8 +15,11 @@ import {
   fetchRouteListForUser,
   selectFilteredRoutes,
 } from "../../../features/routeSlice";
+import { useSearchParams } from "react-router-dom";
+import axios from "axios";
 
 const CreateRoutePlan = () => {
+  const routesLoading = useSelector(state => state.route.loading);
   const [activeTab, setActiveTab] = useState("route");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const dispatch = useDispatch();
@@ -27,7 +30,7 @@ const CreateRoutePlan = () => {
   const [status, setStatus] = useState("Planned");
   const [comments, setComments] = useState("");
   const routes = useSelector(selectFilteredRoutes);
-
+  const [searchParams] = useSearchParams();
 
   const connectionStatus = useSelector(selectConnectionStatus);
 
@@ -52,10 +55,83 @@ const CreateRoutePlan = () => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   // Full selected route objects derived from selectedRoutes ids
-  const selectedRoutesData = sourceRoutes.filter((r) => selectedRoutes.includes(r.id));
+  const selectedRoutesData = sourceRoutes.filter((r) =>
+    selectedRoutes.includes(r.id)
+  );
+
+  const isEdit = searchParams.get("edit") === "true";
+  const routePlanId = searchParams.get("id");
+  
+  // Store API vehicle IDs for later matching
+  const [apiVehicleIds, setApiVehicleIds] = useState([]);
+  
+  // Get vehicle tree data
+  const rawVehicleList = useSelector(selectRawVehicleList);
+  const vehicleTreeData = Array.isArray(rawVehicleList)
+    ? rawVehicleList.filter((item) => item.Type === "Vehicle" || item.Type === "Group")
+    : [];
+
+  useEffect(() => {
+    if (isEdit && routePlanId) {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+      const token = localStorage.getItem("token");
+      axios
+        .get(
+          `${API_BASE_URL}api/geofence/RoutePlanDetails?planid=${routePlanId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+        .then((res) => {
+          const data = res.data;
+          console.log("RoutePlanDetails API response:", data);
+          // Fill form fields from API response
+          if (data && data.RoutePlan) {
+            setPlanName(data.RoutePlan.planName || "");
+            setComments(data.RoutePlan.comments || "");
+            setStatus(data.RoutePlan.status === "P" ? "Planned" : data.RoutePlan.status === "IP" ? "InProcess" : data.RoutePlan.status === "C" ? "Completed" : "Planned");
+            setScheduleDate(data.RoutePlan.PlanDate ? data.RoutePlan.PlanDate.slice(0, 16) : ""); // yyyy-MM-ddTHH:mm
+            setSelectedRoutes(data.RoutePlan.RouteId ? [parseInt(data.RoutePlan.RouteId)] : []);
+          }
+          // Store vehicle car IDs from API response
+          if (data && data.Vehicles && Array.isArray(data.Vehicles)) {
+            const carIds = data.Vehicles.map(v => v.carid ? v.carid.toString() : "");
+            setApiVehicleIds(carIds);
+          }
+        })
+        .catch((err) => {
+          console.error("RoutePlanDetails API error:", err);
+        });
+    }
+  }, [isEdit, routePlanId]);
+  
+  // Match API vehicle IDs with vehicleTreeData when both are available (only on initial load)
+  useEffect(() => {
+    if (apiVehicleIds.length > 0 && vehicleTreeData.length > 0 && selectedVehicles.length === 0) {
+      // Find vehicles where valueId matches carid from API
+      const selectedIds = vehicleTreeData
+        .filter(v => apiVehicleIds.includes(v.valueId ? v.valueId.toString() : ""))
+        .map(v => v.id);
+      setSelectedVehicles(prev => [...prev, ...selectedIds]);
+    }
+  }, [apiVehicleIds, vehicleTreeData]);
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
+      {/* Full page loading overlay for route dropdown */}
+      {routesLoading && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-lg px-8 py-6 flex flex-col items-center gap-3">
+            <svg className="animate-spin h-8 w-8 text-[#25689f] mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
+            <span className="text-[#25689f] font-semibold text-lg">Loading routes...</span>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -78,7 +154,7 @@ const CreateRoutePlan = () => {
             </div>
             <div>
               <h1 className="text-base sm:text-lg font-semibold text-gray-900">
-                Create Route Plan
+                {isEdit ? "Edit Route Plan" : "Create Route Plan"}
               </h1>
             </div>
           </div>
@@ -214,13 +290,14 @@ const SidebarContent = ({
   // sourceRoutes is passed in from parent (Redux or fallback)
   const routeOptions = sourceRoutes.map((route) => ({
     value: route.id,
-    label: (route.routeName || route.name || `Route ${route.id}`).toString().trim(),
+    label: (route.routeName || route.name || `Route ${route.id}`)
+      .toString()
+      .trim(),
   }));
 
-  const handleRouteChange = (selectedOptions) => {
-    setSelectedRoutes(
-      selectedOptions ? selectedOptions.map((opt) => opt.value) : []
-    );
+  // Single select handler
+  const handleRouteChange = (selectedOption) => {
+    setSelectedRoutes(selectedOption ? [selectedOption.value] : []);
   };
   // VehicleTreeSelect for vehicles
   const rawVehicleList = useSelector(selectRawVehicleList);
@@ -281,17 +358,18 @@ const SidebarContent = ({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Routes
+                Route
               </label>
               <Select
-                isMulti
+                isMulti={false}
                 options={routeOptions}
-                value={routeOptions.filter((opt) =>
-                  selectedRoutes.includes(opt.value)
-                )}
+                value={
+                  routeOptions.find((opt) => selectedRoutes[0] === opt.value) ||
+                  null
+                }
                 onChange={handleRouteChange}
                 classNamePrefix="react-select"
-                placeholder="Select routes..."
+                placeholder="Select route..."
                 styles={{
                   control: (base, state) => ({
                     ...base,
@@ -301,20 +379,6 @@ const SidebarContent = ({
                       ? "0 0 0 2px #1e4a6f33"
                       : undefined,
                     minHeight: "40px",
-                  }),
-                  multiValue: (base) => ({
-                    ...base,
-                    backgroundColor: "#e3eaf6",
-                    borderRadius: "0.375rem",
-                  }),
-                  multiValueLabel: (base) => ({
-                    ...base,
-                    color: "#1e4a6f",
-                  }),
-                  multiValueRemove: (base) => ({
-                    ...base,
-                    color: "#1e4a6f",
-                    ":hover": { backgroundColor: "#c7d7ee", color: "#1e4a6f" },
                   }),
                   placeholder: (base) => ({ ...base, color: "#9ca3af" }),
                 }}

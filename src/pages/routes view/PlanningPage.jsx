@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Pencil } from "lucide-react";
 // Utility to convert array of objects to CSV string
 function arrayToCSV(data, columns) {
   const header = columns.map((col) => col.header).join(",");
@@ -44,8 +45,21 @@ export default function PlanningPage() {
     dispatch(fetchRoutePlanList());
   }, [dispatch]);
 
+  // Search state
+  const [searchText, setSearchText] = useState("");
+
   // Use API data, no fallback to dummy data
   const planningData = routePlans || [];
+
+  // Filtered data by Plan Name or Status
+  const filteredData = planningData.filter(row => {
+    if (!searchText.trim()) return true;
+    const planName = row.planName ? row.planName.toLowerCase() : "";
+    const status = row.status ? row.status.toLowerCase() : "";
+    const search = searchText.toLowerCase();
+    return planName.includes(search) || status.includes(search);
+  });
+
   // CSV export columns (match table columns)
   const exportColumns = [
     { key: "planName", header: "Plan Name" },
@@ -58,8 +72,8 @@ export default function PlanningPage() {
   ];
 
   const handleExport = () => {
-    if (!planningData.length) return;
-    const csv = arrayToCSV(planningData, exportColumns);
+    if (!filteredData.length) return;
+    const csv = arrayToCSV(filteredData, exportColumns);
     downloadCSV(csv, "route-plans.csv");
   };
 
@@ -114,8 +128,10 @@ export default function PlanningPage() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Would you like to search for a Route?"
+                  placeholder="Search by Plan Name or Status"
                   className="pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#25689f] focus:border-transparent outline-none transition-all duration-200 w-full"
+                  value={searchText}
+                  onChange={e => setSearchText(e.target.value)}
                 />
               </div>
               <div className="flex items-center space-x-1.5 flex-shrink-0">
@@ -127,7 +143,7 @@ export default function PlanningPage() {
                     <>
                       Showing{" "}
                       <span className="font-semibold text-[#25689f]">
-                        {planningData.length}
+                        {filteredData.length}
                       </span>{" "}
                       Route Plans
                     </>
@@ -142,9 +158,9 @@ export default function PlanningPage() {
       {/* Table - styled like RouteTable */}
       <div className="bg-white shadow-lg rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-4 py-2.5 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <h3 className="text-md font-semibold text-gray-900">
-            Route Plans ({planningData.length})
-          </h3>
+            <h3 className="text-md font-semibold text-gray-900">
+              Route Plans ({filteredData.length})
+            </h3>
           <button
             onClick={handleExport}
             className="px-3 cursor-pointer py-1.5 text-sm bg-[#1F557F]/10 text-[#1F557F] hover:bg-[#1F557F]/20 rounded-lg transition-colors disabled:opacity-50"
@@ -160,28 +176,14 @@ export default function PlanningPage() {
                 <th className="px-3 py-2 text-left">
                   <input type="checkbox" />
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                  Plan Name
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                  Schedule Date
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                  Stops
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                  Distance
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                  Duration
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                  Vehicle
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider"></th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Plan Name</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Schedule Date</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Stops</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Distance</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Duration</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Vehicle</th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">Status</th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-900 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -240,7 +242,7 @@ export default function PlanningPage() {
                     </div>
                   </td>
                 </tr>
-              ) : planningData.length === 0 ? (
+              ) : filteredData.length === 0 ? (
                 <tr>
                   <td
                     colSpan="9"
@@ -265,32 +267,19 @@ export default function PlanningPage() {
                   </td>
                 </tr>
               ) : (
-                planningData.map((row, idx) => (
+                filteredData.map((row, idx) => (
                   <tr key={row.idx || idx}>
                     <td className="px-3 py-2">
                       <input type="checkbox" />
                     </td>
-                    <td
-                      className="px-3 py-2 text-sm font-medium text-gray-900"
-                      title={row.planName}
-                    >
+                    <td className="px-3 py-2 text-sm font-medium text-gray-900" title={row.planName}>
                       {row.planName}
                     </td>
-                    <td className="px-3 py-2 text-sm text-gray-700">
-                      {row.PlanDate}
-                    </td>
-                    <td className="px-3 py-2 text-sm text-gray-700">
-                      {row.TotalStops}
-                    </td>
-                    <td className="px-3 py-2 text-sm text-gray-700">
-                      {row.TotalDistance}
-                    </td>
-                    <td className="px-3 py-2 text-sm text-gray-700">
-                      {row.TotalDuration}
-                    </td>
-                    <td className="px-3 py-2 text-sm text-gray-700">
-                      {row.RouteVehicles}
-                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{row.PlanDate}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{row.TotalStops}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{row.TotalDistance}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{row.TotalDuration}</td>
+                    <td className="px-3 py-2 text-sm text-gray-700">{row.RouteVehicles}</td>
                     <td className="px-3 py-2 text-sm text-gray-700">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -304,21 +293,20 @@ export default function PlanningPage() {
                         {row.status}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-sm text-gray-700">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4 text-gray-400 hover:text-[#25689f] cursor-pointer"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                    <td className="px-3 py-2 text-center">
+                      <button
+                        className="p-1.5 cursor-pointer hover:bg-[#25689f]/10 rounded-lg transition-colors group"
+                        title={`Edit Route Plan: ${row.planName}`}
+                        onClick={() => {
+                          window.open(
+                            `/#/create-route-plan?id=${row.id || row.idx}&edit=true`,
+                            "EditRoutePlan",
+                            "width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no"
+                          );
+                        }}
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15.232 5.232l3.536 3.536M9 11l6 6M3 21h18"
-                        />
-                      </svg>
+                        <Pencil className="w-4 h-4 text-[#25689f] group-hover:text-[#1F557F]" />
+                      </button>
                     </td>
                   </tr>
                 ))

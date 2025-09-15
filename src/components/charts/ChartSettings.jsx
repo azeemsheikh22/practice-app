@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Save, X, Trash2 } from "lucide-react";
 
 const ChartSettings = ({  onSave, onCancel, onDelete }) => {

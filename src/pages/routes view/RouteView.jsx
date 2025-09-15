@@ -4,7 +4,7 @@ import DashboardPage from "./DashboardPage";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { 
-  LayoutDashboard, 
+  // LayoutDashboard, 
   Route, 
   MapPin,
   Upload, 
@@ -19,11 +19,11 @@ const RoutesView = () => {
   const [activeTab, setActiveTab] = useState("routes");
 
   const navigationItems = [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      icon: <LayoutDashboard size={16} />,
-    },
+    // {
+    //   id: "dashboard",
+    //   label: "Dashboard",
+    //   icon: <LayoutDashboard size={16} />,
+    // },
     {
       id: "routes", 
       label: "Routes",
