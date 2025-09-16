@@ -19,8 +19,9 @@ import {
   Trash2,
 } from "lucide-react";
 import AddDashboardCategoryModal from "./AddDashboardCategoryModal";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { selectRawVehicleList } from "../../features/gpsTrackingSlice";
+import { fetchUserDashboardByCategory } from "../../features/chartApiSlice";
 
 const DashboardHeader = ({
   selectedReport,
@@ -35,13 +36,13 @@ const DashboardHeader = ({
   dashboardCategories,
 }) => {
   const [isReportDropdownOpen, setIsReportDropdownOpen] = useState(false);
-  const [localSelectedReport, setLocalSelectedReport] = useState(null);
   const [isTreeModalOpen, setIsTreeModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [dashboardName, setDashboardName] = useState("My Dashboard");
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const reportDropdownRef = useRef(null);
+  const dispatch = useDispatch();
 
   // Use dashboardCategories for report options
   const reportOptions = useMemo(() => {
@@ -62,6 +63,7 @@ const DashboardHeader = ({
       (!selectedReport || !selectedReport.id)
     ) {
       onReportChange(reportOptions[0]);
+      dispatch(fetchUserDashboardByCategory({ catid: reportOptions[0].id }));
     }
   }, [reportOptions]);
 
@@ -80,9 +82,11 @@ const DashboardHeader = ({
   }, []);
 
   const handleReportSelect = (report) => {
-  setLocalSelectedReport(report);
-  onReportChange(report);
-  setIsReportDropdownOpen(false);
+    onReportChange(report);
+    setIsReportDropdownOpen(false);
+    if (report && report.id) {
+      dispatch(fetchUserDashboardByCategory({ catid: report.id }));
+    }
   };
 
   const handleGroupSelect = () => {
@@ -99,8 +103,6 @@ const DashboardHeader = ({
       onEditDashboard({ name: dashboardName, action: "save" });
     }
   };
-
-  console.log(localSelectedReport)
 
   const handleRemoveGroup = () => {
     onGroupChange(null);

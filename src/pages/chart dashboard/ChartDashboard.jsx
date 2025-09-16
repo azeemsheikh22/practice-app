@@ -19,7 +19,11 @@ import {
   initializeConnection,
   selectConnectionStatus,
 } from "../../features/gpsTrackingSlice";
-import { fetchDashboardCategoriesForUser, selectDashboardCategories } from "../../features/chartApiSlice";
+import {
+  fetchDashboardCategoriesForUser,
+  selectDashboardCategories,
+  selectUserDashboardData,
+} from "../../features/chartApiSlice";
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -29,8 +33,10 @@ export default function ChartDashboard() {
   const dispatch = useDispatch();
   const connectionStatus = useSelector(selectConnectionStatus);
   const dashboardCategories = useSelector(selectDashboardCategories);
+  const userDashboardData = useSelector(selectUserDashboardData);
 
 
+  console.log(userDashboardData)
 
   useEffect(() => {
     // Only initialize if not already connected
@@ -321,8 +327,6 @@ export default function ChartDashboard() {
 
       {/* Main Dashboard Content */}
       <div className="p-4">
-
-
         {/* Responsive Grid Layout */}
         <div className="overflow-hidden">
           <ResponsiveGridLayout
