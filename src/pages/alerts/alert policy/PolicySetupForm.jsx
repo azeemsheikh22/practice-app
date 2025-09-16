@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { Edit2, Truck, Users, Search, ChevronDown } from "lucide-react";
@@ -9,9 +9,14 @@ import {
   selectPolicyUsersLoading, 
   selectPolicyUsersError 
 } from "../../../features/alertpolicySlice";  
+import CreatePolicyModal from "../CreatePolicyModal";
+import { useNavigate } from "react-router-dom";
 
 
 export default function PolicySetupForm() {
+  const navigate = useNavigate();
+  // Get alert type list from Redux
+  const policyTypeList = useSelector(state => state.alertpolicy?.policyTypeList || []);
   const dispatch = useDispatch();
   const policyUserList = useSelector(selectPolicyUserList);
   const policyUsersLoading = useSelector(selectPolicyUsersLoading);
@@ -20,7 +25,6 @@ export default function PolicySetupForm() {
   const [activeTab, setActiveTab] = useState("vehicle");
   const [entireFleetEnabled, setEntireFleetEnabled] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUsers, setSelectedUsers] = useState(new Set());
   const [userSelections, setUserSelections] = useState({}); // Track individual user selections
   const [additionalEmails, setAdditionalEmails] = useState("");
   const [smsDeliveryOption, setSmsDeliveryOption] = useState("none");
@@ -30,19 +34,16 @@ export default function PolicySetupForm() {
   const [limitAlertsPerDriver, setLimitAlertsPerDriver] = useState(10);
   const [timeRange, setTimeRange] = useState("everyDay");
 
-  const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
+  // Modal states for vehicle and group selection
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
+  const [selectedVehicles, setSelectedVehicles] = useState([]);
+  const [selectedGroups, setSelectedGroups] = useState([]);
 
   // Fetch policy users on component mount
   useEffect(() => {
     dispatch(fetchPolicyUserList());
   }, [dispatch]);
-
-  // Log error if any
-  useEffect(() => {
-    if (policyUsersError) {
-      console.error("Policy Users Error:", policyUsersError);
-    }
-  }, [policyUsersError]);
 
   const tabs = [
     { id: "vehicle", label: "Vehicle & Alert Options" },
@@ -62,7 +63,7 @@ export default function PolicySetupForm() {
   };
 
   const handleCancel = () => {
-    console.log("Cancel clicked");
+    navigate('/alerts?query=policies');
   };
 
   // Handle individual user selection
@@ -150,13 +151,32 @@ export default function PolicySetupForm() {
       searchQuery.trim() === '' || 
       (user.fullName && user.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-    
+
     filteredUsers.forEach(user => {
       clearedSelections[user.USER_ID] = { all: false, display: false, email: false };
     });
     
     setUserSelections(clearedSelections);
-    setSelectedUsers(new Set());
+  };
+
+  // Vehicle modal functions
+  const handleOpenVehicleModal = () => {
+    setIsVehicleModalOpen(true);
+  };
+
+  const handleVehicleModalSave = (selectedIds, selectedItems) => {
+    setSelectedVehicles(selectedItems);
+    setIsVehicleModalOpen(false);
+  };
+
+  // Group modal functions
+  const handleOpenGroupModal = () => {
+    setIsGroupModalOpen(true);
+  };
+
+  const handleGroupModalSave = (selectedIds, selectedItems) => {
+    setSelectedGroups(selectedItems);
+    setIsGroupModalOpen(false);
   };
 
   const renderVehicleAndAlertOptions = () => (
@@ -203,24 +223,37 @@ export default function PolicySetupForm() {
           {/* Action Links */}
           <div className="space-y-4">
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-3 text-sm cursor-pointer font-medium transition-colors hover:opacity-80"
+              whileHover={entireFleetEnabled ? {} : { scale: 1.02 }}
+              whileTap={entireFleetEnabled ? {} : { scale: 0.98 }}
+              className={`flex items-center gap-3 text-sm font-medium transition-colors ${entireFleetEnabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
               style={{ color: 'var(--primary-color)' }}
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => !entireFleetEnabled && handleOpenVehicleModal()}
+              disabled={entireFleetEnabled}
             >
               <Truck size={20} />
               Add Vehicles
+              {selectedVehicles.length > 0 && (
+                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                  {selectedVehicles.length}
+                </span>
+              )}
             </motion.button>
 
             <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-3 text-sm cursor-pointer font-medium transition-colors hover:opacity-80"
+              whileHover={entireFleetEnabled ? {} : { scale: 1.02 }}
+              whileTap={entireFleetEnabled ? {} : { scale: 0.98 }}
+              className={`flex items-center gap-3 text-sm font-medium transition-colors ${entireFleetEnabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
               style={{ color: 'var(--primary-color)' }}
+              onClick={() => !entireFleetEnabled && handleOpenGroupModal()}
+              disabled={entireFleetEnabled}
             >
               <Users size={20} />
               Add Groups
+              {selectedGroups.length > 0 && (
+                <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                  {selectedGroups.length}
+                </span>
+              )}
             </motion.button>
           </div>
         </div>
@@ -660,6 +693,33 @@ export default function PolicySetupForm() {
     </div>
   );
 
+  // Get route data from props
+  const { routePolicyData = {} } = arguments[0] || {};
+  // State for modal visibility and editing
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [policyInfo, setPolicyInfo] = useState({
+    policyName: routePolicyData.policyName || '',
+    alertType: routePolicyData.alertType || '',
+    highPriority: routePolicyData.highPriority || false
+  });
+
+  // Update header values from state
+  const policyName = policyInfo.policyName;
+  const alertType = policyInfo.alertType;
+
+  // Edit modal handlers
+  const handleEditModalOpen = () => {
+    setIsEditModalOpen(true);
+  };
+  const handleEditModalClose = () => {
+    setIsEditModalOpen(false);
+  };
+  const handleEditModalChange = (field, value) => {
+    setPolicyInfo(prev => ({ ...prev, [field]: value }));
+  };
+  const handleEditModalSave = () => {
+    setIsEditModalOpen(false);
+  };
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
       {/* Header */}
@@ -669,16 +729,17 @@ export default function PolicySetupForm() {
             className="text-xl sm:text-2xl font-bold"
             style={{ color: 'var(--primary-color)' }}
           >
-            VTS-Suspicious Parking-all Area-Alarm-30min
+            {policyName}
           </h1>
           <span
             className="text-lg sm:text-xl text-gray-600"
           >
-            Accident Incident
+            {alertType}
           </span>
           <button
             className="p-1 hover:bg-gray-100 rounded transition-colors cursor-pointer"
             aria-label="Edit policy name"
+            onClick={handleEditModalOpen}
           >
             <Edit2 size={16} className="text-gray-500" />
           </button>
@@ -727,8 +788,16 @@ export default function PolicySetupForm() {
         </div>
       </div>
 
-
-      <SelectVehiclesModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      {/* Edit Policy Modal */}
+      <CreatePolicyModal
+        show={isEditModalOpen}
+        onClose={handleEditModalClose}
+        formData={policyInfo}
+        handleFormChange={handleEditModalChange}
+        handleNext={handleEditModalSave}
+        isNextDisabled={!policyInfo.policyName.trim()}
+        policyTypeList={policyTypeList}
+      />
 
 
       {/* Content Area */}
@@ -737,6 +806,26 @@ export default function PolicySetupForm() {
         {activeTab === 'time' && renderTimeAndFrequency()}
         {activeTab === 'recipients' && renderAlertRecipients()}
       </div>
+
+      {/* Vehicle Selection Modal */}
+      <SelectVehiclesModal
+        isOpen={isVehicleModalOpen}
+        onClose={() => setIsVehicleModalOpen(false)}
+        onSave={handleVehicleModalSave}
+        type="vehicle"
+        initialSelectedItems={selectedVehicles}
+        shouldReset={false}
+      />
+
+      {/* Group Selection Modal */}
+      <SelectVehiclesModal
+        isOpen={isGroupModalOpen}
+        onClose={() => setIsGroupModalOpen(false)}
+        onSave={handleGroupModalSave}
+        type="group"
+        initialSelectedItems={selectedGroups}
+        shouldReset={false}
+      />
     </div>
   );
 }

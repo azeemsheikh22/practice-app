@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Navbar from "../../components/navber/Navbar";
 import AlertHeader from "./AlertHeader";
 import AlertOverview from "./AlertOverview";
@@ -15,6 +15,7 @@ import {
   fetchAlertSummary,
   setSelectedDateRange,
 } from "../../features/alertSlice";
+import { useLocation } from "react-router-dom";
 
 export default function Alerts() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -24,6 +25,8 @@ export default function Alerts() {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [alarmSound, setAlarmSound] = useState(false);
   const dispatch = useDispatch();
+  const location = useLocation();
+
   const {
     policyList,
     loading,
@@ -36,6 +39,13 @@ export default function Alerts() {
     logLoading,
     logError,
   } = useSelector((state) => state.alert);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("query") === "policies") {
+      setActiveTab("policies");
+    }
+  }, [location.search]);
   // Helper function to get date range for alert logs
   const getLogDateRange = (timeRange) => {
     const today = new Date();
@@ -354,7 +364,9 @@ export default function Alerts() {
               alarmSound={alarmSound}
             />
           </>
-        ) : renderTabContent()}
+        ) : (
+          renderTabContent()
+        )}
       </div>
     </div>
   );
