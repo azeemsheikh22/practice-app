@@ -15,7 +15,6 @@ import { useNavigate } from "react-router-dom";
 
 export default function PolicySetupForm() {
   const navigate = useNavigate();
-  // Get alert type list from Redux
   const policyTypeList = useSelector(state => state.alertpolicy?.policyTypeList || []);
   const dispatch = useDispatch();
   const policyUserList = useSelector(selectPolicyUserList);
@@ -33,6 +32,10 @@ export default function PolicySetupForm() {
   const [alertFrequency, setAlertFrequency] = useState(10);
   const [limitAlertsPerDriver, setLimitAlertsPerDriver] = useState(10);
   const [timeRange, setTimeRange] = useState("everyDay");
+  // Custom time range day checkboxes and time values
+  const [customDaysChecked, setCustomDaysChecked] = useState(Array(7).fill(false));
+  const [customDaysStart, setCustomDaysStart] = useState(Array(7).fill(""));
+  const [customDaysEnd, setCustomDaysEnd] = useState(Array(7).fill(""));
 
   // Modal states for vehicle and group selection
   const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
@@ -59,7 +62,14 @@ export default function PolicySetupForm() {
   };
 
   const handleNext = () => {
-    console.log("Next clicked");
+    if (activeTab === "vehicle") {
+      setActiveTab("time");
+    } else if (activeTab === "time") {
+      setActiveTab("recipients");
+    } else if (activeTab === "recipients") {
+      // Optionally, submit or finalize here
+      // For now, do nothing
+    }
   };
 
   const handleCancel = () => {
@@ -285,62 +295,249 @@ export default function PolicySetupForm() {
           Select the time range this alert can trigger within:
         </h3>
         <div className="space-y-4">
-          <label className="flex items-center">
+          <label className="flex items-center cursor-pointer">
             <input
               type="radio"
               name="timeRange"
               value="everyDay"
               checked={timeRange === "everyDay"}
               onChange={() => setTimeRange("everyDay")}
-              className="h-4 w-4 border-gray-300 focus:ring-2 transition-colors"
-              style={{ accentColor: 'var(--primary-color)' }}
+              className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+              style={{
+                accentColor: 'var(--primary-color)',
+                boxShadow: 'none',
+                outline: 'none',
+                border: '2px solid #3b82f6'
+              }}
             />
             <span className="ml-2 text-sm" style={{ color: 'var(--text-color)' }}>
               Every day (24 Hours)
             </span>
           </label>
-          <label className="flex items-center">
+          <label className="flex items-center cursor-pointer">
             <input
               type="radio"
               name="timeRange"
               value="weekdays"
               checked={timeRange === "weekdays"}
               onChange={() => setTimeRange("weekdays")}
-              className="h-4 w-4 border-gray-300 focus:ring-2 transition-colors"
-              style={{ accentColor: 'var(--primary-color)' }}
+              className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+              style={{
+                accentColor: 'var(--primary-color)',
+                boxShadow: 'none',
+                outline: 'none',
+                border: '2px solid #3b82f6'
+              }}
             />
             <span className="ml-2 text-sm" style={{ color: 'var(--text-color)' }}>
               Weekdays only (Monday - Friday, 24 Hours)
             </span>
           </label>
-          <label className="flex items-center">
+          <label className="flex items-center cursor-pointer">
             <input
               type="radio"
               name="timeRange"
               value="weekends"
               checked={timeRange === "weekends"}
               onChange={() => setTimeRange("weekends")}
-              className="h-4 w-4 border-gray-300 focus:ring-2 transition-colors"
-              style={{ accentColor: 'var(--primary-color)' }}
+              className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+              style={{
+                accentColor: 'var(--primary-color)',
+                boxShadow: 'none',
+                outline: 'none',
+                border: '2px solid #3b82f6'
+              }}
             />
             <span className="ml-2 text-sm" style={{ color: 'var(--text-color)' }}>
               Weekends only (Saturday - Sunday, 24 Hours)
             </span>
           </label>
-          <label className="flex items-center">
+          <label className="flex items-center cursor-pointer">
             <input
               type="radio"
               name="timeRange"
               value="custom"
               checked={timeRange === "custom"}
               onChange={() => setTimeRange("custom")}
-              className="h-4 w-4 border-gray-300 focus:ring-2 transition-colors"
-              style={{ accentColor: 'var(--primary-color)' }}
+              className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+              style={{
+                accentColor: 'var(--primary-color)',
+                boxShadow: 'none',
+                outline: 'none',
+                border: '2px solid #3b82f6'
+              }}
             />
             <span className="ml-2 text-sm" style={{ color: 'var(--text-color)' }}>
               Custom
             </span>
           </label>
+          {/* Custom time range UI - only show if 'Custom' is selected */}
+          {timeRange === "custom" && (
+            <div  >
+              <button
+                type="button"
+                className="text-blue-600 text-sm font-medium mb-2 inline-block hover:underline cursor-pointer"
+                onClick={() => {
+                  // Copy Monday's checked, start, end to all other days
+                  const checked = [...customDaysChecked];
+                  const start = [...customDaysStart];
+                  const end = [...customDaysEnd];
+                  for (let i = 1; i < 7; i++) {
+                    checked[i] = checked[0];
+                    start[i] = start[0];
+                    end[i] = end[0];
+                  }
+                  setCustomDaysChecked(checked);
+                  setCustomDaysStart(start);
+                  setCustomDaysEnd(end);
+                }}
+              >
+                Apply Monday's time to all
+              </button>
+              <div className="space-y-2">
+                {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, idx) => (
+                  <div key={day} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 focus:ring-0 transition-colors cursor-pointer"
+                      style={{ accentColor: 'var(--primary-color)', boxShadow: 'none' }}
+                      checked={customDaysChecked[idx]}
+                      onChange={() => {
+                        const updated = [...customDaysChecked];
+                        updated[idx] = !updated[idx];
+                        setCustomDaysChecked(updated);
+                      }}
+                    />
+                    <span className="w-20 text-sm" style={{ color: 'var(--text-color)' }}>{day}</span>
+                    <select
+                      disabled={!customDaysChecked[idx]}
+                      value={customDaysStart[idx]}
+                      onChange={e => {
+                        const updated = [...customDaysStart];
+                        updated[idx] = e.target.value;
+                        setCustomDaysStart(updated);
+                      }}
+                      className={`px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:border-transparent outline-none transition-all duration-200 ${!customDaysChecked[idx] ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+                      style={{ color: 'var(--text-color)' }}
+                    >
+                      <option value=""></option>
+                      <option value="00:00">12:00 AM</option>
+                      <option value="00:30">12:30 AM</option>
+                      <option value="01:00">1:00 AM</option>
+                      <option value="01:30">1:30 AM</option>
+                      <option value="02:00">2:00 AM</option>
+                      <option value="02:30">2:30 AM</option>
+                      <option value="03:00">3:00 AM</option>
+                      <option value="03:30">3:30 AM</option>
+                      <option value="04:00">4:00 AM</option>
+                      <option value="04:30">4:30 AM</option>
+                      <option value="05:00">5:00 AM</option>
+                      <option value="05:30">5:30 AM</option>
+                      <option value="06:00">6:00 AM</option>
+                      <option value="06:30">6:30 AM</option>
+                      <option value="07:00">7:00 AM</option>
+                      <option value="07:30">7:30 AM</option>
+                      <option value="08:00">8:00 AM</option>
+                      <option value="08:30">8:30 AM</option>
+                      <option value="09:00">9:00 AM</option>
+                      <option value="09:30">9:30 AM</option>
+                      <option value="10:00">10:00 AM</option>
+                      <option value="10:30">10:30 AM</option>
+                      <option value="11:00">11:00 AM</option>
+                      <option value="11:30">11:30 AM</option>
+                      <option value="12:00">12:00 PM</option>
+                      <option value="12:30">12:30 PM</option>
+                      <option value="13:00">1:00 PM</option>
+                      <option value="13:30">1:30 PM</option>
+                      <option value="14:00">2:00 PM</option>
+                      <option value="14:30">2:30 PM</option>
+                      <option value="15:00">3:00 PM</option>
+                      <option value="15:30">3:30 PM</option>
+                      <option value="16:00">4:00 PM</option>
+                      <option value="16:30">4:30 PM</option>
+                      <option value="17:00">5:00 PM</option>
+                      <option value="17:30">5:30 PM</option>
+                      <option value="18:00">6:00 PM</option>
+                      <option value="18:30">6:30 PM</option>
+                      <option value="19:00">7:00 PM</option>
+                      <option value="19:30">7:30 PM</option>
+                      <option value="20:00">8:00 PM</option>
+                      <option value="20:30">8:30 PM</option>
+                      <option value="21:00">9:00 PM</option>
+                      <option value="21:30">9:30 PM</option>
+                      <option value="22:00">10:00 PM</option>
+                      <option value="22:30">10:30 PM</option>
+                      <option value="23:00">11:00 PM</option>
+                      <option value="23:30">11:30 PM</option>
+                      <option value="23:59">11:59 PM</option>
+                    </select>
+                    <select
+                      disabled={!customDaysChecked[idx]}
+                      value={customDaysEnd[idx]}
+                      onChange={e => {
+                        const updated = [...customDaysEnd];
+                        updated[idx] = e.target.value;
+                        setCustomDaysEnd(updated);
+                      }}
+                      className={`px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:border-transparent outline-none transition-all duration-200 ${!customDaysChecked[idx] ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+                      style={{ color: 'var(--text-color)' }}
+                    >
+                      <option value=""></option>
+                      <option value="00:00">12:00 AM</option>
+                      <option value="00:30">12:30 AM</option>
+                      <option value="01:00">1:00 AM</option>
+                      <option value="01:30">1:30 AM</option>
+                      <option value="02:00">2:00 AM</option>
+                      <option value="02:30">2:30 AM</option>
+                      <option value="03:00">3:00 AM</option>
+                      <option value="03:30">3:30 AM</option>
+                      <option value="04:00">4:00 AM</option>
+                      <option value="04:30">4:30 AM</option>
+                      <option value="05:00">5:00 AM</option>
+                      <option value="05:30">5:30 AM</option>
+                      <option value="06:00">6:00 AM</option>
+                      <option value="06:30">6:30 AM</option>
+                      <option value="07:00">7:00 AM</option>
+                      <option value="07:30">7:30 AM</option>
+                      <option value="08:00">8:00 AM</option>
+                      <option value="08:30">8:30 AM</option>
+                      <option value="09:00">9:00 AM</option>
+                      <option value="09:30">9:30 AM</option>
+                      <option value="10:00">10:00 AM</option>
+                      <option value="10:30">10:30 AM</option>
+                      <option value="11:00">11:00 AM</option>
+                      <option value="11:30">11:30 AM</option>
+                      <option value="12:00">12:00 PM</option>
+                      <option value="12:30">12:30 PM</option>
+                      <option value="13:00">1:00 PM</option>
+                      <option value="13:30">1:30 PM</option>
+                      <option value="14:00">2:00 PM</option>
+                      <option value="14:30">2:30 PM</option>
+                      <option value="15:00">3:00 PM</option>
+                      <option value="15:30">3:30 PM</option>
+                      <option value="16:00">4:00 PM</option>
+                      <option value="16:30">4:30 PM</option>
+                      <option value="17:00">5:00 PM</option>
+                      <option value="17:30">5:30 PM</option>
+                      <option value="18:00">6:00 PM</option>
+                      <option value="18:30">6:30 PM</option>
+                      <option value="19:00">7:00 PM</option>
+                      <option value="19:30">7:30 PM</option>
+                      <option value="20:00">8:00 PM</option>
+                      <option value="20:30">8:30 PM</option>
+                      <option value="21:00">9:00 PM</option>
+                      <option value="21:30">9:30 PM</option>
+                      <option value="22:00">10:00 PM</option>
+                      <option value="22:30">10:30 PM</option>
+                      <option value="23:00">11:00 PM</option>
+                      <option value="23:30">11:30 PM</option>
+                      <option value="23:59">11:59 PM</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -359,7 +556,7 @@ export default function PolicySetupForm() {
             className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:border-transparent outline-none transition-all duration-200 text-sm"
             style={{ color: 'var(--text-color)' }}
           >
-            {[10, 20, 30, 40, 50].map((num) => (
+            {[1, 5, 10, 25, 50, 100, 200, 500].map((num) => (
               <option key={num} value={num}>{num}</option>
             ))}
           </select>
@@ -376,7 +573,7 @@ export default function PolicySetupForm() {
             className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:border-transparent outline-none transition-all duration-200 text-sm"
             style={{ color: 'var(--text-color)' }}
           >
-            {[10, 20, 30, 40, 50].map((num) => (
+            {[1, 5, 10, 25, 50, 100, 200, 500].map((num) => (
               <option key={num} value={num}>{num}</option>
             ))}
           </select>
@@ -521,10 +718,12 @@ export default function PolicySetupForm() {
                         <input
                           type="checkbox"
                           checked={userSelections[user.USER_ID]?.all || false}
-                          className="h-4 w-4 rounded border-gray-300 focus:ring-2 transition-colors"
+                          className="h-4 w-4 rounded transition-colors cursor-pointer"
                           style={{
                             accentColor: 'var(--primary-color)',
-                            '--tw-ring-color': 'var(--primary-color)'
+                            boxShadow: 'none',
+                            outline: 'none',
+                            border: '2px solid #3b82f6' // blue border for visibility
                           }}
                           onChange={() => handleUserSelection(user.USER_ID, 'all')}
                         />
@@ -533,10 +732,12 @@ export default function PolicySetupForm() {
                         <input
                           type="checkbox"
                           checked={userSelections[user.USER_ID]?.display || false}
-                          className="h-4 w-4 rounded border-gray-300 focus:ring-2 transition-colors"
+                          className="h-4 w-4 rounded transition-colors cursor-pointer"
                           style={{
                             accentColor: 'var(--primary-color)',
-                            '--tw-ring-color': 'var(--primary-color)'
+                            boxShadow: 'none',
+                            outline: 'none',
+                            border: '2px solid #3b82f6'
                           }}
                           onChange={() => handleUserSelection(user.USER_ID, 'display')}
                         />
@@ -545,10 +746,12 @@ export default function PolicySetupForm() {
                         <input
                           type="checkbox"
                           checked={userSelections[user.USER_ID]?.email || false}
-                          className="h-4 w-4 rounded border-gray-300 focus:ring-2 transition-colors"
+                          className="h-4 w-4 rounded transition-colors cursor-pointer"
                           style={{
                             accentColor: 'var(--primary-color)',
-                            '--tw-ring-color': 'var(--primary-color)'
+                            boxShadow: 'none',
+                            outline: 'none',
+                            border: '2px solid #3b82f6'
                           }}
                           onChange={() => handleUserSelection(user.USER_ID, 'email')}
                         />
@@ -656,10 +859,12 @@ export default function PolicySetupForm() {
                       value={option.value}
                       checked={smsDeliveryOption === option.value}
                       onChange={(e) => setSmsDeliveryOption(e.target.value)}
-                      className="h-4 w-4 border-gray-300 focus:ring-2 transition-colors"
+                      className="h-4 w-4 rounded-full transition-colors cursor-pointer"
                       style={{
                         accentColor: 'var(--primary-color)',
-                        '--tw-ring-color': 'var(--primary-color)'
+                        boxShadow: 'none',
+                        outline: 'none',
+                        border: '2px solid #3b82f6'
                       }}
                     />
                     <span className="text-sm" style={{ color: 'var(--text-color)' }}>
@@ -782,7 +987,9 @@ export default function PolicySetupForm() {
               className="px-4 py-2 text-sm cursor-pointer font-medium text-white rounded-md shadow-sm hover:shadow-md transition-all duration-200"
               style={{ backgroundColor: 'var(--accent-red)' }}
             >
-              {activeTab === 'recipients' ? 'Next : Review' : 'Next : Alert Recipients'}
+              {activeTab === 'vehicle' && 'Next : Time & Frequency'}
+              {activeTab === 'time' && 'Next : Alert Recipients'}
+              {activeTab === 'recipients' && 'Next : Review'}
             </motion.button>
           </div>
         </div>

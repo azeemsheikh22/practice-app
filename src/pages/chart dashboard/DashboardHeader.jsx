@@ -104,14 +104,16 @@ const DashboardHeader = ({
     }
   };
 
-  const handleRemoveGroup = () => {
-    onGroupChange(null);
-  };
+  // const handleRemoveGroup = () => {
+  //   onGroupChange(null);
+  // };
 
   const handleCancelEdit = () => {
     setDashboardName("My Dashboard"); // Reset to original
     setIsEditModalOpen(false);
   };
+
+
 
 
   return (
@@ -198,12 +200,12 @@ const DashboardHeader = ({
                     <span className="truncate max-w-[120px]">
                       {selectedGroup.text}
                     </span>
-                    <button
+                    {/* <button
                       onClick={handleRemoveGroup}
                       className="ml-2 hover:bg-[#25689f]/20 rounded-full p-0.5 transition-colors cursor-pointer" // ✅ Changed to blue theme
                     >
                       <X size={12} />
-                    </button>
+                    </button> */}
                   </div>
                 ) : null}
 

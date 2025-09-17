@@ -54,10 +54,10 @@ export default function CreatePolicyModal({
                 className="text-xl sm:text-2xl font-bold"
                 style={{ color: 'var(--text-color)' }}
               >
-                {isEdit ? 'Edit Policy' : 'Create a New Policy'}
+                {isEdit ? 'Create a New Policy' : 'Create a New Policy'}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
-                {isEdit ? 'Edit your policy details below' : 'Set up a new policy for your fleet'}
+                {isEdit ? 'Set up a new policy for your fleet' : 'Set up a new policy for your fleet'}
               </p>
             </div>
             <button
