@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { FixedSizeList as List } from "react-window";
 import { X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
@@ -33,7 +34,6 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
 
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
-  const [visibleItems, setVisibleItems] = useState(50);
 
   const {
     userGeofences,
@@ -74,7 +74,6 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
   const handleRouteTabClick = () => {
     setActiveTab("route");
     setSearchTerm("");
-    setVisibleItems(50);
 
     // ✅ Fetch routes only when tab is clicked
     if (!routes || routes.length === 0) {
@@ -168,11 +167,6 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
     });
   }, [activeTab, geofenceData, categoryData, routeData, searchTerm]);
 
-  // VIRTUAL SCROLLING - Only render visible items
-  const displayedData = useMemo(() => {
-    return filteredData.slice(0, visibleItems);
-  }, [filteredData, visibleItems]);
-
   // Initialize geofence selections
   useEffect(() => {
     if (isOpen && geofenceData.length > 0) {
@@ -206,63 +200,33 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen, routeData.length, reduxSelectedRouteNames, routeFiltersApplied]);
 
-  // LOAD MORE ITEMS ON SCROLL
-  const handleScroll = (e) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    if (scrollHeight - scrollTop <= clientHeight + 100) {
-      setVisibleItems((prev) => Math.min(prev + 50, filteredData.length));
-    }
-  };
-
   if (!isOpen) return null;
 
   // SELECT ALL FUNCTION
   const handleSelectAll = () => {
     if (activeTab === "geofence") {
-      const allIds = filteredData.map((g) => g.id);
-      setLocalSelectedGeofenceIds(
-        new Set([...localSelectedGeofenceIds, ...allIds])
-      );
+      // Always select all from full data, not just filtered/search results
+      setLocalSelectedGeofenceIds(new Set(geofenceData.map((g) => g.id)));
     } else if (activeTab === "category") {
-      const allCategoryNames = filteredData.map((c) => c.name);
-      setLocalSelectedCategories(
-        new Set([...localSelectedCategories, ...allCategoryNames])
-      );
+      // Always select all from full data, not just filtered/search results
+      setLocalSelectedCategories(new Set(categoryData.map((c) => c.name)));
     } else {
-      const allRouteNames = filteredData.map((r) => r.routeName);
-      setLocalSelectedRouteNames(
-        new Set([...localSelectedRouteNames, ...allRouteNames])
-      );
+      // Route tab: Always select all from full data, not just filtered/search results
+      setLocalSelectedRouteNames(new Set(routeData.map((r) => r.routeName)));
     }
   };
 
   // DESELECT ALL FUNCTION
   const handleDeselectAll = () => {
     if (activeTab === "geofence") {
-      const filteredIds = new Set(filteredData.map((g) => g.id));
-      setLocalSelectedGeofenceIds(
-        new Set(
-          [...localSelectedGeofenceIds].filter((id) => !filteredIds.has(id))
-        )
-      );
+      // Always deselect all from full data, not just filtered/search results
+      setLocalSelectedGeofenceIds(new Set());
     } else if (activeTab === "category") {
-      const filteredNames = new Set(filteredData.map((c) => c.name));
-      setLocalSelectedCategories(
-        new Set(
-          [...localSelectedCategories].filter(
-            (name) => !filteredNames.has(name)
-          )
-        )
-      );
+      // Always deselect all from full data, not just filtered/search results
+      setLocalSelectedCategories(new Set());
     } else {
-      const filteredRouteNames = new Set(filteredData.map((r) => r.routeName));
-      setLocalSelectedRouteNames(
-        new Set(
-          [...localSelectedRouteNames].filter(
-            (name) => !filteredRouteNames.has(name)
-          )
-        )
-      );
+      // Route tab: Always deselect all from full data, not just filtered/search results
+      setLocalSelectedRouteNames(new Set());
     }
   };
 
@@ -360,16 +324,134 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
   const safeCurrentSelected =
     currentSelected instanceof Set ? currentSelected : new Set();
 
-  // CALCULATE SELECTED COUNT FROM FILTERED DATA
-  const selectedCount = filteredData.filter((item) => {
-    if (activeTab === "geofence") {
-      return safeCurrentSelected.has(item.id);
-    } else if (activeTab === "category") {
-      return safeCurrentSelected.has(item.name);
-    } else {
-      return safeCurrentSelected.has(item.routeName);
-    }
-  }).length;
+  // Count selected from full data, not just filtered
+  const selectedCount = (activeTab === "geofence")
+    ? geofenceData.filter((item) => safeCurrentSelected.has(item.id)).length
+    : activeTab === "category"
+    ? categoryData.filter((item) => safeCurrentSelected.has(item.name)).length
+    : routeData.filter((item) => safeCurrentSelected.has(item.routeName)).length;
+
+  // Always show full data count after 'of'
+  const totalCount = activeTab === "geofence"
+    ? geofenceData.length
+    : activeTab === "category"
+    ? categoryData.length
+    : routeData.length;
+
+  // Row renderer for react-window (Geofence)
+  const renderGeofenceRow = useCallback(
+    ({ index, style }) => {
+      const item = filteredData[index];
+      return (
+        <div
+          key={item.id}
+          style={style}
+          className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors react-window-list-item"
+        >
+          <input
+            type="checkbox"
+            id={`item-geofence-${item.id}`}
+            checked={safeCurrentSelected.has(item.id)}
+            onChange={() => handleItemToggle(item)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+          />
+          <label
+            htmlFor={`item-geofence-${item.id}`}
+            className="ml-3 flex-1 cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {item.name}
+                </p>
+              </div>
+            </div>
+          </label>
+        </div>
+      );
+    },
+    [filteredData, safeCurrentSelected, handleItemToggle]
+  );
+
+  // Row renderer for react-window (Category)
+  const renderCategoryRow = useCallback(
+    ({ index, style }) => {
+      const item = filteredData[index];
+      // Count geofences for this category
+      const geofenceCountForCategory = geofenceData.filter(
+        (geofence) => geofence.category === item.name
+      ).length;
+
+      return (
+        <div
+          key={item.id || index}
+          style={style}
+          className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors react-window-list-item"
+        >
+          <input
+            type="checkbox"
+            id={`item-category-${item.id || index}`}
+            checked={safeCurrentSelected.has(item.name)}
+            onChange={() => handleItemToggle(item)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+          />
+          <label
+            htmlFor={`item-category-${item.id || index}`}
+            className="ml-3 flex-1 cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {item.name}
+                </p>
+              </div>
+              <div className="ml-2 flex-shrink-0">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                  {geofenceCountForCategory}
+                </span>
+              </div>
+            </div>
+          </label>
+        </div>
+      );
+    },
+    [filteredData, safeCurrentSelected, handleItemToggle, geofenceData]
+  );
+
+  // Row renderer for react-window (Route)
+  const renderRouteRow = useCallback(
+    ({ index, style }) => {
+      const item = filteredData[index];
+      return (
+        <div
+          key={item.routeName}
+          style={style}
+          className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors react-window-list-item"
+        >
+          <input
+            type="checkbox"
+            id={`item-route-${item.routeName}`}
+            checked={safeCurrentSelected.has(item.routeName)}
+            onChange={() => handleItemToggle(item)}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer"
+          />
+          <label
+            htmlFor={`item-route-${item.routeName}`}
+            className="ml-3 flex-1 cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {item.routeName}
+                </p>
+              </div>
+            </div>
+          </label>
+        </div>
+      );
+    },
+    [filteredData, safeCurrentSelected, handleItemToggle]
+  );
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-[905]">
@@ -404,7 +486,6 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
               onClick={() => {
                 setActiveTab("geofence");
                 setSearchTerm("");
-                setVisibleItems(50);
               }}
               className={`flex-1 cursor-pointer py-1.5 px-3 text-sm font-medium rounded-md transition-colors ${
                 activeTab === "geofence"
@@ -418,7 +499,6 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
               onClick={() => {
                 setActiveTab("category");
                 setSearchTerm("");
-                setVisibleItems(50);
               }}
               className={`flex-1 cursor-pointer py-1.5 px-3 text-sm font-medium rounded-md transition-colors ${
                 activeTab === "category"
@@ -461,7 +541,6 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
-                  setVisibleItems(50);
                 }}
                 className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -471,7 +550,8 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
               <div className="flex gap-2">
                 <button
                   onClick={handleSelectAll}
-                  className="px-3 py-1.5 bg-blue-600 text-white cursor-pointer text-xs rounded-md hover:bg-blue-700 transition-colors"
+                  className="px-3 py-1.5 cursor-pointer text-xs rounded-md"
+                  style={{ background: "#25689f", color: "white" }}
                 >
                   Select All
                 </button>
@@ -485,17 +565,17 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
 
               <div className="flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-md">
                 <span className="font-medium">
-                  {selectedCount} of {filteredData.length} selected
+                  {selectedCount} of {totalCount} selected
+                  {searchTerm.trim() && (
+                    <span className="ml-2 text-gray-500">(showing {filteredData.length})</span>
+                  )}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Scrollable list */}
-          <div
-            className="flex-1 overflow-y-auto px-4 py-2"
-            onScroll={handleScroll}
-          >
+          <div className="flex-1 px-4 py-2">
             {/* ✅ Show loading for routes */}
             {activeTab === "route" && routesLoading ? (
               <div className="flex items-center justify-center py-8">
@@ -521,130 +601,80 @@ const AdvancedOptionsModal = ({ isOpen, onClose }) => {
                   </p>
                 </div>
               </div>
+            ) : activeTab === "geofence" ? (
+              <div style={{ height: 290, overflow: "auto" }}>
+                <List
+                  height={290}
+                  itemCount={filteredData.length}
+                  itemSize={48}
+                  width={"100%"}
+                  itemData={filteredData}
+                  className="react-window-list"
+                >
+                  {renderGeofenceRow}
+                </List>
+              </div>
+            ) : activeTab === "category" ? (
+              <div style={{ height: 290, overflow: "auto" }}>
+                <List
+                  height={290}
+                  itemCount={filteredData.length}
+                  itemSize={48}
+                  width={"100%"}
+                  itemData={filteredData}
+                  className="react-window-list"
+                >
+                  {renderCategoryRow}
+                </List>
+              </div>
             ) : (
-              <div className="space-y-1">
-                {displayedData.map((item, index) => (
-                  <div
-                    key={
-                      activeTab === "geofence"
-                        ? item.id
-                        : activeTab === "category"
-                        ? item.id || index
-                        : item.routeName
-                    }
-                    className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      id={`item-${
-                        activeTab === "geofence"
-                          ? item.id
-                          : activeTab === "category"
-                          ? item.id || index
-                          : item.routeName
-                      }`}
-                      checked={
-                        activeTab === "geofence"
-                          ? safeCurrentSelected.has(item.id)
-                          : activeTab === "category"
-                          ? safeCurrentSelected.has(item.name)
-                          : safeCurrentSelected.has(item.routeName)
-                      }
-                      onChange={() => handleItemToggle(item)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label
-                      htmlFor={`item-${
-                        activeTab === "geofence"
-                          ? item.id
-                          : activeTab === "category"
-                          ? item.id || index
-                          : item.routeName
-                      }`}
-                      className="ml-3 flex-1 cursor-pointer"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {activeTab === "route" ? item.routeName : item.name}
-                          </p>
-                          {activeTab === "geofence" && item.category && (
-                            <p className="text-xs text-gray-500 truncate">
-                              {item.category}
-                            </p>
-                          )}
-                          {/* ✅ Show route details */}
-                          {activeTab === "route" && (
-                            <p className="text-xs text-gray-500 truncate">
-                              Origin: {item.originLatLng} → Destination:{" "}
-                              {item.destinationLatLng}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Color indicator - only for geofence and category */}
-                        {activeTab !== "route" && item.color && (
-                          <div
-                            className="w-3 h-3 rounded-full ml-2 flex-shrink-0"
-                            style={{ backgroundColor: item.color }}
-                          ></div>
-                        )}
-                      </div>
-                    </label>
-                  </div>
-                ))}
-
-                {/* Load more indicator */}
-                {displayedData.length < filteredData.length && (
-                  <div className="text-center py-4">
-                    <div className="text-sm text-gray-500">
-                      Showing {displayedData.length} of {filteredData.length}{" "}
-                      items
-                    </div>
-                    <div className="text-xs text-gray-400 mt-1">
-                      Scroll down to load more
-                    </div>
-                  </div>
-                )}
+              <div style={{ height: 290, overflow: "auto" }}>
+                <List
+                  height={290}
+                  itemCount={filteredData.length}
+                  itemSize={48}
+                  width={"100%"}
+                  itemData={filteredData}
+                  className="react-window-list"
+                >
+                  {renderRouteRow}
+                </List>
               </div>
             )}
           </div>
         </div>
 
         {/* Show Shapes Toggle - ✅ Hide when route tab is active */}
-        {activeTab !== "route" && (
-          <div className="px-4 py-2 border-t border-gray-200 bg-gray-50">
-            <div className="flex items-center justify-between">
-              <label className="flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showShapes}
-                  onChange={handleShowShapesToggle}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <span className="ml-2 text-sm font-medium text-gray-700">
-                  Show Geofence Shapes
-                </span>
-              </label>
-            </div>
-          </div>
-        )}
+  {/* Move Show Geofence Shapes to footer row */}
 
         {/* Modal footer */}
         <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 cursor-pointer text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveSettings}
-              className="px-4 py-2 text-sm cursor-pointer font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              Apply Filters
-            </button>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <label className="flex items-center cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showShapes}
+                onChange={handleShowShapesToggle}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="ml-2 text-sm font-medium text-gray-700">
+                Show Geofence Shapes
+              </span>
+            </label>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 cursor-pointer text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveSettings}
+                className="px-4 py-2 text-sm cursor-pointer font-medium text-white bg-[#25689f] border border-transparent rounded-md hover:bg-[#1d5b8f] transition-colors"
+              >
+                Apply Filters
+              </button>
+            </div>
           </div>
         </div>
       </motion.div>

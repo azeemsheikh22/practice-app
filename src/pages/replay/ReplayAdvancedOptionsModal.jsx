@@ -79,6 +79,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
   ]);
 
   const handleSelectAll = () => {
+    // Always select all from full data, not just filtered/search results
     if (activeTab === "geofence") {
       setSelectedGeofenceIds(new Set(geofenceData.map((g) => g.id)));
     } else {
@@ -87,6 +88,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
   };
 
   const handleDeselectAll = () => {
+    // Always deselect all from full data, not just filtered/search results
     if (activeTab === "geofence") {
       setSelectedGeofenceIds(new Set());
     } else {
@@ -112,10 +114,13 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
     }
   };
 
-  const selectedCount = filteredData.filter((item) => {
-    if (activeTab === "geofence") return selectedGeofenceIds.has(item.id);
-    return selectedCategories.has(item.Categoryname);
-  }).length;
+  // Count selected from full data, not just filtered
+  const selectedCount = (activeTab === "geofence")
+    ? geofenceData.filter((item) => selectedGeofenceIds.has(item.id)).length
+    : categoryData.filter((item) => selectedCategories.has(item.Categoryname)).length;
+
+  // Always show full data count after 'of'
+  const totalCount = activeTab === "geofence" ? geofenceData.length : categoryData.length;
 
   // Row renderer for react-window
   const renderGeofenceRow = useCallback(
@@ -132,7 +137,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
             id={`item-geofence-${item.id}`}
             checked={selectedGeofenceIds.has(item.id)}
             onChange={() => handleItemToggle(item)}
-            className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded"
+            className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded cursor-pointer"
           />
           <label
             htmlFor={`item-geofence-${item.id}`}
@@ -288,11 +293,14 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                   Deselect All
                 </button>
               </div>
-              <div className="flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-md">
-                <span className="font-medium">
-                  {selectedCount} of {filteredData.length} selected
-                </span>
-              </div>
+                <div className="flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-md">
+                  <span className="font-medium">
+                    {selectedCount} of {totalCount} selected
+                    {searchTerm.trim() && (
+                      <span className="ml-2 text-gray-500">(showing {filteredData.length})</span>
+                    )}
+                  </span>
+                </div>
             </div>
           </div>
           {/* Scrollable list - only the list gets overflow */}
@@ -343,7 +351,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                         id={`item-category-${item.id || index}`}
                         checked={selectedCategories.has(item.Categoryname)}
                         onChange={() => handleItemToggle(item)}
-                        className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded"
+                        className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded cursor-pointer"
                       />
                       <label
                         htmlFor={`item-category-${item.id || index}`}
@@ -382,7 +390,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                     payload: e.target.checked,
                   })
                 }
-                className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded"
+                className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded cursor-pointer"
               />
               <span className="ml-2 text-sm font-medium text-gray-700">
                 Show Geofence Shapes
