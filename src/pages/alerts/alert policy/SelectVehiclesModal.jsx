@@ -140,26 +140,16 @@ const SelectVehiclesModal = ({
   // Auto-expand root nodes by default
   useEffect(() => {
     if (treeStructure.length > 0) {
-      const rootNodes = treeStructure.filter((item) => item.parent === "#");
-
-      if (rootNodes.length > 0) {
-        setExpandedGroups((prev) => {
-          const newExpanded = { ...prev };
-          let hasChanges = false;
-
-          rootNodes.forEach((node) => {
-            // Always expand root nodes by default
-            if (!(node.id in newExpanded) || !newExpanded[node.id]) {
-              newExpanded[node.id] = true;
-              hasChanges = true;
-            }
-          });
-
-          return hasChanges ? newExpanded : prev;
-        });
-      }
+      // Expand all groups whose parent is '#', regardless of id
+      const expanded = {};
+      treeStructure.forEach((node) => {
+        if (node.parent === "#") {
+          expanded[node.id] = true;
+        }
+      });
+      setExpandedGroups(expanded);
     }
-  }, [treeStructure]);
+  }, [treeStructure, isOpen]);
 
   // Expand all when searching (from DashboardHeader)
   useEffect(() => {

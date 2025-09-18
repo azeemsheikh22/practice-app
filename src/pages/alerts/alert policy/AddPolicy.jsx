@@ -24,7 +24,7 @@ export default function AddPolicy() {
       <Navbar />
 
       {/* Main Content */}
-      <div className="w-full max-w-[1800px] mx-auto px-2 sm:px-4 lg:px-6 pt-3">
+      <div className="w-full max-w-[1800px] mx-auto px-2 sm:px-4 lg:px-6 py-3">
         <PolicySetupForm routePolicyData={policyData} />
       </div>
     </div>

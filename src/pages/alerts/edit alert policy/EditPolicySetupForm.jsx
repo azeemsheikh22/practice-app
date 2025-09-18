@@ -1,21 +1,20 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Edit2, Truck, Users, Search, ChevronDown } from "lucide-react";
-import SelectVehiclesModal from "./SelectVehiclesModal";
 import { 
-  fetchPolicyUserList, 
-  selectPolicyUserList, 
-  selectPolicyUsersLoading, 
-  selectPolicyUsersError 
-} from "../../../features/alertpolicySlice";  
-import CreatePolicyModal from "../CreatePolicyModal";
+  // Edit2, 
+  Truck, Users, Search, ChevronDown } from "lucide-react";
+import EditSelectVehiclesModal from "./EditSelectVehiclesModal";
+import {
+  fetchPolicyUserList,
+  selectPolicyUserList,
+  selectPolicyUsersLoading,
+  selectPolicyUsersError,
+} from "../../../features/alertpolicySlice";
 import { useNavigate } from "react-router-dom";
 
-
-export default function PolicySetupForm() {
+export default function EditPolicySetupForm() {
   const navigate = useNavigate();
-  const policyTypeList = useSelector(state => state.alertpolicy?.policyTypeList || []);
   const dispatch = useDispatch();
   const policyUserList = useSelector(selectPolicyUserList);
   const policyUsersLoading = useSelector(selectPolicyUsersLoading);
@@ -33,7 +32,9 @@ export default function PolicySetupForm() {
   const [limitAlertsPerDriver, setLimitAlertsPerDriver] = useState(10);
   const [timeRange, setTimeRange] = useState("everyDay");
   // Custom time range day checkboxes and time values
-  const [customDaysChecked, setCustomDaysChecked] = useState(Array(7).fill(false));
+  const [customDaysChecked, setCustomDaysChecked] = useState(
+    Array(7).fill(false)
+  );
   const [customDaysStart, setCustomDaysStart] = useState(Array(7).fill(""));
   const [customDaysEnd, setCustomDaysEnd] = useState(Array(7).fill(""));
 
@@ -51,7 +52,7 @@ export default function PolicySetupForm() {
   const tabs = [
     { id: "vehicle", label: "Vehicle & Alert Options" },
     { id: "time", label: "Time & Frequency" },
-    { id: "recipients", label: "Alert Recipients" }
+    { id: "recipients", label: "Alert Recipients" },
   ];
 
   // Use API data, no fallback to dummy data
@@ -73,25 +74,25 @@ export default function PolicySetupForm() {
   };
 
   const handleCancel = () => {
-    navigate('/alerts?query=policies');
+    navigate("/alerts?query=policies");
   };
 
   // Handle individual user selection
   const handleUserSelection = (userId, type) => {
-    setUserSelections(prev => {
+    setUserSelections((prev) => {
       const newSelections = { ...prev };
       // Deep copy the user selection object
       const userSelection = newSelections[userId]
         ? { ...newSelections[userId] }
         : { all: false, display: false, email: false };
 
-      if (type === 'all') {
+      if (type === "all") {
         // Toggle all, display, and email together
         const newAllState = !userSelection.all;
         newSelections[userId] = {
           all: newAllState,
           display: newAllState,
-          email: newAllState
+          email: newAllState,
         };
       } else {
         // Toggle only the selected checkbox
@@ -107,44 +108,53 @@ export default function PolicySetupForm() {
 
   // Handle select all for a column
   const handleSelectAll = (type) => {
-    setUserSelections(prev => {
+    setUserSelections((prev) => {
       const newSelections = { ...prev };
-      
+
       // Get filtered users (those that match search query)
-      const filteredUsers = users.filter(user => 
-        searchQuery.trim() === '' || 
-        (user.fullName && user.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
+      const filteredUsers = users.filter(
+        (user) =>
+          searchQuery.trim() === "" ||
+          (user.fullName &&
+            user.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
       );
-      
+
       // Check if all filtered users are selected for the specified type
-      const allUsersSelected = filteredUsers.length > 0 && filteredUsers.every(user => {
-        if (!newSelections[user.USER_ID]) return false;
-        return newSelections[user.USER_ID][type] === true;
-      });
+      const allUsersSelected =
+        filteredUsers.length > 0 &&
+        filteredUsers.every((user) => {
+          if (!newSelections[user.USER_ID]) return false;
+          return newSelections[user.USER_ID][type] === true;
+        });
 
       // New state is the opposite of current state
       const newState = !allUsersSelected;
-      
+
       // Only update selections for filtered users
-      filteredUsers.forEach(user => {
+      filteredUsers.forEach((user) => {
         if (!newSelections[user.USER_ID]) {
-          newSelections[user.USER_ID] = { all: false, display: false, email: false };
+          newSelections[user.USER_ID] = {
+            all: false,
+            display: false,
+            email: false,
+          };
         }
 
-        if (type === 'all') {
+        if (type === "all") {
           // Select/deselect all columns
           newSelections[user.USER_ID] = {
             all: newState,
             display: newState,
-            email: newState
+            email: newState,
           };
         } else {
           // Select/deselect specific column
           newSelections[user.USER_ID][type] = newState;
-          
+
           // Update "All" state based on display and email
-          newSelections[user.USER_ID].all = 
-            newSelections[user.USER_ID].display && newSelections[user.USER_ID].email;
+          newSelections[user.USER_ID].all =
+            newSelections[user.USER_ID].display &&
+            newSelections[user.USER_ID].email;
         }
       });
 
@@ -155,18 +165,24 @@ export default function PolicySetupForm() {
   // Handle deselect all
   const handleDeselectAll = () => {
     // Create a new object with all checkboxes unchecked instead of empty object
-    const clearedSelections = {...userSelections};
-    
+    const clearedSelections = { ...userSelections };
+
     // Only deselect filtered users that match the search query
-    const filteredUsers = users.filter(user => 
-      searchQuery.trim() === '' || 
-      (user.fullName && user.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
+    const filteredUsers = users.filter(
+      (user) =>
+        searchQuery.trim() === "" ||
+        (user.fullName &&
+          user.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-    filteredUsers.forEach(user => {
-      clearedSelections[user.USER_ID] = { all: false, display: false, email: false };
+    filteredUsers.forEach((user) => {
+      clearedSelections[user.USER_ID] = {
+        all: false,
+        display: false,
+        email: false,
+      };
     });
-    
+
     setUserSelections(clearedSelections);
   };
 
@@ -176,10 +192,10 @@ export default function PolicySetupForm() {
   };
 
   const handleVehicleModalSave = (selectedIds, selectedItems) => {
-  // When vehicles are selected, clear groups
-  setSelectedVehicles(selectedItems);
-  setSelectedGroups([]);
-  setIsVehicleModalOpen(false);
+    // When vehicles are selected, clear groups
+    setSelectedVehicles(selectedItems);
+    setSelectedGroups([]);
+    setIsVehicleModalOpen(false);
   };
 
   // Group modal functions
@@ -188,10 +204,10 @@ export default function PolicySetupForm() {
   };
 
   const handleGroupModalSave = (selectedIds, selectedItems) => {
-  // When groups are selected, clear vehicles
-  setSelectedGroups(selectedItems);
-  setSelectedVehicles([]);
-  setIsGroupModalOpen(false);
+    // When groups are selected, clear vehicles
+    setSelectedGroups(selectedItems);
+    setSelectedVehicles([]);
+    setIsGroupModalOpen(false);
   };
 
   const renderVehicleAndAlertOptions = () => (
@@ -201,7 +217,7 @@ export default function PolicySetupForm() {
         <div>
           <h3
             className="text-sm font-medium mb-4"
-            style={{ color: 'var(--primary-color)' }}
+            style={{ color: "var(--primary-color)" }}
           >
             Select what you would like to monitor:
           </h3>
@@ -211,8 +227,10 @@ export default function PolicySetupForm() {
             <motion.button
               className="relative inline-flex h-6 w-11 cursor-pointer items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2"
               style={{
-                backgroundColor: entireFleetEnabled ? 'var(--primary-color)' : '#e5e7eb',
-                '--tw-ring-color': 'var(--primary-color)'
+                backgroundColor: entireFleetEnabled
+                  ? "var(--primary-color)"
+                  : "#e5e7eb",
+                "--tw-ring-color": "var(--primary-color)",
               }}
               onClick={() => setEntireFleetEnabled(!entireFleetEnabled)}
               role="switch"
@@ -222,14 +240,14 @@ export default function PolicySetupForm() {
               <motion.span
                 className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
                 animate={{
-                  x: entireFleetEnabled ? 24 : 4
+                  x: entireFleetEnabled ? 24 : 4,
                 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />
             </motion.button>
             <span
               className="text-sm font-medium"
-              style={{ color: 'var(--text-color)' }}
+              style={{ color: "var(--text-color)" }}
             >
               My Entire Fleet
             </span>
@@ -240,8 +258,12 @@ export default function PolicySetupForm() {
             <motion.button
               whileHover={entireFleetEnabled ? {} : { scale: 1.02 }}
               whileTap={entireFleetEnabled ? {} : { scale: 0.98 }}
-              className={`flex items-center gap-3 text-sm font-medium transition-colors ${entireFleetEnabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
-              style={{ color: 'var(--primary-color)' }}
+              className={`flex items-center gap-3 text-sm font-medium transition-colors ${
+                entireFleetEnabled
+                  ? "opacity-50 cursor-not-allowed"
+                  : "cursor-pointer hover:opacity-80"
+              }`}
+              style={{ color: "var(--primary-color)" }}
               onClick={() => !entireFleetEnabled && handleOpenVehicleModal()}
               disabled={entireFleetEnabled}
             >
@@ -257,8 +279,12 @@ export default function PolicySetupForm() {
             <motion.button
               whileHover={entireFleetEnabled ? {} : { scale: 1.02 }}
               whileTap={entireFleetEnabled ? {} : { scale: 0.98 }}
-              className={`flex items-center gap-3 text-sm font-medium transition-colors ${entireFleetEnabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:opacity-80'}`}
-              style={{ color: 'var(--primary-color)' }}
+              className={`flex items-center gap-3 text-sm font-medium transition-colors ${
+                entireFleetEnabled
+                  ? "opacity-50 cursor-not-allowed"
+                  : "cursor-pointer hover:opacity-80"
+              }`}
+              style={{ color: "var(--primary-color)" }}
               onClick={() => !entireFleetEnabled && handleOpenGroupModal()}
               disabled={entireFleetEnabled}
             >
@@ -278,13 +304,13 @@ export default function PolicySetupForm() {
       <div>
         <h3
           className="text-sm font-medium mb-4"
-          style={{ color: 'var(--primary-color)' }}
+          style={{ color: "var(--primary-color)" }}
         >
           Alert Triggers:
         </h3>
         <p
           className="text-sm leading-relaxed"
-          style={{ color: 'var(--text-color)' }}
+          style={{ color: "var(--text-color)" }}
         >
           This alert is triggered when vehicle face high Impact values :
         </p>
@@ -296,7 +322,10 @@ export default function PolicySetupForm() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Left Section - Time Range Selection */}
       <div className="space-y-6">
-        <h3 className="text-sm font-medium mb-4" style={{ color: 'var(--primary-color)' }}>
+        <h3
+          className="text-sm font-medium mb-4"
+          style={{ color: "var(--primary-color)" }}
+        >
           Select the time range this alert can trigger within:
         </h3>
         <div className="space-y-4">
@@ -309,13 +338,16 @@ export default function PolicySetupForm() {
               onChange={() => setTimeRange("everyDay")}
               className="h-4 w-4 rounded-full transition-colors cursor-pointer"
               style={{
-                accentColor: 'var(--primary-color)',
-                boxShadow: 'none',
-                outline: 'none',
-                border: '2px solid #3b82f6'
+                accentColor: "var(--primary-color)",
+                boxShadow: "none",
+                outline: "none",
+                border: "2px solid #3b82f6",
               }}
             />
-            <span className="ml-2 text-sm" style={{ color: 'var(--text-color)' }}>
+            <span
+              className="ml-2 text-sm"
+              style={{ color: "var(--text-color)" }}
+            >
               Every day (24 Hours)
             </span>
           </label>
@@ -328,13 +360,16 @@ export default function PolicySetupForm() {
               onChange={() => setTimeRange("weekdays")}
               className="h-4 w-4 rounded-full transition-colors cursor-pointer"
               style={{
-                accentColor: 'var(--primary-color)',
-                boxShadow: 'none',
-                outline: 'none',
-                border: '2px solid #3b82f6'
+                accentColor: "var(--primary-color)",
+                boxShadow: "none",
+                outline: "none",
+                border: "2px solid #3b82f6",
               }}
             />
-            <span className="ml-2 text-sm" style={{ color: 'var(--text-color)' }}>
+            <span
+              className="ml-2 text-sm"
+              style={{ color: "var(--text-color)" }}
+            >
               Weekdays only (Monday - Friday, 24 Hours)
             </span>
           </label>
@@ -347,13 +382,16 @@ export default function PolicySetupForm() {
               onChange={() => setTimeRange("weekends")}
               className="h-4 w-4 rounded-full transition-colors cursor-pointer"
               style={{
-                accentColor: 'var(--primary-color)',
-                boxShadow: 'none',
-                outline: 'none',
-                border: '2px solid #3b82f6'
+                accentColor: "var(--primary-color)",
+                boxShadow: "none",
+                outline: "none",
+                border: "2px solid #3b82f6",
               }}
             />
-            <span className="ml-2 text-sm" style={{ color: 'var(--text-color)' }}>
+            <span
+              className="ml-2 text-sm"
+              style={{ color: "var(--text-color)" }}
+            >
               Weekends only (Saturday - Sunday, 24 Hours)
             </span>
           </label>
@@ -366,19 +404,22 @@ export default function PolicySetupForm() {
               onChange={() => setTimeRange("custom")}
               className="h-4 w-4 rounded-full transition-colors cursor-pointer"
               style={{
-                accentColor: 'var(--primary-color)',
-                boxShadow: 'none',
-                outline: 'none',
-                border: '2px solid #3b82f6'
+                accentColor: "var(--primary-color)",
+                boxShadow: "none",
+                outline: "none",
+                border: "2px solid #3b82f6",
               }}
             />
-            <span className="ml-2 text-sm" style={{ color: 'var(--text-color)' }}>
+            <span
+              className="ml-2 text-sm"
+              style={{ color: "var(--text-color)" }}
+            >
               Custom
             </span>
           </label>
           {/* Custom time range UI - only show if 'Custom' is selected */}
           {timeRange === "custom" && (
-            <div  >
+            <div>
               <button
                 type="button"
                 className="text-blue-600 text-sm font-medium mb-2 inline-block hover:underline cursor-pointer"
@@ -400,12 +441,23 @@ export default function PolicySetupForm() {
                 Apply Monday's time to all
               </button>
               <div className="space-y-2">
-                {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, idx) => (
+                {[
+                  "Monday",
+                  "Tuesday",
+                  "Wednesday",
+                  "Thursday",
+                  "Friday",
+                  "Saturday",
+                  "Sunday",
+                ].map((day, idx) => (
                   <div key={day} className="flex items-center gap-2">
                     <input
                       type="checkbox"
                       className="h-4 w-4 rounded border-gray-300 focus:ring-0 transition-colors cursor-pointer"
-                      style={{ accentColor: 'var(--primary-color)', boxShadow: 'none' }}
+                      style={{
+                        accentColor: "var(--primary-color)",
+                        boxShadow: "none",
+                      }}
                       checked={customDaysChecked[idx]}
                       onChange={() => {
                         const updated = [...customDaysChecked];
@@ -413,17 +465,26 @@ export default function PolicySetupForm() {
                         setCustomDaysChecked(updated);
                       }}
                     />
-                    <span className="w-20 text-sm" style={{ color: 'var(--text-color)' }}>{day}</span>
+                    <span
+                      className="w-20 text-sm"
+                      style={{ color: "var(--text-color)" }}
+                    >
+                      {day}
+                    </span>
                     <select
                       disabled={!customDaysChecked[idx]}
                       value={customDaysStart[idx]}
-                      onChange={e => {
+                      onChange={(e) => {
                         const updated = [...customDaysStart];
                         updated[idx] = e.target.value;
                         setCustomDaysStart(updated);
                       }}
-                      className={`px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:border-transparent outline-none transition-all duration-200 ${!customDaysChecked[idx] ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
-                      style={{ color: 'var(--text-color)' }}
+                      className={`px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:border-transparent outline-none transition-all duration-200 ${
+                        !customDaysChecked[idx]
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : ""
+                      }`}
+                      style={{ color: "var(--text-color)" }}
                     >
                       <option value=""></option>
                       <option value="00:00">12:00 AM</option>
@@ -479,13 +540,17 @@ export default function PolicySetupForm() {
                     <select
                       disabled={!customDaysChecked[idx]}
                       value={customDaysEnd[idx]}
-                      onChange={e => {
+                      onChange={(e) => {
                         const updated = [...customDaysEnd];
                         updated[idx] = e.target.value;
                         setCustomDaysEnd(updated);
                       }}
-                      className={`px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:border-transparent outline-none transition-all duration-200 ${!customDaysChecked[idx] ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
-                      style={{ color: 'var(--text-color)' }}
+                      className={`px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:border-transparent outline-none transition-all duration-200 ${
+                        !customDaysChecked[idx]
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : ""
+                      }`}
+                      style={{ color: "var(--text-color)" }}
                     >
                       <option value=""></option>
                       <option value="00:00">12:00 AM</option>
@@ -548,42 +613,57 @@ export default function PolicySetupForm() {
 
       {/* Right Section - Alert Frequency */}
       <div className="space-y-6">
-        <h3 className="text-sm font-medium mb-4" style={{ color: 'var(--primary-color)' }}>
+        <h3
+          className="text-sm font-medium mb-4"
+          style={{ color: "var(--primary-color)" }}
+        >
           Specify the frequency you would like to receive alerts:
         </h3>
         <div className="space-y-4">
-          <label className="block text-sm font-medium" style={{ color: 'var(--text-color)' }}>
+          <label
+            className="block text-sm font-medium"
+            style={{ color: "var(--text-color)" }}
+          >
             Limit Alerts per Driver
           </label>
           <select
             value={limitAlertsPerDriver}
             onChange={(e) => setLimitAlertsPerDriver(e.target.value)}
             className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:border-transparent outline-none transition-all duration-200 text-sm"
-            style={{ color: 'var(--text-color)' }}
+            style={{ color: "var(--text-color)" }}
           >
             {[1, 5, 10, 25, 50, 100, 200, 500].map((num) => (
-              <option key={num} value={num}>{num}</option>
+              <option key={num} value={num}>
+                {num}
+              </option>
             ))}
           </select>
           <p className="text-xs text-gray-500">
-            The number of alerts that will be sent daily for each driver will be limited to:
+            The number of alerts that will be sent daily for each driver will be
+            limited to:
           </p>
 
-          <label className="block text-sm font-medium mt-4" style={{ color: 'var(--text-color)' }}>
+          <label
+            className="block text-sm font-medium mt-4"
+            style={{ color: "var(--text-color)" }}
+          >
             Total Daily Limit
           </label>
           <select
             value={alertFrequency}
             onChange={(e) => setAlertFrequency(e.target.value)}
             className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:border-transparent outline-none transition-all duration-200 text-sm"
-            style={{ color: 'var(--text-color)' }}
+            style={{ color: "var(--text-color)" }}
           >
             {[1, 5, 10, 25, 50, 100, 200, 500].map((num) => (
-              <option key={num} value={num}>{num}</option>
+              <option key={num} value={num}>
+                {num}
+              </option>
             ))}
           </select>
           <p className="text-xs text-gray-500">
-            The total number of alerts that will be sent daily for all drivers will be limited to:
+            The total number of alerts that will be sent daily for all drivers
+            will be limited to:
           </p>
         </div>
       </div>
@@ -596,7 +676,7 @@ export default function PolicySetupForm() {
       <div className="space-y-6">
         <h3
           className="text-sm font-medium mb-4"
-          style={{ color: 'var(--primary-color)' }}
+          style={{ color: "var(--primary-color)" }}
         >
           Select the users who will receive this alert:
         </h3>
@@ -607,7 +687,7 @@ export default function PolicySetupForm() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="flex items-center justify-center cursor-pointer gap-2 px-4 py-2 text-white text-sm font-medium rounded-md shadow-sm hover:shadow-md transition-all duration-200"
-            style={{ backgroundColor: 'var(--primary-color)' }}
+            style={{ backgroundColor: "var(--primary-color)" }}
           >
             <Users size={16} />
             Select By Group
@@ -625,14 +705,14 @@ export default function PolicySetupForm() {
               placeholder="Search..."
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:border-transparent outline-none transition-all duration-200 text-sm"
               style={{
-                '--tw-ring-color': 'var(--primary-color)',
-                color: 'var(--text-color)'
+                "--tw-ring-color": "var(--primary-color)",
+                color: "var(--text-color)",
               }}
               onFocus={(e) => {
                 e.target.style.boxShadow = `0 0 0 2px var(--primary-color)`;
               }}
               onBlur={(e) => {
-                e.target.style.boxShadow = 'none';
+                e.target.style.boxShadow = "none";
               }}
             />
           </div>
@@ -640,7 +720,10 @@ export default function PolicySetupForm() {
 
         {/* Users Table */}
         <div className="border border-gray-200 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+          <div
+            className="overflow-x-auto"
+            style={{ maxHeight: "300px", overflowY: "auto" }}
+          >
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 sticky top-0">
                 <tr>
@@ -649,7 +732,7 @@ export default function PolicySetupForm() {
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button
-                      onClick={() => handleSelectAll('all')}
+                      onClick={() => handleSelectAll("all")}
                       className="hover:text-gray-700 transition-colors cursor-pointer"
                     >
                       All
@@ -657,7 +740,7 @@ export default function PolicySetupForm() {
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button
-                      onClick={() => handleSelectAll('display')}
+                      onClick={() => handleSelectAll("display")}
                       className="hover:text-gray-700 transition-colors cursor-pointer"
                     >
                       Display
@@ -665,7 +748,7 @@ export default function PolicySetupForm() {
                   </th>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <button
-                      onClick={() => handleSelectAll('email')}
+                      onClick={() => handleSelectAll("email")}
                       className="hover:text-gray-700 transition-colors cursor-pointer"
                     >
                       Email
@@ -676,11 +759,30 @@ export default function PolicySetupForm() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {policyUsersLoading ? (
                   <tr>
-                    <td colSpan="4" className="px-4 py-8 text-center text-gray-500">
+                    <td
+                      colSpan="4"
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
                       <div className="flex items-center justify-center">
-                        <svg className="animate-spin h-5 w-5 mr-2 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        <svg
+                          className="animate-spin h-5 w-5 mr-2 text-blue-600"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                          ></path>
                         </svg>
                         Loading users...
                       </div>
@@ -688,10 +790,23 @@ export default function PolicySetupForm() {
                   </tr>
                 ) : policyUsersError ? (
                   <tr>
-                    <td colSpan="4" className="px-4 py-8 text-center text-red-500">
+                    <td
+                      colSpan="4"
+                      className="px-4 py-8 text-center text-red-500"
+                    >
                       <div className="flex flex-col items-center">
-                        <svg className="h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <svg
+                          className="h-8 w-8 mb-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
                         </svg>
                         Error loading users: {policyUsersError}
                       </div>
@@ -699,10 +814,23 @@ export default function PolicySetupForm() {
                   </tr>
                 ) : users.length === 0 ? (
                   <tr>
-                    <td colSpan="4" className="px-4 py-8 text-center text-gray-500">
+                    <td
+                      colSpan="4"
+                      className="px-4 py-8 text-center text-gray-500"
+                    >
                       <div className="flex flex-col items-center">
-                        <svg className="h-8 w-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 0a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                        <svg
+                          className="h-8 w-8 mb-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5 0a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+                          />
                         </svg>
                         No users found
                       </div>
@@ -710,59 +838,76 @@ export default function PolicySetupForm() {
                   </tr>
                 ) : (
                   users
-                    .filter(user => 
-                      searchQuery.trim() === '' || 
-                      (user.fullName && user.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .filter(
+                      (user) =>
+                        searchQuery.trim() === "" ||
+                        (user.fullName &&
+                          user.fullName
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()))
                     )
                     .map((user) => (
-                    <tr key={user.USER_ID} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-color)' }}>
-                        {user.fullName}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={userSelections[user.USER_ID]?.all || false}
-                          className="h-4 w-4 rounded transition-colors cursor-pointer"
-                          style={{
-                            accentColor: 'var(--primary-color)',
-                            boxShadow: 'none',
-                            outline: 'none',
-                            border: '2px solid #3b82f6' // blue border for visibility
-                          }}
-                          onChange={() => handleUserSelection(user.USER_ID, 'all')}
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={userSelections[user.USER_ID]?.display || false}
-                          className="h-4 w-4 rounded transition-colors cursor-pointer"
-                          style={{
-                            accentColor: 'var(--primary-color)',
-                            boxShadow: 'none',
-                            outline: 'none',
-                            border: '2px solid #3b82f6'
-                          }}
-                          onChange={() => handleUserSelection(user.USER_ID, 'display')}
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <input
-                          type="checkbox"
-                          checked={userSelections[user.USER_ID]?.email || false}
-                          className="h-4 w-4 rounded transition-colors cursor-pointer"
-                          style={{
-                            accentColor: 'var(--primary-color)',
-                            boxShadow: 'none',
-                            outline: 'none',
-                            border: '2px solid #3b82f6'
-                          }}
-                          onChange={() => handleUserSelection(user.USER_ID, 'email')}
-                        />
-                      </td>
-                    </tr>
-                  ))
+                      <tr key={user.USER_ID} className="hover:bg-gray-50">
+                        <td
+                          className="px-4 py-3 text-sm"
+                          style={{ color: "var(--text-color)" }}
+                        >
+                          {user.fullName}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={userSelections[user.USER_ID]?.all || false}
+                            className="h-4 w-4 rounded transition-colors cursor-pointer"
+                            style={{
+                              accentColor: "var(--primary-color)",
+                              boxShadow: "none",
+                              outline: "none",
+                              border: "2px solid #3b82f6", // blue border for visibility
+                            }}
+                            onChange={() =>
+                              handleUserSelection(user.USER_ID, "all")
+                            }
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={
+                              userSelections[user.USER_ID]?.display || false
+                            }
+                            className="h-4 w-4 rounded transition-colors cursor-pointer"
+                            style={{
+                              accentColor: "var(--primary-color)",
+                              boxShadow: "none",
+                              outline: "none",
+                              border: "2px solid #3b82f6",
+                            }}
+                            onChange={() =>
+                              handleUserSelection(user.USER_ID, "display")
+                            }
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={
+                              userSelections[user.USER_ID]?.email || false
+                            }
+                            className="h-4 w-4 rounded transition-colors cursor-pointer"
+                            style={{
+                              accentColor: "var(--primary-color)",
+                              boxShadow: "none",
+                              outline: "none",
+                              border: "2px solid #3b82f6",
+                            }}
+                            onChange={() =>
+                              handleUserSelection(user.USER_ID, "email")
+                            }
+                          />
+                        </td>
+                      </tr>
+                    ))
                 )}
               </tbody>
             </table>
@@ -771,13 +916,18 @@ export default function PolicySetupForm() {
 
         {/* Selection Count and Deselect All */}
         <div className="flex items-center justify-between text-sm mt-3">
-          <span style={{ color: 'var(--text-color)' }}>
-            {Object.keys(userSelections).filter(userId => userSelections[userId].all).length} Selected
+          <span style={{ color: "var(--text-color)" }}>
+            {
+              Object.keys(userSelections).filter(
+                (userId) => userSelections[userId].all
+              ).length
+            }{" "}
+            Selected
           </span>
           <button
             onClick={handleDeselectAll}
             className="font-medium transition-colors hover:opacity-80 cursor-pointer"
-            style={{ color: 'var(--primary-color)' }}
+            style={{ color: "var(--primary-color)" }}
           >
             Deselect All
           </button>
@@ -787,7 +937,7 @@ export default function PolicySetupForm() {
         <div className="mt-6">
           <label
             className="block text-sm font-medium mb-2"
-            style={{ color: 'var(--primary-color)' }}
+            style={{ color: "var(--primary-color)" }}
           >
             Additional Emails:
           </label>
@@ -797,14 +947,14 @@ export default function PolicySetupForm() {
             rows={4}
             className="block w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:border-transparent outline-none transition-all duration-200 text-sm resize-none"
             style={{
-              '--tw-ring-color': 'var(--primary-color)',
-              color: 'var(--text-color)'
+              "--tw-ring-color": "var(--primary-color)",
+              color: "var(--text-color)",
             }}
             onFocus={(e) => {
               e.target.style.boxShadow = `0 0 0 2px var(--primary-color)`;
             }}
             onBlur={(e) => {
-              e.target.style.boxShadow = 'none';
+              e.target.style.boxShadow = "none";
             }}
           />
           <p className="text-xs text-gray-500 mt-1">
@@ -821,19 +971,19 @@ export default function PolicySetupForm() {
               onChange={(e) => setOnlyIncludeDrivers(e.target.checked)}
               className="h-4 w-4 rounded transition-colors cursor-pointer"
               style={{
-                accentColor: 'var(--primary-color)',
-                boxShadow: 'none',
-                outline: 'none',
-                border: '2px solid #3b82f6'
+                accentColor: "var(--primary-color)",
+                boxShadow: "none",
+                outline: "none",
+                border: "2px solid #3b82f6",
               }}
             />
-            <span className="text-xs" style={{ color: 'var(--text-color)' }}>
+            <span className="text-xs" style={{ color: "var(--text-color)" }}>
               Only include drivers that the recipients have access to, using:
             </span>
             {onlyIncludeDrivers && (
               <select
                 className="ml-2 px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:border-transparent outline-none transition-all duration-200"
-                style={{ color: 'var(--text-color)' }}
+                style={{ color: "var(--text-color)" }}
                 defaultValue="all"
               >
                 <option value="all">All Groups for that user</option>
@@ -849,7 +999,7 @@ export default function PolicySetupForm() {
         <div>
           <h3
             className="text-sm font-medium mb-4"
-            style={{ color: 'var(--text-color)' }}
+            style={{ color: "var(--text-color)" }}
           >
             Delivery Options:
           </h3>
@@ -858,18 +1008,21 @@ export default function PolicySetupForm() {
             <div>
               <p
                 className="text-sm font-medium mb-3"
-                style={{ color: 'var(--text-color)' }}
+                style={{ color: "var(--text-color)" }}
               >
                 Send Alert via SMS to:
               </p>
 
               <div className="space-y-3">
                 {[
-                  { value: 'none', label: 'None' },
-                  { value: 'primary', label: 'Primary Contact Person' },
-                  { value: 'secondary', label: 'Secondary Contact Person' }
+                  { value: "none", label: "None" },
+                  { value: "primary", label: "Primary Contact Person" },
+                  { value: "secondary", label: "Secondary Contact Person" },
                 ].map((option) => (
-                  <label key={option.value} className="flex items-center gap-3 cursor-pointer">
+                  <label
+                    key={option.value}
+                    className="flex items-center gap-3 cursor-pointer"
+                  >
                     <input
                       type="radio"
                       name="smsDelivery"
@@ -878,13 +1031,16 @@ export default function PolicySetupForm() {
                       onChange={(e) => setSmsDeliveryOption(e.target.value)}
                       className="h-4 w-4 rounded-full transition-colors cursor-pointer"
                       style={{
-                        accentColor: 'var(--primary-color)',
-                        boxShadow: 'none',
-                        outline: 'none',
-                        border: '2px solid #3b82f6'
+                        accentColor: "var(--primary-color)",
+                        boxShadow: "none",
+                        outline: "none",
+                        border: "2px solid #3b82f6",
                       }}
                     />
-                    <span className="text-sm" style={{ color: 'var(--text-color)' }}>
+                    <span
+                      className="text-sm"
+                      style={{ color: "var(--text-color)" }}
+                    >
                       {option.label}
                     </span>
                   </label>
@@ -900,13 +1056,16 @@ export default function PolicySetupForm() {
                   onChange={(e) => setCustomizeEmailIntro(e.target.checked)}
                   className="h-4 w-4 rounded transition-colors cursor-pointer"
                   style={{
-                    accentColor: 'var(--primary-color)',
-                    boxShadow: 'none',
-                    outline: 'none',
-                    border: '2px solid #3b82f6'
+                    accentColor: "var(--primary-color)",
+                    boxShadow: "none",
+                    outline: "none",
+                    border: "2px solid #3b82f6",
                   }}
                 />
-                <span className="text-sm" style={{ color: 'var(--text-color)' }}>
+                <span
+                  className="text-sm"
+                  style={{ color: "var(--text-color)" }}
+                >
                   Customize email introduction
                 </span>
               </label>
@@ -916,8 +1075,8 @@ export default function PolicySetupForm() {
                   rows={4}
                   className="block w-full mt-2 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:border-transparent outline-none transition-all duration-200 text-sm resize-none"
                   style={{
-                    '--tw-ring-color': 'var(--primary-color)',
-                    color: 'var(--text-color)'
+                    "--tw-ring-color": "var(--primary-color)",
+                    color: "var(--text-color)",
                   }}
                 />
               )}
@@ -928,33 +1087,6 @@ export default function PolicySetupForm() {
     </div>
   );
 
-  // Get route data from props
-  const { routePolicyData = {} } = arguments[0] || {};
-  // State for modal visibility and editing
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [policyInfo, setPolicyInfo] = useState({
-    policyName: routePolicyData.policyName || '',
-    alertType: routePolicyData.alertType || '',
-    highPriority: routePolicyData.highPriority || false
-  });
-
-  // Update header values from state
-  const policyName = policyInfo.policyName;
-  const alertType = policyInfo.alertType;
-
-  // Edit modal handlers
-  const handleEditModalOpen = () => {
-    setIsEditModalOpen(true);
-  };
-  const handleEditModalClose = () => {
-    setIsEditModalOpen(false);
-  };
-  const handleEditModalChange = (field, value) => {
-    setPolicyInfo(prev => ({ ...prev, [field]: value }));
-  };
-  const handleEditModalSave = () => {
-    setIsEditModalOpen(false);
-  };
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
       {/* Header */}
@@ -962,22 +1094,18 @@ export default function PolicySetupForm() {
         <div className="flex items-center gap-3 mb-4">
           <h1
             className="text-xl sm:text-2xl font-bold"
-            style={{ color: 'var(--primary-color)' }}
+            style={{ color: "var(--primary-color)" }}
           >
-            {policyName}
+            helllo
           </h1>
-          <span
-            className="text-lg sm:text-xl text-gray-600"
-          >
-            {alertType}
-          </span>
-          <button
+          <span className="text-lg sm:text-xl text-gray-600">alert ype</span>
+          {/* <button
             className="p-1 hover:bg-gray-100 rounded transition-colors cursor-pointer"
             aria-label="Edit policy name"
             onClick={handleEditModalOpen}
           >
             <Edit2 size={16} className="text-gray-500" />
-          </button>
+          </button> */}
         </div>
 
         {/* Tab Navigation */}
@@ -988,12 +1116,16 @@ export default function PolicySetupForm() {
               <button
                 key={tab.id}
                 onClick={() => handleTabClick(tab.id)}
-                className={`px-4 py-2 rounded-md  cursor-pointer text-sm font-medium transition-all duration-200 whitespace-nowrap ${activeTab === tab.id
-                  ? 'text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200'
-                  }`}
+                className={`px-4 py-2 rounded-md  cursor-pointer text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? "text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-800 hover:bg-gray-200"
+                }`}
                 style={{
-                  backgroundColor: activeTab === tab.id ? 'var(--primary-color)' : 'transparent'
+                  backgroundColor:
+                    activeTab === tab.id
+                      ? "var(--primary-color)"
+                      : "transparent",
                 }}
               >
                 {tab.label}
@@ -1006,7 +1138,7 @@ export default function PolicySetupForm() {
             <button
               onClick={handleCancel}
               className="text-sm  font-medium cursor-pointer transition-colors hover:opacity-80"
-              style={{ color: 'var(--primary-color)' }}
+              style={{ color: "var(--primary-color)" }}
             >
               Cancel
             </button>
@@ -1015,37 +1147,25 @@ export default function PolicySetupForm() {
               whileTap={{ scale: 0.98 }}
               onClick={handleNext}
               className="px-4 py-2 text-sm cursor-pointer font-medium text-white rounded-md shadow-sm hover:shadow-md transition-all duration-200"
-              style={{ backgroundColor: 'var(--accent-red)' }}
+              style={{ backgroundColor: "var(--accent-red)" }}
             >
-              {activeTab === 'vehicle' && 'Next : Time & Frequency'}
-              {activeTab === 'time' && 'Next : Alert Recipients'}
-              {activeTab === 'recipients' && 'Next : Review'}
+              {activeTab === "vehicle" && "Next : Time & Frequency"}
+              {activeTab === "time" && "Next : Alert Recipients"}
+              {activeTab === "recipients" && "Next : Review"}
             </motion.button>
           </div>
         </div>
       </div>
 
-      {/* Edit Policy Modal */}
-      <CreatePolicyModal
-        show={isEditModalOpen}
-        onClose={handleEditModalClose}
-        formData={policyInfo}
-        handleFormChange={handleEditModalChange}
-        handleNext={handleEditModalSave}
-        isNextDisabled={!policyInfo.policyName.trim()}
-        policyTypeList={policyTypeList}
-      />
-
-
       {/* Content Area */}
       <div className="mt-8">
-        {activeTab === 'vehicle' && renderVehicleAndAlertOptions()}
-        {activeTab === 'time' && renderTimeAndFrequency()}
-        {activeTab === 'recipients' && renderAlertRecipients()}
+        {activeTab === "vehicle" && renderVehicleAndAlertOptions()}
+        {activeTab === "time" && renderTimeAndFrequency()}
+        {activeTab === "recipients" && renderAlertRecipients()}
       </div>
 
       {/* Vehicle Selection Modal */}
-      <SelectVehiclesModal
+      <EditSelectVehiclesModal
         isOpen={isVehicleModalOpen}
         onClose={() => setIsVehicleModalOpen(false)}
         onSave={handleVehicleModalSave}
@@ -1055,7 +1175,7 @@ export default function PolicySetupForm() {
       />
 
       {/* Group Selection Modal */}
-      <SelectVehiclesModal
+      <EditSelectVehiclesModal
         isOpen={isGroupModalOpen}
         onClose={() => setIsGroupModalOpen(false)}
         onSave={handleGroupModalSave}

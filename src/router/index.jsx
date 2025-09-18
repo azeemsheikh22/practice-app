@@ -18,6 +18,7 @@ import Reports from "../pages/reports/Reports";
 import Prevention from "../pages/prevention/Prevention";
 import CreateRoutePlan from "../pages/routes view/create route plan/CreateRoutePlan";
 import FleetService from "../pages/fleet service/FleetService";
+import EditPolicy from "../pages/alerts/edit alert policy/EditPolicy";
 
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem("token");
@@ -69,6 +70,15 @@ function AllRoute() {
         element={
           <ProtectedRoute>
             <AddPolicy />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/edit-policy"
+        element={
+          <ProtectedRoute>
+            <EditPolicy />
           </ProtectedRoute>
         }
       />

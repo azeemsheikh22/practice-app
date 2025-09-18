@@ -235,7 +235,7 @@ const ReportSetup = ({ selectedReport, selectedCategory, onRun, onCancel, initia
 
                   <div className="col-span-12 md:col-span-6">
                     <h3 className="font-bold text-gray-700 flex items-center gap-2 md:justify-start justify-start">
-                      <span className="w-6 h-6 rounded-full  text-[#25689f] flex items-center justify-center font-semibold">
+                      <span className="h-6 rounded-full  text-[#25689f] flex items-center justify-center font-semibold">
                         2
                       </span>
                       <span className="text-gray-700">Time Frame</span>

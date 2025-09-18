@@ -1,19 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { X, Car, Users, Layers, Plus, Minus } from "lucide-react";
+import { X, Car, Layers, Plus, Minus } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSelector } from "react-redux";
 import { FixedSizeList as List } from "react-window";
 import {
   selectRawVehicleList,
   selectLoading,
-} from "../../features/gpsTrackingSlice";
+} from "../../../features/gpsTrackingSlice";
 
-const SelectionModal = ({
+const EditSelectVehiclesModal = ({
   isOpen,
   onClose,
   onSave,
-  type = "vehicle", // vehicle, driver, or group
+  type = "vehicle", // vehicle or group (excluding driver for policy)
   initialSelectedItems = [],
   shouldReset = false,
 }) => {
@@ -120,7 +120,7 @@ const SelectionModal = ({
           ? searchInTree(item.children)
           : [];
 
-        const result = [];
+        let result = [];
         if (matchesSearch || filteredChildren.length > 0) {
           result.push({
             ...item,
@@ -149,7 +149,7 @@ const SelectionModal = ({
       });
       setExpandedGroups(expanded);
     }
-  }, [treeStructure,isOpen]);
+  }, [treeStructure, isOpen]);
 
   // Expand all when searching (from DashboardHeader)
   useEffect(() => {
@@ -171,9 +171,6 @@ const SelectionModal = ({
     switch (type) {
       case "vehicle":
         filteredByType = rawVehicles.filter((item) => item.Type === "Vehicle");
-        break;
-      case "driver":
-        filteredByType = rawVehicles.filter((item) => item.Type === "Driver");
         break;
       case "group":
         // For groups, return tree structure with search applied
@@ -278,11 +275,6 @@ const SelectionModal = ({
               )}
             </div>
 
-            {/* Group Icon - Hide for Entire Fleet */}
-            {/* {!isEntireFleet && (
-            <Layers size={16} className="text-blue-600 mr-2" />
-          )} */}
-
             {/* Group Name */}
             <span
               className={`text-sm font-medium flex-1 select-none ${
@@ -291,13 +283,6 @@ const SelectionModal = ({
             >
               {item.text}
             </span>
-
-            {/* Children Count - Hide for Entire Fleet */}
-            {/* {hasChildren && !isEntireFleet && (
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full ml-2">
-              {item.children.length}
-            </span>
-          )} */}
           </div>
 
           {/* Children */}
@@ -358,9 +343,6 @@ const SelectionModal = ({
           {item.Type === "Vehicle" && (
             <Car size={16} className="text-green-600 mr-2" />
           )}
-          {item.Type === "Driver" && (
-            <Users size={16} className="text-violet-600 mr-2" />
-          )}
 
           {/* Text */}
           <div className="flex-1">
@@ -397,8 +379,6 @@ const SelectionModal = ({
     switch (type) {
       case "vehicle":
         return "Select Vehicle from your fleet";
-      case "driver":
-        return "Select Driver from your fleet";
       case "group":
         return "Select Group from your fleet";
       default:
@@ -410,8 +390,6 @@ const SelectionModal = ({
     switch (type) {
       case "vehicle":
         return <Car size={20} className="text-green-600" />;
-      case "driver":
-        return <Users size={20} className="text-violet-600" />;
       case "group":
         return <Layers size={20} className="text-blue-600" />;
       default:
@@ -537,7 +515,7 @@ const SelectionModal = ({
                   ))}
                 </div>
               ) : (
-                // Flat list for vehicles and drivers with virtual scrolling
+                // Flat list for vehicles with virtual scrolling
                 <div className="h-[300px]">{renderFlatList()}</div>
               )
             ) : (
@@ -600,4 +578,4 @@ const SelectionModal = ({
   );
 };
 
-export default SelectionModal;
+export default EditSelectVehiclesModal;

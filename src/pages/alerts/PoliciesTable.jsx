@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { resetExportType } from "../../features/alertSlice";
 import { saveAs } from "file-saver";
@@ -50,9 +51,9 @@ export default function PoliciesTable({
 }) {
   const [selectedRows, setSelectedRows] = useState({});
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
-  // Correct: declare exportType and dispatch at the top
   const exportType = useSelector((state) => state.alert.exportType);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   // Filter data based on search query
   const filteredData = useMemo(() => {
@@ -190,7 +191,10 @@ export default function PoliciesTable({
 
   // Action handlers
   const handleEdit = (policy) => {
-    console.log("Edit policy:", policy);
+    // Navigate to /edit-policy with query param id=policy.idx
+    if (policy && policy.idx !== undefined) {
+      navigate(`/edit-policy?id=${policy.idx}`);
+    }
   };
 
   const handleDelete = (policy) => {
@@ -358,7 +362,7 @@ export default function PoliciesTable({
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         onClick={() => handleEdit(policy)}
-                        className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                        className="p-2 hover:bg-blue-50 rounded-lg transition-colors group cursor-pointer"
                         title="Edit Policy"
                       >
                         <Pencil className="w-4 h-4 text-blue-600 group-hover:text-blue-800" />

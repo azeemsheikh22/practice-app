@@ -67,6 +67,8 @@ const ReplayTripsTab = ({ selectedVehicle }) => {
     }
   };
 
+  console.log(trips)
+
   // Clear selected trip when trips data changes (new vehicle selected)
   useEffect(() => {
     if (selectedTrip && trips && trips.length === 0) {
@@ -138,7 +140,9 @@ const ReplayTripsTab = ({ selectedVehicle }) => {
                     {isSelected && <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">Selected</span>}
                   </span>
                   <span className="text-white/90 text-xs" title={trip.Driver || 'Unknown Driver'}>
-                    {trip.Driver ? (trip.Driver.length > 15 ? trip.Driver.substring(0, 15) + '...' : trip.Driver) : 'Unknown Driver'}
+                    {typeof trip.Driver === 'string' && trip.Driver.length > 0
+                      ? (trip.Driver.length > 15 ? trip.Driver.substring(0, 15) + '...' : trip.Driver)
+                      : 'Unknown Driver'}
                   </span>
                 </div>
               </div>
