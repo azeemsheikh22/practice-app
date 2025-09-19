@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 const SessionManager = ({
@@ -77,7 +76,7 @@ const SessionManager = ({
     // Show warning if close to expiry
     const timeUntilExpiry = sessionTimeout - timeSinceLastActivity;
     if (timeUntilExpiry <= warningTime && !warningShownRef.current) {
-      showSessionWarning(Math.ceil(timeUntilExpiry / 1000));
+      // showSessionWarning(Math.ceil(timeUntilExpiry / 1000));
       warningShownRef.current = true;
 
       // Set timeout for automatic logout (FORCE LOGOUT)
@@ -88,24 +87,24 @@ const SessionManager = ({
   };
 
   // Function to show session warning
-  const showSessionWarning = (secondsLeft) => {
-    toast.error(
-      `Your session will expire in ${secondsLeft} seconds due to inactivity. Click anywhere to extend your session.`,
-      {
-        duration: warningTime,
-        position: "top-center",
-        style: {
-          background: "#FEE2E2",
-          color: "#B91C1C",
-          fontWeight: "bold",
-          maxWidth: "500px",
-          padding: "16px",
-          borderRadius: "8px",
-        },
-        icon: "⚠️",
-      }
-    );
-  };
+  // const showSessionWarning = (secondsLeft) => {
+  //   toast.error(
+  //     `Your session will expire in ${secondsLeft} seconds due to inactivity. Click anywhere to extend your session.`,
+  //     {
+  //       duration: warningTime,
+  //       position: "top-center",
+  //       style: {
+  //         background: "#FEE2E2",
+  //         color: "#B91C1C",
+  //         fontWeight: "bold",
+  //         maxWidth: "500px",
+  //         padding: "16px",
+  //         borderRadius: "8px",
+  //       },
+  //       icon: "⚠️",
+  //     }
+  //   );
+  // };
 
   // Function to handle logout
   const handleLogout = (reason = "Session expired") => {
