@@ -14,8 +14,9 @@ import { useSelector, useDispatch } from "react-redux";
 import {
   selectCurrentReplayIndex,
   selectSelectedTrip,
-  selectGetReplayCount,
+  // selectGetReplayCount,
   setCurrentReplayIndex,
+  selectSelectedRoutes,
 } from "../../features/replaySlice";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -118,8 +119,14 @@ const ReplayMap = forwardRef(
     );
     const showTripMarkers = filters.showTripMarkers || false;
     const selectedTrip = useSelector(selectSelectedTrip);
-    const getReplayCount = useSelector(selectGetReplayCount);
+    // const getReplayCount = useSelector(selectGetReplayCount);
+    const selectedRoutes = useSelector(selectSelectedRoutes); // Array of route ids
+    const { routes } = useSelector((state) => state.route); // Array of route objects
 
+    // Filter routes by selectedRoutes ids
+    const selectedRouteObjects = Array.isArray(routes)
+      ? routes.filter(route => selectedRoutes.includes(route.id))
+      : [];
 
     // console.log(getReplayCount)
 
@@ -233,6 +240,52 @@ const ReplayMap = forwardRef(
       }
       // eslint-disable-next-line
     }, [displayMode, replayData ? replayData.length : 0, showTripMarkers]);
+
+    // Highlight selected routes on map
+    useEffect(() => {
+      if (
+        !mapInstanceRef.current ||
+        !selectedRouteObjects ||
+        selectedRouteObjects.length === 0
+      )
+        return;
+      // Remove previous route polylines (className: 'selected-route-polyline')
+      mapInstanceRef.current.eachLayer((layer) => {
+        if (
+          layer.options &&
+          layer.options.className === "selected-route-polyline"
+        ) {
+          mapInstanceRef.current.removeLayer(layer);
+        }
+      });
+      selectedRouteObjects.forEach((route, idx) => {
+        if (!route.routeString) return;
+        // Parse routeString: "lat lng,lat lng,..."
+        const points = route.routeString
+          .split(",")
+          .map((pair) => {
+            const [lat, lng] = pair.trim().split(" ");
+            return [parseFloat(lat), parseFloat(lng)];
+          })
+          .filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng));
+        if (points.length > 1) {
+          const polyline = L.polyline(points, {
+            color: "#147fde", // Blue highlight
+            weight: 6,
+            opacity: 0.95,
+            className: "selected-route-polyline",
+            dashArray: idx % 2 === 0 ? "10,6" : "6,6",
+          }).addTo(mapInstanceRef.current);
+          // Show route name on hover
+          polyline.bindTooltip(route.routeName || "Route", {
+            direction: "top",
+            offset: [0, -8],
+            className: "route-tooltip",
+            sticky: true,
+          });
+        }
+      });
+    }, [selectedRoutes]);
 
     // Draw trip markers when showTripMarkers or selectedTrip changes
     useEffect(() => {
@@ -1356,10 +1409,10 @@ const ReplayMap = forwardRef(
         let nextIdx = Math.ceil(floatIdx);
         if (idx < 0) idx = 0;
         if (nextIdx >= replayData.length) nextIdx = replayData.length - 1;
-        
+
         // Update current replay index in Redux store for table highlighting
         dispatch(setCurrentReplayIndex(idx));
-        
+
         const p1 = replayData[idx];
         const p2 = replayData[nextIdx];
         let lat = p1.latitude;

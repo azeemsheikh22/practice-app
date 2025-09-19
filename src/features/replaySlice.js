@@ -108,9 +108,11 @@ const replaySlice = createSlice({
     showGeofences: null,
     geofencesLoading: false,
     geofencesError: null,
-    // Category state
-    categories: null,
-    showCategories: null,
+  // Category state
+  categories: null,
+  showCategories: null,
+  // Route selection state
+  selectedRoutes: [],
     getReplayCount: 0,
     filters: {
       displayMode: "line", // 'line' | 'marker' | 'all'
@@ -152,6 +154,10 @@ const replaySlice = createSlice({
     },
     setShowGeofenceOnMap: (state, action) => {
       state.showGeofenceOnMap = action.payload;
+    },
+    setSelectedRoutes: (state, action) => {
+      // Save selected route objects array
+      state.selectedRoutes = action.payload;
     },
     setSelectedTrip: (state, action) => {
       state.selectedTrip = action.payload;
@@ -250,6 +256,7 @@ export const {
   setShowCategories,
   setShowGeofenceOnMap,
   setSelectedTrip,
+  setSelectedRoutes,
   incrementGetReplayCount,
 } = replaySlice.actions;
 export const selectShowShapes = (state) => state.replay.showShapes;
@@ -267,3 +274,6 @@ export const selectReplayTrips = (state) => state.replay.replayTrips;
 export const selectReplayTripsLoading = (state) => state.replay.tripsLoading;
 export const selectSelectedTrip = (state) => state.replay.selectedTrip;
 export const selectReplayTripsError = (state) => state.replay.tripsError;
+
+// Selector for selected routes
+export const selectSelectedRoutes = (state) => state.replay.selectedRoutes;

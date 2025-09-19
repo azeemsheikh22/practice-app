@@ -19,6 +19,7 @@ import {
   incrementGetReplayCount,
 } from "../../features/replaySlice";
 import { fetchGeofenceCatList } from "../../features/geofenceSlice";
+import { fetchRouteListForUser } from "../../features/routeSlice";
 
 const Replay = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
@@ -46,6 +47,7 @@ const Replay = () => {
   useEffect(() => {
     dispatch(fetchGeofenceCatList());
     dispatch(fetchReplayGeofenceForUser());
+    dispatch(fetchRouteListForUser());
   }, []);
 
   const connectionStatus = useSelector(selectConnectionStatus);

@@ -11,10 +11,12 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
   const [selectedGeofenceIds, setSelectedGeofenceIds] = useState(new Set());
   const [selectedCategories, setSelectedCategories] = useState(new Set());
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedRoutes, setSelectedRoutes] = useState(new Set());
   const showShapes = useSelector((state) => state.replay.showShapes);
   const { geofences } = useSelector((state) => state.replay);
   const { categories, showCategories } = useSelector((state) => state.replay);
   const { geofenceCatList } = useSelector((state) => state.geofence);
+  const { routes, loading } = useSelector((state) => state.route);
 
   // Only use real geofence data for geofence tab
   const geofenceData =
@@ -28,21 +30,30 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
       : [];
 
   const filteredData = useMemo(() => {
-    let currentData = activeTab === "geofence" ? geofenceData : categoryData;
+    let currentData;
+    if (activeTab === "geofence") {
+      currentData = geofenceData;
+    } else if (activeTab === "category") {
+      currentData = categoryData;
+    } else {
+      currentData = Array.isArray(routes) ? routes : [];
+    }
     if (!searchTerm.trim()) return currentData;
     const searchLower = searchTerm.toLowerCase();
     if (activeTab === "geofence") {
-      // Search by geofenceName
       return currentData.filter((item) =>
         (item.geofenceName || "").toLowerCase().includes(searchLower)
       );
-    } else {
-      // Search by Categoryname
+    } else if (activeTab === "category") {
       return currentData.filter((item) =>
         (item.Categoryname || "").toLowerCase().includes(searchLower)
       );
+    } else {
+      return currentData.filter((item) =>
+        (item.routeName || "").toLowerCase().includes(searchLower)
+      );
     }
-  }, [activeTab, geofenceData, categoryData, searchTerm]);
+  }, [activeTab, geofenceData, categoryData, routes, searchTerm]);
 
   // For react-window, itemData is filteredData
   const itemData = filteredData;
@@ -79,20 +90,24 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
   ]);
 
   const handleSelectAll = () => {
-    // Always select all from full data, not just filtered/search results
     if (activeTab === "geofence") {
       setSelectedGeofenceIds(new Set(geofenceData.map((g) => g.id)));
-    } else {
+    } else if (activeTab === "category") {
       setSelectedCategories(new Set(categoryData.map((c) => c.Categoryname)));
+    } else {
+      setSelectedRoutes(
+        new Set((Array.isArray(routes) ? routes : []).map((r) => r.routeName))
+      );
     }
   };
 
   const handleDeselectAll = () => {
-    // Always deselect all from full data, not just filtered/search results
     if (activeTab === "geofence") {
       setSelectedGeofenceIds(new Set());
-    } else {
+    } else if (activeTab === "category") {
       setSelectedCategories(new Set());
+    } else {
+      setSelectedRoutes(new Set());
     }
   };
 
@@ -104,23 +119,45 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
         else next.add(item.id);
         return next;
       });
-    } else {
+    } else if (activeTab === "category") {
       setSelectedCategories((prev) => {
         const next = new Set(prev);
         if (next.has(item.Categoryname)) next.delete(item.Categoryname);
         else next.add(item.Categoryname);
         return next;
       });
+    } else {
+      setSelectedRoutes((prev) => {
+        const next = new Set(prev);
+        if (next.has(item.routeName)) next.delete(item.routeName);
+        else next.add(item.routeName);
+        return next;
+      });
     }
   };
 
   // Count selected from full data, not just filtered
-  const selectedCount = (activeTab === "geofence")
-    ? geofenceData.filter((item) => selectedGeofenceIds.has(item.id)).length
-    : categoryData.filter((item) => selectedCategories.has(item.Categoryname)).length;
+  const selectedRoutesArr = Array.isArray(selectedRoutes)
+    ? selectedRoutes
+    : Array.from(selectedRoutes);
+  const selectedCount =
+    activeTab === "geofence"
+      ? geofenceData.filter((item) => selectedGeofenceIds.has(item.id)).length
+      : activeTab === "category"
+      ? categoryData.filter((item) => selectedCategories.has(item.Categoryname))
+          .length
+      : (Array.isArray(routes) ? routes : []).filter((item) =>
+          selectedRoutesArr.includes(item.routeName)
+        ).length;
 
-  // Always show full data count after 'of'
-  const totalCount = activeTab === "geofence" ? geofenceData.length : categoryData.length;
+  const totalCount =
+    activeTab === "geofence"
+      ? geofenceData.length
+      : activeTab === "category"
+      ? categoryData.length
+      : Array.isArray(routes)
+      ? routes.length
+      : 0;
 
   // Row renderer for react-window
   const renderGeofenceRow = useCallback(
@@ -157,9 +194,44 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
     [itemData, selectedGeofenceIds, handleItemToggle]
   );
 
+  // Route row renderer for react-window
+  const renderRouteRow = useCallback(
+    ({ index, style }) => {
+      const item = itemData[index];
+      return (
+        <div
+          key={item.id || item.routeName}
+          style={style}
+          className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors react-window-list-item"
+        >
+          <input
+            type="checkbox"
+            id={`item-route-${item.routeName}`}
+            checked={selectedRoutesArr.includes(item.routeName)}
+            onChange={() => handleItemToggle(item)}
+            className="h-4 w-4 text-[#25689f] focus:ring-[#25689f] border-gray-300 rounded cursor-pointer"
+          />
+          <label
+            htmlFor={`item-route-${item.routeName}`}
+            className="ml-3 flex-1 cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {item.routeName}
+                </p>
+              </div>
+            </div>
+          </label>
+        </div>
+      );
+    },
+    [itemData, selectedRoutesArr, handleItemToggle]
+  );
+
   if (!isOpen) return null;
 
-  // Apply Filters handler: only update showGeofences based on selected geofences
+  // Apply Filters handler for geofence and category tabs
   const handleApplyFilters = () => {
     if (activeTab === "geofence") {
       // Only update showGeofences with selected geofences
@@ -173,21 +245,16 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
     } else if (activeTab === "category") {
       // Filter geofences based on selected categories
       const selectedCategoryNames = Array.from(selectedCategories);
-
       const filteredGeofencesByCategory = geofenceData.filter((geofence) => {
-        // Use Categoryname field (with lowercase 'n')
         const categoryMatch = selectedCategoryNames.includes(
           geofence.Categoryname
         );
         return categoryMatch;
       });
-
-      // Update showGeofences with filtered geofences (not categories)
       dispatch({
         type: "replay/setShowGeofences",
         payload: filteredGeofencesByCategory,
       });
-
       // Also update showCategories for reference
       const selectedCategoriesArray = categoryData.filter((c) =>
         selectedCategories.has(c.Categoryname)
@@ -197,6 +264,22 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
         payload: selectedCategoriesArray,
       });
     }
+    onClose();
+  };
+
+  const handleShowRoutes = () => {
+    // Sirf selected route ids Redux mai save karo
+    const selectedRoutesArr = Array.isArray(selectedRoutes)
+      ? selectedRoutes
+      : Array.from(selectedRoutes);
+    // routes array se sirf id nikaalo
+    const selectedRouteIds = (Array.isArray(routes) ? routes : [])
+      .filter((route) => selectedRoutesArr.includes(route.routeName))
+      .map((route) => route.id);
+    dispatch({
+      type: "replay/setSelectedRoutes",
+      payload: selectedRouteIds,
+    });
     onClose();
   };
 
@@ -257,6 +340,19 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
             >
               Category ({categoryData.length})
             </button>
+            <button
+              onClick={() => {
+                setActiveTab("route");
+                setSearchTerm("");
+              }}
+              className={`flex-1 cursor-pointer py-1.5 px-3 text-sm font-medium rounded-md transition-colors ${
+                activeTab === "route"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Routes ({Array.isArray(routes) ? routes.length : 0})
+            </button>
           </div>
         </div>
         {/* Content */}
@@ -293,26 +389,46 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                   Deselect All
                 </button>
               </div>
-                <div className="flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-md">
-                  <span className="font-medium">
-                    {selectedCount} of {totalCount} selected
-                    {searchTerm.trim() && (
-                      <span className="ml-2 text-gray-500">(showing {filteredData.length})</span>
-                    )}
-                  </span>
-                </div>
+              <div className="flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-md">
+                <span className="font-medium">
+                  {selectedCount} of {totalCount} selected
+                  {searchTerm.trim() && (
+                    <span className="ml-2 text-gray-500">
+                      (showing {filteredData.length})
+                    </span>
+                  )}
+                </span>
+              </div>
             </div>
           </div>
           {/* Scrollable list - only the list gets overflow */}
           <div className="flex-1 px-4 py-2">
-            {filteredData.length === 0 ? (
+            {activeTab === "route" && loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-center">
+                  <div className="w-12 h-12 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center animate-spin">
+                    {/* Simple loader spinner */}
+                    <svg className="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                  </div>
+                  <p className="text-blue-600 font-medium">Loading routes...</p>
+                </div>
+              </div>
+            ) : filteredData.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <div className="text-center">
                   <div className="w-12 h-12 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
                     <X size={24} className="text-gray-400" />
                   </div>
                   <p className="text-gray-500 font-medium">
-                    No {activeTab === "geofence" ? "geofences" : "categories"}{" "}
+                    No{" "}
+                    {activeTab === "geofence"
+                      ? "geofences"
+                      : activeTab === "category"
+                      ? "categories"
+                      : "routes"}{" "}
                     found
                   </p>
                 </div>
@@ -330,7 +446,7 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                   {renderGeofenceRow}
                 </List>
               </div>
-            ) : (
+            ) : activeTab === "category" ? (
               <div
                 className="space-y-1"
                 style={{ maxHeight: 290, overflow: "auto" }}
@@ -340,7 +456,6 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                   const geofenceCountForCategory = geofenceData.filter(
                     (geofence) => geofence.Categoryname === item.Categoryname
                   ).length;
-
                   return (
                     <div
                       key={item.id || index}
@@ -374,6 +489,19 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
                   );
                 })}
               </div>
+            ) : (
+              <div style={{ height: 290, overflow: "auto" }}>
+                <List
+                  height={290}
+                  itemCount={filteredData.length}
+                  itemSize={48}
+                  width={"100%"}
+                  itemData={filteredData}
+                  className="react-window-list"
+                >
+                  {renderRouteRow}
+                </List>
+              </div>
             )}
           </div>
         </div>
@@ -403,13 +531,23 @@ const ReplayAdvancedOptionsModal = ({ isOpen, onClose }) => {
               >
                 Cancel
               </button>
-              <button
-                onClick={handleApplyFilters}
-                className="px-4 py-2 text-sm cursor-pointer font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
-                style={{ background: "#25689f" }}
-              >
-                Apply Filters
-              </button>
+              {activeTab === "route" ? (
+                <button
+                  onClick={handleShowRoutes}
+                  className="px-4 py-2 text-sm cursor-pointer font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
+                  style={{ background: "#25689f" }}
+                >
+                  Show Routes
+                </button>
+              ) : (
+                <button
+                  onClick={handleApplyFilters}
+                  className="px-4 py-2 text-sm cursor-pointer font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
+                  style={{ background: "#25689f" }}
+                >
+                  Apply Filters
+                </button>
+              )}
             </div>
           </div>
         </div>
