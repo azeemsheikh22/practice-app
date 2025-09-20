@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { motion } from "framer-motion";
-import { Edit2, Truck, Users, Search, ChevronDown } from "lucide-react";
+import { Edit2, Truck, Users, Search } from "lucide-react";
 import SelectVehiclesModal from "./SelectVehiclesModal";
 import { 
   fetchPolicyUserList, 
@@ -175,7 +175,7 @@ export default function PolicySetupForm() {
     setIsVehicleModalOpen(true);
   };
 
-  const handleVehicleModalSave = (selectedIds, selectedItems) => {
+  const handleVehicleModalSave = (selectedItems) => {
   // When vehicles are selected, clear groups
   setSelectedVehicles(selectedItems);
   setSelectedGroups([]);
@@ -187,7 +187,7 @@ export default function PolicySetupForm() {
     setIsGroupModalOpen(true);
   };
 
-  const handleGroupModalSave = (selectedIds, selectedItems) => {
+  const handleGroupModalSave = (selectedItems) => {
   // When groups are selected, clear vehicles
   setSelectedGroups(selectedItems);
   setSelectedVehicles([]);
@@ -603,7 +603,7 @@ export default function PolicySetupForm() {
 
         {/* Select By Group Button and Search */}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <motion.button
+          {/* <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="flex items-center justify-center cursor-pointer gap-2 px-4 py-2 text-white text-sm font-medium rounded-md shadow-sm hover:shadow-md transition-all duration-200"
@@ -612,9 +612,9 @@ export default function PolicySetupForm() {
             <Users size={16} />
             Select By Group
             <ChevronDown size={14} />
-          </motion.button>
+          </motion.button> */}
 
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search size={16} className="text-gray-400" />
             </div>

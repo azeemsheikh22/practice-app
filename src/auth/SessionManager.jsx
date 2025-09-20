@@ -11,7 +11,6 @@ const SessionManager = ({
   const warningShownRef = useRef(false);
   const logoutTimeoutRef = useRef(null);
 
-  // Function to update last activity time
   const updateLastActivity = () => {
     const currentTime = new Date().getTime();
     localStorage.setItem("lastActivityTime", currentTime.toString());
@@ -59,6 +58,8 @@ const SessionManager = ({
       handleLogout("Time manipulation detected. Please login again.");
       return;
     }
+
+    
 
     // Check if login time is too old (more than 24 hours)
     const maxSessionAge = 24 * 60 * 60 * 1000; // 24 hours

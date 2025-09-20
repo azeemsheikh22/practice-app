@@ -288,7 +288,7 @@ const DashboardHeader = ({
           dashboardName={dashboardName}
           onNameChange={setDashboardName}
           onSave={handleSaveDashboard}
-          onDelete={handleDeleteDashboard}
+          // onDelete={handleDeleteDashboard}
           onCancel={handleCancelEdit}
         />
       )}
