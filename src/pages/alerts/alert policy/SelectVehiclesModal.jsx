@@ -1,22 +1,24 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { X, Car, Users, Layers, Plus, Minus } from "lucide-react";
+import { X, Car, Users, Layers, Plus, Minus, User } from "lucide-react";
 import { motion } from "framer-motion";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { FixedSizeList as List } from "react-window";
 import {
   selectRawVehicleList,
   selectLoading,
+  requestVehicleListWithScope,
 } from "../../../features/gpsTrackingSlice";
 
 const SelectVehiclesModal = ({
   isOpen,
   onClose,
   onSave,
-  type = "vehicle", // vehicle or group (excluding driver for policy)
+  type = "vehicle", // vehicle, group, or driver
   initialSelectedItems = [],
   shouldReset = false,
 }) => {
+  const dispatch = useDispatch();
   const [selectedItems, setSelectedItems] = useState(initialSelectedItems); // Multi selection
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
@@ -37,6 +39,28 @@ const SelectVehiclesModal = ({
   const rawVehicles = useSelector(selectRawVehicleList);
   const isLoading = useSelector(selectLoading);
 
+
+  // Dispatch data fetch based on type when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      let scope;
+      switch (type) {
+        case "vehicle":
+          scope = 1;
+          break;
+        case "driver":
+          scope = 2;
+          break;
+        case "group":
+          scope = 3;
+          break;
+        default:
+          scope = 1; // Default to vehicles
+      }
+      dispatch(requestVehicleListWithScope(scope));
+    }
+  }, [dispatch, isOpen, type]);
+
   // Reset selection when modal opens or type changes
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +71,19 @@ const SelectVehiclesModal = ({
       setExpandedGroups({});
     }
   }, [type, isOpen, initialSelectedItems, shouldReset]);
+
+  const getModalTitle = () => {
+    switch (type) {
+      case "vehicle":
+        return "Select Vehicles";
+      case "group":
+        return "Select Groups";
+      case "driver":
+        return "Select Drivers";
+      default:
+        return "Select Items";
+    }
+  };
 
   // Filter only groups (no vehicles) for tree structure
   const groupsOnly = useMemo(() => {
@@ -171,6 +208,9 @@ const SelectVehiclesModal = ({
     switch (type) {
       case "vehicle":
         filteredByType = rawVehicles.filter((item) => item.Type === "Vehicle");
+        break;
+      case "driver":
+        filteredByType = rawVehicles.filter((item) => item.Type === "Driver");
         break;
       case "group":
         // For groups, return tree structure with search applied
@@ -343,6 +383,9 @@ const SelectVehiclesModal = ({
           {item.Type === "Vehicle" && (
             <Car size={16} className="text-green-600 mr-2" />
           )}
+          {item.Type === "Driver" && (
+            <User size={16} className="text-orange-600 mr-2" />
+          )}
 
           {/* Text */}
           <div className="flex-1">
@@ -379,6 +422,8 @@ const SelectVehiclesModal = ({
     switch (type) {
       case "vehicle":
         return "Select Vehicle from your fleet";
+      case "driver":
+        return "Select Driver from your fleet";
       case "group":
         return "Select Group from your fleet";
       default:
@@ -390,6 +435,8 @@ const SelectVehiclesModal = ({
     switch (type) {
       case "vehicle":
         return <Car size={20} className="text-green-600" />;
+      case "driver":
+        return <User size={20} className="text-orange-600" />;
       case "group":
         return <Layers size={20} className="text-blue-600" />;
       default:

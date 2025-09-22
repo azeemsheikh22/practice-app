@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Navbar from "../../components/navber/Navbar";
 import AlertHeader from "./AlertHeader";
 import AlertOverview from "./AlertOverview";
@@ -26,6 +26,7 @@ export default function Alerts() {
   const [alarmSound, setAlarmSound] = useState(false);
   const dispatch = useDispatch();
   const location = useLocation();
+  const policiesHeaderRef = useRef();
 
   const {
     policyList,
@@ -283,11 +284,13 @@ export default function Alerts() {
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               totalRecords={policyList?.length || 0}
+              onEditPolicyRef={policiesHeaderRef}
             />
             <PoliciesTable
               policyData={policyList || []}
               searchQuery={searchQuery}
               loading={loading}
+              onEditPolicy={(policyData) => policiesHeaderRef.current?.editPolicy(policyData)}
               error={error}
             />
           </div>

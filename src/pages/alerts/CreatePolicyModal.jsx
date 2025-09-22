@@ -9,21 +9,21 @@ export default function CreatePolicyModal({
   handleFormChange,
   handleNext,
   isNextDisabled,
-  policyTypeList
+  policyTypeList,
+  isEditMode = false
 }) {
   if (!show) return null;
 
   // Set default alert type only in create mode (not edit)
-  const isEdit = !!formData.policyName;
   useEffect(() => {
     if (
-      !isEdit &&
+      !isEditMode &&
       Array.isArray(policyTypeList) && policyTypeList.length > 0 &&
       (!formData.alertType || !policyTypeList.some(item => item.alm_type === formData.alertType))
     ) {
       handleFormChange('alertType', policyTypeList[0].alm_type);
     }
-  }, [isEdit, policyTypeList, formData.alertType, handleFormChange]);
+  }, [isEditMode, policyTypeList, formData.alertType, handleFormChange]);
 
   // ...existing code...
 
@@ -54,10 +54,10 @@ export default function CreatePolicyModal({
                 className="text-xl sm:text-2xl font-bold"
                 style={{ color: 'var(--text-color)' }}
               >
-                {isEdit ? 'Create a New Policy' : 'Create a New Policy'}
+                {isEditMode ? 'Edit Policy' : 'Create a New Policy'}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
-                {isEdit ? 'Set up a new policy for your fleet' : 'Set up a new policy for your fleet'}
+                {isEditMode ? 'Update your policy settings' : 'Set up a new policy for your fleet'}
               </p>
             </div>
             <button
@@ -84,13 +84,18 @@ export default function CreatePolicyModal({
               <select
                 value={formData.alertType}
                 onChange={(e) => handleFormChange('alertType', e.target.value)}
-                className="flex-1 sm:max-w-sm px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:border-transparent outline-none text-sm transition-all duration-200"
+                disabled={isEditMode}
+                className={`flex-1 sm:max-w-sm px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:border-transparent outline-none text-sm transition-all duration-200 ${
+                  isEditMode ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                }`}
                 style={{ 
                   color: 'var(--text-color)',
                   '--tw-ring-color': 'var(--primary-color)'
                 }}
                 onFocus={(e) => {
-                  e.target.style.boxShadow = `0 0 0 2px var(--primary-color)`;
+                  if (!isEditMode) {
+                    e.target.style.boxShadow = `0 0 0 2px var(--primary-color)`;
+                  }
                 }}
                 onBlur={(e) => {
                   e.target.style.boxShadow = 'none';

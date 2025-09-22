@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useImperativeHandle } from "react";
 import CreatePolicyModal from "./CreatePolicyModal";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchPolicyTypeList } from "../../features/alertpolicySlice";
@@ -22,13 +22,15 @@ import {
 export default function PolicyManagementHeader({ 
   searchQuery, 
   setSearchQuery, 
-  totalRecords 
+  totalRecords,
+  onEditPolicyRef // New prop to expose edit function to parent
 }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [showExportDropdown, setShowExportDropdown] = useState(false);
   const [showUserPoliciesOnly, setShowUserPoliciesOnly] = useState(false);
   const [showCreatePolicyModal, setShowCreatePolicyModal] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Get policyTypeList from alertpolicy slice
   const policyTypeList = useSelector(state => state.alertpolicy?.policyTypeList);
@@ -52,14 +54,29 @@ export default function PolicyManagementHeader({
   const handleCreateNewPolicy = () => {
     // Dispatch API call to fetch policy type list
     dispatch(fetchPolicyTypeList())
+    setIsEditMode(false);
+    setShowCreatePolicyModal(true);
+  };
+
+  const handleEditPolicy = (policyData) => {
+    // Dispatch API call to fetch policy type list
+    dispatch(fetchPolicyTypeList())
+    setIsEditMode(true);
+    // Set form data with existing policy data
+    setFormData({
+      alertType: policyData.alertType || "",
+      highPriority: policyData.highPriority || false,
+      policyName: policyData.policyName || ""
+    });
     setShowCreatePolicyModal(true);
   };
 
   const handleCloseModal = () => {
     setShowCreatePolicyModal(false);
+    setIsEditMode(false);
     // Reset form data
     setFormData({
-      alertType: "Accident Incident",
+      alertType: "",
       highPriority: false,
       policyName: ""
     });
@@ -82,6 +99,11 @@ export default function PolicyManagementHeader({
 
   // Check if Next button should be disabled
   const isNextDisabled = !formData.policyName.trim();
+
+  // Expose handleEditPolicy function to parent component
+  useImperativeHandle(onEditPolicyRef, () => ({
+    editPolicy: handleEditPolicy
+  }), []);
 
   return (
     <>
@@ -260,6 +282,7 @@ export default function PolicyManagementHeader({
         handleNext={handleNext}
         isNextDisabled={isNextDisabled}
         policyTypeList={policyTypeList}
+        isEditMode={isEditMode}
       />
     </>
   );

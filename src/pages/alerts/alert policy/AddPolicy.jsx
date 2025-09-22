@@ -3,7 +3,13 @@ import Navbar from "../../../components/navber/Navbar";
 import PolicySetupForm from "./PolicySetupForm";
 import { useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { initializeConnection, selectConnectionStatus } from "../../../features/gpsTrackingSlice";
+import {
+  initializeConnection,
+  selectConnectionStatus,
+} from "../../../features/gpsTrackingSlice";
+import { fetchGeofenceCatList } from "../../../features/geofenceSlice";
+import { fetchReplayGeofenceForUser } from "../../../features/replaySlice";
+import { fetchRouteListForUser } from "../../../features/routeSlice";
 
 export default function AddPolicy() {
   // Get route state
@@ -17,6 +23,12 @@ export default function AddPolicy() {
     if (connectionStatus === "disconnected") {
       dispatch(initializeConnection(3));
     }
+  }, []);
+
+  useEffect(() => {
+    dispatch(fetchGeofenceCatList());
+    dispatch(fetchReplayGeofenceForUser());
+    dispatch(fetchRouteListForUser());
   }, []);
 
   return (
