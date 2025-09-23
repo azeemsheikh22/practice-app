@@ -179,6 +179,10 @@ const ReplayMap = forwardRef(
 
     // Auto zoom state
     const [autoZoomEnabled, setAutoZoomEnabled] = useState(true);
+    
+    // Auto follow state - controls whether map follows vehicle during replay
+    const [autoFollowEnabled, setAutoFollowEnabled] = useState(true);
+    const [userInteracting, setUserInteracting] = useState(false);
 
     // Helper: Clear all map layers related to previous track/markers
     const clearMapLayers = () => {
@@ -234,6 +238,8 @@ const ReplayMap = forwardRef(
         clearMapLayers();
         drawTrack();
         setAutoZoomEnabled(true); // Naya data aaya ya displayMode change hua to auto-zoom allow
+        setAutoFollowEnabled(true); // Re-enable auto-follow for new data
+        setUserInteracting(false); // Reset user interaction state
       } else if (mapInstanceRef.current) {
         // If no data, clear all layers
         clearMapLayers();
@@ -243,13 +249,9 @@ const ReplayMap = forwardRef(
 
     // Highlight selected routes on map
     useEffect(() => {
-      if (
-        !mapInstanceRef.current ||
-        !selectedRouteObjects ||
-        selectedRouteObjects.length === 0
-      )
-        return;
-      // Remove previous route polylines (className: 'selected-route-polyline')
+      if (!mapInstanceRef.current) return;
+      
+      // Always remove previous route polylines first (className: 'selected-route-polyline')
       mapInstanceRef.current.eachLayer((layer) => {
         if (
           layer.options &&
@@ -258,6 +260,12 @@ const ReplayMap = forwardRef(
           mapInstanceRef.current.removeLayer(layer);
         }
       });
+      
+      // If no routes selected or no route objects, just return after cleanup
+      if (!selectedRouteObjects || selectedRouteObjects.length === 0) {
+        return;
+      }
+      
       selectedRouteObjects.forEach((route, idx) => {
         if (!route.routeString) return;
         // Parse routeString: "lat lng,lat lng,..."
@@ -270,11 +278,12 @@ const ReplayMap = forwardRef(
           .filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng));
         if (points.length > 1) {
           const polyline = L.polyline(points, {
-            color: "#147fde", // Blue highlight
+            color: "#147fde",
             weight: 6,
             opacity: 0.95,
             className: "selected-route-polyline",
             dashArray: idx % 2 === 0 ? "10,6" : "6,6",
+            zIndex: 150,
           }).addTo(mapInstanceRef.current);
           // Show route name on hover
           polyline.bindTooltip(route.routeName || "Route", {
@@ -313,29 +322,52 @@ const ReplayMap = forwardRef(
       }
     }, [autoZoomEnabled, replayData]);
 
-    // User ne zoom/drag kiya to auto-zoom disable ho jaye
+    // User interaction detection - disable auto features when user interacts
     useEffect(() => {
       if (!mapInstanceRef.current) return;
       const map = mapInstanceRef.current;
-      const disableAutoZoom = () => setAutoZoomEnabled(false);
-
-      // Add zoom event listener to redraw trip markers with proper sizing
-      const handleZoomEnd = () => {
-        if (showTripMarkers && tripsData && tripsData.length > 0) {
-          setTimeout(() => {
-            drawTripMarkers(); // Redraw with new sizes
-          }, 150);
-        }
+      
+      const handleUserInteraction = () => {
+        setAutoZoomEnabled(false);
+        setAutoFollowEnabled(false);
+        setUserInteracting(true);
       };
 
-      map.on("zoomstart", disableAutoZoom);
-      map.on("dragstart", disableAutoZoom);
+      const handleInteractionEnd = () => {
+        // Auto-follow stays disabled until user manually re-enables or new data loads
+        setTimeout(() => {
+          setUserInteracting(false);
+        }, 2000); // Give some time after interaction ends
+      };
+
+      // Handle zoom end without redrawing markers to prevent jumping
+      const handleZoomEnd = () => {
+        handleInteractionEnd();
+      };
+
+      const handleDragEnd = () => {
+        handleInteractionEnd();
+      };
+
+      // User interaction events that should disable auto-follow
+      map.on("zoomstart", handleUserInteraction);
+      map.on("dragstart", handleUserInteraction);
+      map.on("mousedown", handleUserInteraction);
+      map.on("wheel", handleUserInteraction);
+      
+      // Interaction end events
       map.on("zoomend", handleZoomEnd);
+      map.on("dragend", handleDragEnd);
+      map.on("mouseup", handleInteractionEnd);
 
       return () => {
-        map.off("zoomstart", disableAutoZoom);
-        map.off("dragstart", disableAutoZoom);
+        map.off("zoomstart", handleUserInteraction);
+        map.off("dragstart", handleUserInteraction);
+        map.off("mousedown", handleUserInteraction);
+        map.off("wheel", handleUserInteraction);
         map.off("zoomend", handleZoomEnd);
+        map.off("dragend", handleDragEnd);
+        map.off("mouseup", handleInteractionEnd);
       };
     }, [showTripMarkers, tripsData]);
 
@@ -435,6 +467,7 @@ const ReplayMap = forwardRef(
           color: "#25689f",
           weight: 4,
           opacity: 0.8,
+          zIndex: 100,
         }).addTo(mapInstanceRef.current);
         setRouteLayer(polyline);
 
@@ -447,7 +480,7 @@ const ReplayMap = forwardRef(
               const marker = L.marker([point.latitude, point.longitude], {
                 icon: getVehicleIcon(status, point.head),
                 title: point.car_name || "",
-                zIndexOffset: 1500,
+                zIndexOffset: 500,
               });
               marker.bindPopup(
                 `<div style=\"min-width:120px\"><b>${
@@ -469,7 +502,7 @@ const ReplayMap = forwardRef(
             const marker = L.marker([point.latitude, point.longitude], {
               icon: getVehicleIcon(status, point.head),
               title: point.car_name || "",
-              zIndexOffset: 1500,
+              zIndexOffset: 500,
             });
             marker.bindPopup(
               `<div style=\"min-width:120px\"><b>${
@@ -543,12 +576,12 @@ const ReplayMap = forwardRef(
 
           L.marker(coordinates[0], {
             icon: startIcon,
-            zIndexOffset: 10000,
+            zIndexOffset: 3000,
           }).addTo(mapInstanceRef.current);
 
           L.marker(coordinates[coordinates.length - 1], {
             icon: endIcon,
-            zIndexOffset: 10000,
+            zIndexOffset: 3000,
           }).addTo(mapInstanceRef.current);
         }
 
@@ -566,6 +599,7 @@ const ReplayMap = forwardRef(
           color: "#25689f",
           weight: 4,
           opacity: 0.8,
+          zIndex: 100,
         }).addTo(mapInstanceRef.current);
         setRouteLayer(polyline);
 
@@ -578,7 +612,7 @@ const ReplayMap = forwardRef(
               const marker = L.marker([point.latitude, point.longitude], {
                 icon: getVehicleIcon(status, point.head),
                 title: point.car_name || "",
-                zIndexOffset: 1500, // Status icon bhi upar
+                zIndexOffset: 500,
               });
               marker.bindPopup(
                 `<div style=\"min-width:120px\"><b>${
@@ -646,12 +680,12 @@ const ReplayMap = forwardRef(
 
           const startMarker = L.marker(coordinates[0], {
             icon: startIcon,
-            zIndexOffset: 10000, // Highest priority
+            zIndexOffset: 3000,
           }).addTo(mapInstanceRef.current);
 
           const endMarker = L.marker(coordinates[coordinates.length - 1], {
             icon: endIcon,
-            zIndexOffset: 10000, // Highest priority
+            zIndexOffset: 3000,
           }).addTo(mapInstanceRef.current);
 
           // Add rich popups for start/end markers
@@ -735,6 +769,7 @@ const ReplayMap = forwardRef(
         color: "#25689f",
         weight: 4,
         opacity: 0.8,
+        zIndex: 100,
       }).addTo(mapInstanceRef.current);
       setRouteLayer(polyline);
 
@@ -745,7 +780,7 @@ const ReplayMap = forwardRef(
           const marker = L.marker([point.latitude, point.longitude], {
             icon: getVehicleIcon(status, point.head),
             title: point.car_name || "",
-            zIndexOffset: 1500,
+            zIndexOffset: 500,
           });
           marker.bindPopup(
             `<div style=\"min-width:120px\"><b>${
@@ -809,11 +844,11 @@ const ReplayMap = forwardRef(
 
         L.marker(coordinates[0], {
           icon: startIcon,
-          zIndexOffset: 10000,
+          zIndexOffset: 3000,
         }).addTo(mapInstanceRef.current);
         L.marker(coordinates[coordinates.length - 1], {
           icon: endIcon,
-          zIndexOffset: 10000,
+          zIndexOffset: 3000,
         }).addTo(mapInstanceRef.current);
       }
     };
@@ -1099,20 +1134,15 @@ const ReplayMap = forwardRef(
         return;
       }
 
-      // Get current zoom level for responsive marker sizing
-      const currentZoom = mapInstanceRef.current
-        ? mapInstanceRef.current.getZoom()
-        : 12;
+      // Fixed marker sizes to prevent jumping during zoom
+      const baseSize = 32; // Fixed size
+      const badgeSize = 16; // Fixed badge size
+      const fontSize = 12; // Fixed font size
+      const badgeFontSize = 9; // Fixed badge font size
 
-      // Calculate marker sizes based on zoom level with better visibility
-      const baseSize = Math.max(24, Math.min(40, currentZoom * 2.5)); // Smaller max size: 24px to 40px
-      const badgeSize = Math.max(14, Math.min(20, currentZoom * 1.4)); // Smaller badge: 14px to 20px
-      const fontSize = Math.max(11, Math.min(16, currentZoom * 1.0)); // Smaller font: 11px to 16px
-      const badgeFontSize = Math.max(8, Math.min(12, currentZoom * 0.7)); // Smaller badge font: 8px to 12px
-
-      // Enhanced z-index for better layering - higher values for better visibility
-      const baseZIndex = 8000 + index * 100; // Each trip gets higher z-index
-      const markerZIndex = currentZoom < 12 ? baseZIndex + 2000 : baseZIndex; // Even higher when zoomed out
+      // Fixed z-index for consistent layering - no zoom dependency
+      const baseZIndex = 1000; // Base z-index for trip markers
+      const markerZIndex = baseZIndex + (index * 10); // Each trip gets incrementally higher z-index
 
       // Selected trip gets extra highlighting
       const selectedBonus = isSelected ? 5000 : 0;
@@ -1128,10 +1158,8 @@ const ReplayMap = forwardRef(
 
       // Function to check if position is too close to existing markers
       const getAvailablePosition = (originalLat, originalLng, type) => {
-        const currentZoom = mapInstanceRef.current
-          ? mapInstanceRef.current.getZoom()
-          : 12;
-        const minDistance = currentZoom > 12 ? 0.0002 : 0.0008; // Smaller offset when zoomed in
+        // Fixed distance regardless of zoom to prevent marker jumping
+        const minDistance = 0.0005; // Fixed distance for consistency
 
         let testLat = originalLat;
         let testLng = originalLng;
@@ -1193,6 +1221,8 @@ const ReplayMap = forwardRef(
           justify-content: center;
           position: relative;
           cursor: pointer;
+          transform-origin: center center;
+          transform: translate(-50%, -50%);
           ${
             isSelected
               ? "box-shadow: 0 0 15px rgba(37, 104, 159, 0.8); border: 3px solid #25689f;"
@@ -1263,6 +1293,8 @@ const ReplayMap = forwardRef(
           justify-content: center;
           position: relative;
           cursor: pointer;
+          transform-origin: center center;
+          transform: translate(-50%, -50%);
           ${
             isSelected
               ? "box-shadow: 0 0 15px rgba(37, 104, 159, 0.8); border: 3px solid #25689f;"
@@ -1349,14 +1381,15 @@ const ReplayMap = forwardRef(
 
       const tripPolyline = L.polyline(tripPath, {
         color: tripColor,
-        weight: isSelected ? 8 : 6, // Thicker line when selected
-        opacity: isSelected ? 1 : 0.9, // More opaque when selected
+        weight: isSelected ? 8 : 6,
+        opacity: isSelected ? 1 : 0.9,
         className: `trip-polyline ${isSelected ? "selected-trip" : ""}`,
         dashArray: isSelected
           ? "none"
           : index % 2 === 0
           ? "15, 10"
-          : "10, 5, 5, 5", // Solid line when selected
+          : "10, 5, 5, 5",
+        zIndex: 200,
       });
 
       // Add custom property for identification
@@ -1441,7 +1474,7 @@ const ReplayMap = forwardRef(
           const marker = L.marker([lat, lng], {
             icon: getVehicleIcon(status, head),
             title: p1.car_name || "",
-            zIndexOffset: 4000,
+            zIndexOffset: 5000,
           });
           marker.bindPopup(
             `<div style=\"min-width:120px\"><b>${p1.car_name || ""}</b><br/>${
@@ -1465,17 +1498,23 @@ const ReplayMap = forwardRef(
             });
           });
 
-          // Center map if needed
-          if (mapInstanceRef.current) {
+          // Center map only if auto-follow is enabled and user is not interacting
+          if (mapInstanceRef.current && autoFollowEnabled && !userInteracting) {
             const map = mapInstanceRef.current;
             const currentZoom = map.getZoom();
             const last = lastViewRef.current;
-            if (
-              last.lat !== lat ||
-              last.lng !== lng ||
-              last.zoom !== currentZoom
-            ) {
-              map.setView([lat, lng], currentZoom, { animate: true });
+            
+            // Only follow if the vehicle has moved significantly or zoom changed
+            const distance = last.lat && last.lng ? 
+              Math.sqrt(Math.pow(lat - last.lat, 2) + Math.pow(lng - last.lng, 2)) : 1;
+            const significantMove = distance > 0.0001; // Roughly 10 meters
+            
+            if (significantMove || last.zoom !== currentZoom) {
+              map.setView([lat, lng], currentZoom, { 
+                animate: true, 
+                duration: 0.5, // Smoother animation
+                easeLinearity: 0.1 
+              });
               lastViewRef.current = { lat, lng, zoom: currentZoom };
             }
           }
@@ -1524,7 +1563,7 @@ const ReplayMap = forwardRef(
           const marker = L.marker([point.latitude, point.longitude], {
             icon: getVehicleIcon(point.status || point.status1, point.head),
             title: point.car_name || "",
-            zIndexOffset: 4000,
+            zIndexOffset: 5000,
           });
           marker.bindPopup(
             `<div style=\"min-width:120px\"><b>${
@@ -1732,6 +1771,32 @@ const ReplayMap = forwardRef(
               className="flex items-center px-3 py-2 bg-white/95 backdrop-blur-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg shadow-lg border border-gray-200 text-xs font-medium transition-all cursor-pointer duration-200"
             >
               <Navigation size={14} />
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setAutoFollowEnabled(!autoFollowEnabled)}
+              className={`flex items-center px-3 py-2 backdrop-blur-sm text-xs font-medium transition-all cursor-pointer duration-200 rounded-lg shadow-lg border border-gray-200 ${
+                autoFollowEnabled
+                  ? 'bg-blue-100/95 text-blue-700 hover:bg-blue-200/95'
+                  : 'bg-white/95 text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+              }`}
+              title={autoFollowEnabled ? "Disable Auto-Follow" : "Enable Auto-Follow"}
+            >
+              <svg 
+                width="14" 
+                height="14" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v6M12 17v6M4.22 4.22l4.24 4.24M15.54 15.54l4.24 4.24M1 12h6M17 12h6M4.22 19.78l4.24-4.24M15.54 8.46l4.24-4.24"/>
+              </svg>
             </motion.button>
 
             <motion.button
