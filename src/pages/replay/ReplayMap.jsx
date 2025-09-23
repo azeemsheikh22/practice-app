@@ -720,10 +720,7 @@ const ReplayMap = forwardRef(
                 <p style="margin: 6px 0; font-size: 13px;"><strong>📍 Status:</strong> ${
                   replayData[0]?.status || "Unknown"
                 }</p>
-                <p style="margin: 6px 0; font-size: 13px;"><strong>⏱️ Total Duration:</strong> ${totalDuration} minutes</p>
-                <p style="margin: 6px 0; font-size: 13px;"><strong>📊 Total Points:</strong> ${
-                  replayData.length
-                }</p>
+           
               </div>
             </div>
           `);
@@ -750,10 +747,7 @@ const ReplayMap = forwardRef(
                 <p style="margin: 6px 0; font-size: 13px;"><strong>📍 Status:</strong> ${
                   replayData[replayData.length - 1]?.status || "Unknown"
                 }</p>
-                <p style="margin: 6px 0; font-size: 13px;"><strong>⏱️ Total Duration:</strong> ${totalDuration} minutes</p>
-                <p style="margin: 6px 0; font-size: 13px;"><strong>📊 Total Points:</strong> ${
-                  replayData.length
-                }</p>
+     
               </div>
             </div>
           `);

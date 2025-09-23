@@ -1,10 +1,12 @@
-
 const AlertTriggers = ({
   alertType,
   selectedLocationOption,
   setSelectedLocationOption,
   selectedIdlingOption,
   setSelectedIdlingOption,
+  excessIdleMinutes,
+  setExcessIdleMinutes,
+  handleExcessIdlingReset,
   geofenceOption,
   setGeofenceOption,
   geofenceTime,
@@ -48,7 +50,7 @@ const AlertTriggers = ({
   gpsDistanceKm,
   setGpsDistanceKm,
   onOpenPlaceModal,
-}) => { 
+}) => {
   const alertTypeLower = alertType?.toLowerCase() || "";
 
   if (alertTypeLower === "activity") {
@@ -336,6 +338,8 @@ const AlertTriggers = ({
         <div className="flex items-center gap-2 mb-4">
           <input
             type="text"
+            value={excessIdleMinutes}
+            onChange={(e) => setExcessIdleMinutes(e.target.value)}
             className="w-32 px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:border-transparent outline-none transition-all duration-200"
             style={{
               color: "var(--text-color)",
@@ -415,7 +419,7 @@ const AlertTriggers = ({
         <button
           className="mt-4 text-gray-400 text-sm cursor-pointer"
           type="button"
-        
+          onClick={handleExcessIdlingReset}
         >
           Reset Selection
         </button>
@@ -862,40 +866,62 @@ const AlertTriggers = ({
           </span>
         </div>
         <div className="space-y-3">
-          <label className="flex items-center cursor-pointer">
-            <input
-              type="radio"
-              name="interruptionOption"
-              value="onlyCheck"
-              checked={interruptionOption === "onlyCheck"}
-              onChange={() => setInterruptionOption("onlyCheck")}
-              className="h-4 w-4 rounded-full transition-colors cursor-pointer"
-              style={{ accentColor: "var(--primary-color)" }}
-            />
-            <span
-              className="ml-2 text-sm"
-              style={{ color: "var(--text-color)" }}
-            >
-              Only Check Activity within selected places.
-            </span>
-          </label>
-          <label className="flex items-center cursor-pointer">
-            <input
-              type="radio"
-              name="interruptionOption"
-              value="ignoreActivity"
-              checked={interruptionOption === "ignoreActivity"}
-              onChange={() => setInterruptionOption("ignoreActivity")}
-              className="h-4 w-4 rounded-full transition-colors cursor-pointer"
-              style={{ accentColor: "var(--primary-color)" }}
-            />
-            <span
-              className="ml-2 text-sm"
-              style={{ color: "var(--text-color)" }}
-            >
-              Ignore Activity within selected places.
-            </span>
-          </label>
+          <div>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="interruptionOption"
+                value="onlyCheck"
+                checked={interruptionOption === "onlyCheck"}
+                onChange={() => setInterruptionOption("onlyCheck")}
+                className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+                style={{ accentColor: "var(--primary-color)" }}
+              />
+              <span
+                className="ml-2 text-sm"
+                style={{ color: "var(--text-color)" }}
+              >
+                Only Check Activity within selected places.
+              </span>
+            </label>
+            {interruptionOption === "onlyCheck" && (
+              <button
+                onClick={onOpenPlaceModal}
+                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+                style={{ color: "var(--primary-color)" }}
+              >
+                Select Places
+              </button>
+            )}
+          </div>
+          <div>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="interruptionOption"
+                value="ignoreActivity"
+                checked={interruptionOption === "ignoreActivity"}
+                onChange={() => setInterruptionOption("ignoreActivity")}
+                className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+                style={{ accentColor: "var(--primary-color)" }}
+              />
+              <span
+                className="ml-2 text-sm"
+                style={{ color: "var(--text-color)" }}
+              >
+                Ignore Activity within selected places.
+              </span>
+            </label>
+            {interruptionOption === "ignoreActivity" && (
+              <button
+                onClick={onOpenPlaceModal}
+                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+                style={{ color: "var(--primary-color)" }}
+              >
+                Select Places
+              </button>
+            )}
+          </div>
         </div>
         <button
           className="mt-4 text-gray-400 text-sm cursor-pointer"
@@ -1245,56 +1271,68 @@ const AlertTriggers = ({
             Seconds
           </span>
         </div>
-        <label className="flex items-center cursor-pointer mt-2">
-          <input
-            type="radio"
-            name="speedExceedingOption"
-            value="onlySend"
-            checked={speedExceedingOption === "onlySend"}
-            onChange={() => setSpeedExceedingOption("onlySend")}
-            className="h-4 w-4 rounded-full transition-colors cursor-pointer"
-            style={{ accentColor: "var(--primary-color)" }}
-          />
-          <span className="ml-2 text-sm" style={{ color: "var(--text-color)" }}>
-            Only send Speeding Exceeding Alerts for incidents that occur within
-            selected places.
-          </span>
-        </label>
-        {speedExceedingOption === "onlySend" && (
-          <button
-            onClick={onOpenPlaceModal}
-            className="ml-6 text-blue-600 text-sm hover:underline cursor-pointer"
-            style={{ color: "var(--primary-color)" }}
-            type="button"
-          >
-            Select Places
-          </button>
-        )}
-        <label className="flex items-center cursor-pointer mt-2">
-          <input
-            type="radio"
-            name="speedExceedingOption"
-            value="ignoreSend"
-            checked={speedExceedingOption === "ignoreSend"}
-            onChange={() => setSpeedExceedingOption("ignoreSend")}
-            className="h-4 w-4 rounded-full transition-colors cursor-pointer"
-            style={{ accentColor: "var(--primary-color)" }}
-          />
-          <span className="ml-2 text-sm" style={{ color: "var(--text-color)" }}>
-            Ignore Speeding Exceeding Alerts for incidents that occur within
-            selected places.
-          </span>
-        </label>
-        {speedExceedingOption === "ignoreSend" && (
-          <button
-            onClick={onOpenPlaceModal}
-            className="ml-6 text-blue-600 text-sm hover:underline cursor-pointer"
-            style={{ color: "var(--primary-color)" }}
-            type="button"
-          >
-            Select Places
-          </button>
-        )}
+        <div className="space-y-3">
+          <div>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="speedExceedingOption"
+                value="onlySend"
+                checked={speedExceedingOption === "onlySend"}
+                onChange={() => setSpeedExceedingOption("onlySend")}
+                className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+                style={{ accentColor: "var(--primary-color)" }}
+              />
+              <span
+                className="ml-2 text-sm"
+                style={{ color: "var(--text-color)" }}
+              >
+                Only send Speeding Exceeding Alerts for incidents that occur
+                within selected places.
+              </span>
+            </label>
+            {speedExceedingOption === "onlySend" && (
+              <button
+                onClick={onOpenPlaceModal}
+                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+                style={{ color: "var(--primary-color)" }}
+                type="button"
+              >
+                Select Places
+              </button>
+            )}
+          </div>
+          <div>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="radio"
+                name="speedExceedingOption"
+                value="ignoreSend"
+                checked={speedExceedingOption === "ignoreSend"}
+                onChange={() => setSpeedExceedingOption("ignoreSend")}
+                className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+                style={{ accentColor: "var(--primary-color)" }}
+              />
+              <span
+                className="ml-2 text-sm"
+                style={{ color: "var(--text-color)" }}
+              >
+                Ignore Speeding Exceeding Alerts for incidents that occur within
+                selected places.
+              </span>
+            </label>
+            {speedExceedingOption === "ignoreSend" && (
+              <button
+                onClick={onOpenPlaceModal}
+                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+                style={{ color: "var(--primary-color)" }}
+                type="button"
+              >
+                Select Places
+              </button>
+            )}
+          </div>
+        </div>
         <button
           className="mt-4 text-gray-400 text-sm cursor-pointer"
           type="button"
@@ -1598,7 +1636,14 @@ const AlertTriggers = ({
   return (
     <>
       <div>
-        {alertType === "Box Temper Alert" ? (
+        {alertType === "Box Temper Alert" ||
+        alertType === "MDVR Driver Distraction Alert" ||
+        alertType === "MDVR Driver Fatigue Alert" ||
+        alertType === "MDVR Driver Smoking Alert" ||
+        alertType === "MDVR Driver Using Cell Phone Alert" ||
+        alertType === "MDVR Driver Yawn Alert" ||
+        alertType === "MDVR Removed Memory Card Alert" ||
+        alertType === "MDVR Seat Belt Alert" || alertType === "Unauthorized Stop" || alertType === "Un-Registered Area Driver Attendance" || alertType === "Valve Close Alarm" || alertType === "Valve Open Alarm" ? (
           <></>
         ) : alertType === "Enter geo-fence" ? (
           <>
@@ -1613,6 +1658,203 @@ const AlertTriggers = ({
               style={{ color: "var(--text-color)" }}
             >
               This alert is triggered when vehicle enter this geofence :
+            </p>
+          </>
+        ) : alertType === "Exit Geo-fence" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert is triggered when vehicle exit this geofence :
+            </p>
+          </>
+        ) : alertType === "GPS Antenna Disconnect" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert is triggered when GPS antenna is disconnected :
+            </p>
+          </>
+        ) : alertType === "GSM Jamming Alert" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert is triggered when GSM Signal Jamming decected.
+            </p>
+          </>
+        ) : alertType === "Hard braking Alert" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert notifies when a vehicle faces specified impact values
+            </p>
+          </>
+        ) : alertType === "Harsh Cornering" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert notifies when a vehicle faces specified impact values
+            </p>
+          </>
+        ) : alertType === "Main Power Lost" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert triggers when the GPS unit has lost power and is unable
+              to be tracked for a set period of time.
+            </p>
+          </>
+        ) : alertType === "Panic Alert" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert notifies when a vehicle enters the Panic status.
+            </p>
+          </>
+        ) : alertType === "Quick Start" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert notifies when a vehicle faces specified impact values
+            </p>
+          </>
+        ) : alertType === "Roll Over Alarm" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert is triggered when vehicle is roll-over :
+            </p>
+          </>
+        ) : alertType === "Route Deviation" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert is triggered when vehicle is deviated from specified
+              route as per plan :
+            </p>
+          </>
+        ) : alertType === "Tilt Angle Sensor OFF" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert notifies when a Tilt Angle Sensor Value Changes.
+            </p>
+          </>
+        ) : alertType === "Tilt Angle Sensor ON" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert notifies when a Tilt Angle Sensor Value Changes.
+            </p>
+          </>
+        ) : alertType === "Towing" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert will be triggered when a vehicle is being towed.
             </p>
           </>
         ) : (

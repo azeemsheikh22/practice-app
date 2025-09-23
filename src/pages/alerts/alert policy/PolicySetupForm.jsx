@@ -65,9 +65,16 @@ export default function PolicySetupForm() {
     setSelectedLocationOption("onlyCheckActivity"); // Reset par 'Any activity during the monitoring time range' select ho
     // Yahan agar selected places ka state hai to usko bhi reset karen
   };
+
+  // Excess Idling reset function
+  const handleExcessIdlingReset = () => {
+    setSelectedIdlingOption(""); // Reset radio selection to default (none selected)
+    setExcessIdleMinutes(""); // Reset minutes input field
+  };
+
   // Excess Idling alert specific state
-  const [selectedIdlingOption, setSelectedIdlingOption] =
-    useState("");
+  const [selectedIdlingOption, setSelectedIdlingOption] = useState("");
+  const [excessIdleMinutes, setExcessIdleMinutes] = useState("");
 
   // Additional alert-specific states that were previously inside renderAlertTriggers
   const [interruptionOption, setInterruptionOption] = useState("");
@@ -96,10 +103,14 @@ export default function PolicySetupForm() {
   const [gpsDistanceKm, setGpsDistanceKm] = useState("");
 
   // Excess Idling alert trigger radio state
-  const [idlingTrigger, setIdlingTrigger] = useState("At the Start of the event.");
+  const [idlingTrigger, setIdlingTrigger] = useState(
+    "At the Start of the event."
+  );
 
   // Activity alert trigger radio state
-  const [activityTrigger, setActivityTrigger] = useState("At the Start of the event.");
+  const [activityTrigger, setActivityTrigger] = useState(
+    "At the Start of the event."
+  );
 
   // Fetch policy users on component mount
   useEffect(() => {
@@ -413,6 +424,9 @@ export default function PolicySetupForm() {
           handleActivityLocationReset={handleActivityLocationReset}
           selectedIdlingOption={selectedIdlingOption}
           setSelectedIdlingOption={setSelectedIdlingOption}
+          excessIdleMinutes={excessIdleMinutes}
+          setExcessIdleMinutes={setExcessIdleMinutes}
+          handleExcessIdlingReset={handleExcessIdlingReset}
           geofenceOption={geofenceOption}
           setGeofenceOption={setGeofenceOption}
           geofenceTime={geofenceTime}
@@ -762,10 +776,13 @@ export default function PolicySetupForm() {
         >
           Specify the frequency you would like to receive alerts:
         </h3>
-          {/* Show radio group for Activity alert type */}
+        {/* Show radio group for Activity alert type */}
         {alertType === "Activity" && (
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-2" style={{ color: "var(--text-color)" }}>
+            <label
+              className="block text-sm font-medium mb-2"
+              style={{ color: "var(--text-color)" }}
+            >
               Which message trigger the alert?
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -774,59 +791,117 @@ export default function PolicySetupForm() {
                 name="activityTrigger"
                 value="At the Start of the event."
                 checked={activityTrigger === "At the Start of the event."}
-                onChange={() => setActivityTrigger("At the Start of the event.")}
+                onChange={() =>
+                  setActivityTrigger("At the Start of the event.")
+                }
                 className="h-4 w-4 rounded-full transition-colors cursor-pointer"
                 style={{ accentColor: "var(--primary-color)" }}
               />
-              <span className="text-sm" style={{ color: "var(--text-color)" }}>At the Start of the event.</span>
+              <span className="text-sm" style={{ color: "var(--text-color)" }}>
+                At the Start of the event.
+              </span>
             </label>
           </div>
         )}
 
+        {alertType === "Activity" ||
+          (alertType === "Late Start" && (
+            <div className="mb-6">
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: "var(--text-color)" }}
+              >
+                Which message trigger the alert?
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="activityTrigger"
+                  value="At the Start of the event."
+                  checked={activityTrigger === "At the Start of the event."}
+                  onChange={() =>
+                    setActivityTrigger("At the Start of the event.")
+                  }
+                  className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+                  style={{ accentColor: "var(--primary-color)" }}
+                />
+                <span
+                  className="text-sm"
+                  style={{ color: "var(--text-color)" }}
+                >
+                  At the Start of the event.
+                </span>
+              </label>
+            </div>
+          ))}
+
         {/* Show radio group for Excess Idling alert type */}
-        {alertType === "Excess Idling" && (
-          <div className="mb-6">
-            <label className="block text-sm font-medium mb-2" style={{ color: "var(--text-color)" }}>
-              Which message trigger the alert?
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                name="idlingTrigger"
-                value="At the Start of the event."
-                checked={idlingTrigger === "At the Start of the event."}
-                onChange={() => setIdlingTrigger("At the Start of the event.")}
-                className="h-4 w-4 rounded-full transition-colors cursor-pointer"
-                style={{ accentColor: "var(--primary-color)" }}
-              />
-              <span className="text-sm" style={{ color: "var(--text-color)" }}>At the Start of the event.</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer mt-2">
-              <input
-                type="radio"
-                name="idlingTrigger"
-                value="At the end of the event."
-                checked={idlingTrigger === "At the end of the event."}
-                onChange={() => setIdlingTrigger("At the end of the event.")}
-                className="h-4 w-4 rounded-full transition-colors cursor-pointer"
-                style={{ accentColor: "var(--primary-color)" }}
-              />
-              <span className="text-sm" style={{ color: "var(--text-color)" }}>At the end of the event.</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer mt-2">
-              <input
-                type="radio"
-                name="idlingTrigger"
-                value="At both of the event."
-                checked={idlingTrigger === "At both of the event."}
-                onChange={() => setIdlingTrigger("At both of the event.")}
-                className="h-4 w-4 rounded-full transition-colors cursor-pointer"
-                style={{ accentColor: "var(--primary-color)" }}
-              />
-              <span className="text-sm" style={{ color: "var(--text-color)" }}>At both of the event.</span>
-            </label>
-          </div>
-        )}
+        {alertType === "Excess Idling" ||
+          alertType === "Long Stop" ||
+          alertType === "Seat belt Alert" ||
+          (alertType === "Speeding" || alertType === "Towing" && (
+            <div className="mb-6">
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: "var(--text-color)" }}
+              >
+                Which message trigger the alert?
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="idlingTrigger"
+                  value="At the Start of the event."
+                  checked={idlingTrigger === "At the Start of the event."}
+                  onChange={() =>
+                    setIdlingTrigger("At the Start of the event.")
+                  }
+                  className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+                  style={{ accentColor: "var(--primary-color)" }}
+                />
+                <span
+                  className="text-sm"
+                  style={{ color: "var(--text-color)" }}
+                >
+                  At the Start of the event.
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer mt-2">
+                <input
+                  type="radio"
+                  name="idlingTrigger"
+                  value="At the end of the event."
+                  checked={idlingTrigger === "At the end of the event."}
+                  onChange={() => setIdlingTrigger("At the end of the event.")}
+                  className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+                  style={{ accentColor: "var(--primary-color)" }}
+                />
+                <span
+                  className="text-sm"
+                  style={{ color: "var(--text-color)" }}
+                >
+                  At the end of the event.
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer mt-2">
+                <input
+                  type="radio"
+                  name="idlingTrigger"
+                  value="At both of the event."
+                  checked={idlingTrigger === "At both of the event."}
+                  onChange={() => setIdlingTrigger("At both of the event.")}
+                  className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+                  style={{ accentColor: "var(--primary-color)" }}
+                />
+                <span
+                  className="text-sm"
+                  style={{ color: "var(--text-color)" }}
+                >
+                  At both of the event.
+                </span>
+              </label>
+            </div>
+          ))}
 
         <div className="space-y-4">
           <label
@@ -1445,9 +1520,9 @@ export default function PolicySetupForm() {
       />
 
       {/* SelectedPlace Modal */}
-      <SelectedPlaceModal 
-        isOpen={isPlaceModalOpen} 
-        onClose={handleClosePlaceModal} 
+      <SelectedPlaceModal
+        isOpen={isPlaceModalOpen}
+        onClose={handleClosePlaceModal}
       />
     </div>
   );
