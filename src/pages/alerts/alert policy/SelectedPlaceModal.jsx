@@ -2,11 +2,10 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { FixedSizeList as List } from "react-window";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import { createPortal } from "react-dom";
 
 const SelectedPlaceModal = ({ isOpen, onClose }) => {
-  const dispatch = useDispatch();
   const [activeTab, setActiveTab] = useState("geofence");
   const [selectedGeofenceIds, setSelectedGeofenceIds] = useState(new Set());
   const [selectedCategories, setSelectedCategories] = useState(new Set());
@@ -56,11 +55,6 @@ const SelectedPlaceModal = ({ isOpen, onClose }) => {
 
   // For react-window, itemData is filteredData
   const itemData = filteredData;
-
-  // Get showGeofences from redux
-  const showGeofences = useSelector((state) => state.replay.showGeofences);
-
-  // When modal opens, initialize selection from Redux showGeofences
 
   useEffect(() => {
     if (isOpen) {
@@ -213,10 +207,6 @@ const SelectedPlaceModal = ({ isOpen, onClose }) => {
   );
 
   if (!isOpen) return null;
-
-
-
-
 
   // Modal content
   const modalContent = (

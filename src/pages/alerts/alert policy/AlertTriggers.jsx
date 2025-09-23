@@ -1,5 +1,3 @@
-import { useState } from "react";
-import SelectedPlaceModal from "./SelectedPlaceModal";
 
 const AlertTriggers = ({
   alertType,
@@ -49,12 +47,17 @@ const AlertTriggers = ({
   setUnAssignedDriverMinutes,
   gpsDistanceKm,
   setGpsDistanceKm,
-}) => {
-  const [isPlaceModalOpen, setIsPlaceModalOpen] = useState(false);
-
+  onOpenPlaceModal,
+}) => { 
   const alertTypeLower = alertType?.toLowerCase() || "";
 
   if (alertTypeLower === "activity") {
+    // Urdu Roman: Reset Selection button ka handler
+    const handleResetSelection = () => {
+      setSelectedLocationOption(""); // Urdu Roman: Reset par koi radio select nahi hoga
+      // Yahan agar selected places ka state hai to usko bhi reset karen
+    };
+
     return (
       <div className="space-y-6">
         <h3
@@ -222,9 +225,9 @@ const AlertTriggers = ({
 
             {selectedLocationOption === "onlyCheckActivity" && (
               <button
+                onClick={onOpenPlaceModal}
                 className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
                 style={{ color: "var(--primary-color)" }}
-                onClick={() => setIsPlaceModalOpen(true)}
               >
                 Select places
               </button>
@@ -257,21 +260,23 @@ const AlertTriggers = ({
 
             {selectedLocationOption === "ignoreActivity" && (
               <button
+                onClick={onOpenPlaceModal}
                 className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
                 style={{ color: "var(--primary-color)" }}
-                onClick={() => setIsPlaceModalOpen(true)}
               >
                 Select places
               </button>
             )}
           </div>
         </div>
-        {isPlaceModalOpen && (
-          <SelectedPlaceModal
-            isOpen={isPlaceModalOpen}
-            onClose={() => setIsPlaceModalOpen(false)}
-          />
-        )}
+
+        <button
+          className="mt-4 text-gray-400 text-sm cursor-pointer"
+          type="button"
+          onClick={handleResetSelection}
+        >
+          Reset Selection
+        </button>
       </div>
     );
   }
@@ -367,9 +372,9 @@ const AlertTriggers = ({
           </label>
           {selectedIdlingOption === "ignoreIdling" && (
             <button
+              onClick={onOpenPlaceModal}
               className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
               style={{ color: "var(--primary-color)" }}
-              onClick={() => setIsPlaceModalOpen(true)}
             >
               Select Places
             </button>
@@ -398,20 +403,22 @@ const AlertTriggers = ({
           </label>
           {selectedIdlingOption === "includeIdling" && (
             <button
+              onClick={onOpenPlaceModal}
               className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
               style={{ color: "var(--primary-color)" }}
-              onClick={() => setIsPlaceModalOpen(true)}
             >
               Select Places
             </button>
           )}
         </div>
-        {isPlaceModalOpen && (
-          <SelectedPlaceModal
-            isOpen={isPlaceModalOpen}
-            onClose={() => setIsPlaceModalOpen(false)}
-          />
-        )}
+
+        <button
+          className="mt-4 text-gray-400 text-sm cursor-pointer"
+          type="button"
+        
+        >
+          Reset Selection
+        </button>
       </div>
     );
   }
@@ -692,19 +699,13 @@ const AlertTriggers = ({
           </span>
           <br />
           <button
+            onClick={onOpenPlaceModal}
             className="mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
             style={{ color: "var(--primary-color)" }}
-            onClick={() => setIsPlaceModalOpen(true)}
           >
             Select Places
           </button>
         </div>
-        {isPlaceModalOpen && (
-          <SelectedPlaceModal
-            isOpen={isPlaceModalOpen}
-            onClose={() => setIsPlaceModalOpen(false)}
-          />
-        )}
       </div>
     );
   }
@@ -1160,9 +1161,9 @@ const AlertTriggers = ({
           </label>
           {ignoreSeatbeltActivity && (
             <button
+              onClick={onOpenPlaceModal}
               className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
               style={{ color: "var(--primary-color)" }}
-              onClick={() => setIsPlaceModalOpen(true)}
             >
               Select Places
             </button>
@@ -1261,10 +1262,10 @@ const AlertTriggers = ({
         </label>
         {speedExceedingOption === "onlySend" && (
           <button
+            onClick={onOpenPlaceModal}
             className="ml-6 text-blue-600 text-sm hover:underline cursor-pointer"
             style={{ color: "var(--primary-color)" }}
             type="button"
-            onClick={() => setIsPlaceModalOpen(true)}
           >
             Select Places
           </button>
@@ -1286,10 +1287,10 @@ const AlertTriggers = ({
         </label>
         {speedExceedingOption === "ignoreSend" && (
           <button
+            onClick={onOpenPlaceModal}
             className="ml-6 text-blue-600 text-sm hover:underline cursor-pointer"
             style={{ color: "var(--primary-color)" }}
             type="button"
-            onClick={() => setIsPlaceModalOpen(true)}
           >
             Select Places
           </button>
@@ -1386,21 +1387,15 @@ const AlertTriggers = ({
           </label>
           {speedingPlaceChecked && (
             <button
+              onClick={onOpenPlaceModal}
               className="ml-6 text-blue-600 text-sm hover:underline cursor-pointer"
               style={{ color: "var(--primary-color)" }}
               type="button"
-              onClick={() => setIsPlaceModalOpen(true)}
             >
               Select places
             </button>
           )}
         </div>
-        {isPlaceModalOpen && (
-          <SelectedPlaceModal
-            isOpen={isPlaceModalOpen}
-            onClose={() => setIsPlaceModalOpen(false)}
-          />
-        )}
       </div>
     );
   }
@@ -1601,20 +1596,43 @@ const AlertTriggers = ({
   }
 
   return (
-    <div>
-      <h3
-        className="text-sm font-medium mb-4"
-        style={{ color: "var(--primary-color)" }}
-      >
-        Alert Triggers:
-      </h3>
-      <p
-        className="text-sm leading-relaxed"
-        style={{ color: "var(--text-color)" }}
-      >
-        This alert is triggered when vehicle face high Impact values :
-      </p>
-    </div>
+    <>
+      <div>
+        {alertType === "Box Temper Alert" ? (
+          <></>
+        ) : alertType === "Enter geo-fence" ? (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert is triggered when vehicle enter this geofence :
+            </p>
+          </>
+        ) : (
+          <>
+            <h3
+              className="text-sm font-medium mb-4"
+              style={{ color: "var(--primary-color)" }}
+            >
+              Alert Triggers:
+            </h3>
+            <p
+              className="text-sm leading-relaxed"
+              style={{ color: "var(--text-color)" }}
+            >
+              This alert is triggered when vehicle face high Impact values :
+            </p>
+          </>
+        )}
+      </div>
+    </>
   );
 };
 

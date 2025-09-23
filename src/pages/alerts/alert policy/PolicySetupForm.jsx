@@ -12,6 +12,7 @@ import {
 import CreatePolicyModal from "../CreatePolicyModal";
 import { useNavigate } from "react-router-dom";
 import AlertTriggers from "./AlertTriggers";
+import SelectedPlaceModal from "./SelectedPlaceModal";
 
 export default function PolicySetupForm() {
   const navigate = useNavigate();
@@ -49,16 +50,24 @@ export default function PolicySetupForm() {
   const [selectedGroups, setSelectedGroups] = useState([]);
   const [selectedDrivers, setSelectedDrivers] = useState([]);
 
+  // SelectedPlaceModal state
+  const [isPlaceModalOpen, setIsPlaceModalOpen] = useState(false);
+
   const [geofenceOption, setGeofenceOption] = useState("entered");
   const [geofenceTime, setGeofenceTime] = useState("");
   const [geofenceDuration, setGeofenceDuration] = useState("");
 
   // Activity alert specific states
-  const [selectedLocationOption, setSelectedLocationOption] =
-    useState("onlyCheckActivity");
+  const [selectedLocationOption, setSelectedLocationOption] = useState("");
+
+  // Urdu Roman: Reset Selection ka function
+  const handleActivityLocationReset = () => {
+    setSelectedLocationOption("onlyCheckActivity"); // Reset par 'Any activity during the monitoring time range' select ho
+    // Yahan agar selected places ka state hai to usko bhi reset karen
+  };
   // Excess Idling alert specific state
   const [selectedIdlingOption, setSelectedIdlingOption] =
-    useState("ignoreIdling");
+    useState("");
 
   // Additional alert-specific states that were previously inside renderAlertTriggers
   const [interruptionOption, setInterruptionOption] = useState("");
@@ -273,6 +282,15 @@ export default function PolicySetupForm() {
     setIsDriverModalOpen(false);
   };
 
+  // Place modal functions
+  const handleOpenPlaceModal = () => {
+    setIsPlaceModalOpen(true);
+  };
+
+  const handleClosePlaceModal = () => {
+    setIsPlaceModalOpen(false);
+  };
+
   // AlertTriggers functionality has been moved to separate component
 
   const renderVehicleAndAlertOptions = () => (
@@ -392,6 +410,7 @@ export default function PolicySetupForm() {
           alertType={alertType}
           selectedLocationOption={selectedLocationOption}
           setSelectedLocationOption={setSelectedLocationOption}
+          handleActivityLocationReset={handleActivityLocationReset}
           selectedIdlingOption={selectedIdlingOption}
           setSelectedIdlingOption={setSelectedIdlingOption}
           geofenceOption={geofenceOption}
@@ -436,6 +455,7 @@ export default function PolicySetupForm() {
           setUnAssignedDriverMinutes={setUnAssignedDriverMinutes}
           gpsDistanceKm={gpsDistanceKm}
           setGpsDistanceKm={setGpsDistanceKm}
+          onOpenPlaceModal={handleOpenPlaceModal}
         />
       </div>
     </div>
@@ -1422,6 +1442,12 @@ export default function PolicySetupForm() {
         type="driver"
         initialSelectedItems={selectedDrivers}
         shouldReset={false}
+      />
+
+      {/* SelectedPlace Modal */}
+      <SelectedPlaceModal 
+        isOpen={isPlaceModalOpen} 
+        onClose={handleClosePlaceModal} 
       />
     </div>
   );
