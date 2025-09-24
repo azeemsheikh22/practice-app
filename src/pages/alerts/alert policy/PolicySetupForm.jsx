@@ -13,6 +13,7 @@ import CreatePolicyModal from "../CreatePolicyModal";
 import { useNavigate } from "react-router-dom";
 import AlertTriggers from "./AlertTriggers";
 import SelectedPlaceModal from "./SelectedPlaceModal";
+import PolicyReview from "./PolicyReview";
 
 export default function PolicySetupForm() {
   const navigate = useNavigate();
@@ -31,7 +32,9 @@ export default function PolicySetupForm() {
   const [additionalEmails, setAdditionalEmails] = useState("");
   const [smsDeliveryOption, setSmsDeliveryOption] = useState("none");
   const [customizeEmailIntro, setCustomizeEmailIntro] = useState(false);
+  const [customEmailText, setCustomEmailText] = useState("");
   const [onlyIncludeDrivers, setOnlyIncludeDrivers] = useState(false);
+  const [controlGroupOption, setControlGroupOption] = useState("all");
   const [alertFrequency, setAlertFrequency] = useState(10);
   const [limitAlertsPerDriver, setLimitAlertsPerDriver] = useState(10);
   const [timeRange, setTimeRange] = useState("everyDay");
@@ -62,14 +65,31 @@ export default function PolicySetupForm() {
 
   // Urdu Roman: Reset Selection ka function
   const handleActivityLocationReset = () => {
-    setSelectedLocationOption("onlyCheckActivity"); // Reset par 'Any activity during the monitoring time range' select ho
-    // Yahan agar selected places ka state hai to usko bhi reset karen
+    setSelectedLocationOption(""); // Reset radio selection to default (none selected)
+    setSelectedPlaces({
+      // Reset selected places
+      geofences: [],
+      categories: [],
+      routes: [],
+      geofenceNames: [],
+      categoryNames: [],
+      routeNames: [],
+    });
   };
 
   // Excess Idling reset function
   const handleExcessIdlingReset = () => {
     setSelectedIdlingOption(""); // Reset radio selection to default (none selected)
     setExcessIdleMinutes(""); // Reset minutes input field
+    setSelectedPlaces({
+      // Reset selected places
+      geofences: [],
+      categories: [],
+      routes: [],
+      geofenceNames: [],
+      categoryNames: [],
+      routeNames: [],
+    });
   };
 
   // Excess Idling alert specific state
@@ -101,14 +121,34 @@ export default function PolicySetupForm() {
   const [unAssignedDriverMinutes, setUnAssignedDriverMinutes] = useState("");
 
   const [gpsDistanceKm, setGpsDistanceKm] = useState("");
+  4;
+
+  // Get route data from props
+  const { routePolicyData = {} } = arguments[0] || {};
+  // State for modal visibility and editing
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [policyInfo, setPolicyInfo] = useState({
+    policyName: routePolicyData.policyName || "",
+    alertType: routePolicyData.alertType || "",
+    highPriority: routePolicyData.highPriority || false,
+  });
+
+  // Update header values from state
+  const policyName = policyInfo.policyName;
+  const alertType = policyInfo.alertType;
+
+  // Selected places state for different alert types
+  const [selectedPlaces, setSelectedPlaces] = useState({
+    geofences: [],
+    categories: [],
+    routes: [],
+    geofenceNames: [],
+    categoryNames: [],
+    routeNames: [],
+  });
 
   // Excess Idling alert trigger radio state
   const [idlingTrigger, setIdlingTrigger] = useState(
-    "At the Start of the event."
-  );
-
-  // Activity alert trigger radio state
-  const [activityTrigger, setActivityTrigger] = useState(
     "At the Start of the event."
   );
 
@@ -121,6 +161,7 @@ export default function PolicySetupForm() {
     { id: "vehicle", label: "Vehicle & Alert Options" },
     { id: "time", label: "Time & Frequency" },
     { id: "recipients", label: "Alert Recipients" },
+    // { id: "review", label: "Review & Save" },
   ];
 
   // Use API data, no fallback to dummy data
@@ -136,8 +177,9 @@ export default function PolicySetupForm() {
     } else if (activeTab === "time") {
       setActiveTab("recipients");
     } else if (activeTab === "recipients") {
-      // Optionally, submit or finalize here
-      // For now, do nothing
+      setActiveTab("review");
+    } else if (activeTab === "review") {
+      // This will be handled by the Save button in PolicyReview
     }
   };
 
@@ -149,24 +191,37 @@ export default function PolicySetupForm() {
   const handleUserSelection = (userId, type) => {
     setUserSelections((prev) => {
       const newSelections = { ...prev };
+
+      // Find the complete user object
+      const userObj = users.find((u) => u.USER_ID === userId);
+
       // Deep copy the user selection object
       const userSelection = newSelections[userId]
         ? { ...newSelections[userId] }
-        : { all: false, display: false, email: false };
+        : {
+            all: false,
+            display: false,
+            email: false,
+            // Store complete user object for review
+            userInfo: userObj,
+          };
 
       if (type === "all") {
         // Toggle all, display, and email together
         const newAllState = !userSelection.all;
         newSelections[userId] = {
+          ...userSelection,
           all: newAllState,
           display: newAllState,
           email: newAllState,
+          userInfo: userObj,
         };
       } else {
         // Toggle only the selected checkbox
         userSelection[type] = !userSelection[type];
         // After toggling, update 'all' to true only if both are checked
         userSelection.all = userSelection.display && userSelection.email;
+        userSelection.userInfo = userObj;
         newSelections[userId] = userSelection;
       }
 
@@ -205,6 +260,7 @@ export default function PolicySetupForm() {
             all: false,
             display: false,
             email: false,
+            userInfo: user,
           };
         }
 
@@ -214,10 +270,12 @@ export default function PolicySetupForm() {
             all: newState,
             display: newState,
             email: newState,
+            userInfo: user,
           };
         } else {
           // Select/deselect specific column
           newSelections[user.USER_ID][type] = newState;
+          newSelections[user.USER_ID].userInfo = user;
 
           // Update "All" state based on display and email
           newSelections[user.USER_ID].all =
@@ -248,6 +306,7 @@ export default function PolicySetupForm() {
         all: false,
         display: false,
         email: false,
+        userInfo: user,
       };
     });
 
@@ -259,9 +318,10 @@ export default function PolicySetupForm() {
     setIsVehicleModalOpen(true);
   };
 
-  const handleVehicleModalSave = (selectedItems) => {
+  const handleVehicleModalSave = (selectedIds, selectedItems) => {
     // When vehicles are selected, clear groups and drivers
-    setSelectedVehicles(selectedItems);
+    // Store complete objects instead of just IDs
+    setSelectedVehicles(selectedItems || selectedIds);
     setSelectedGroups([]);
     setSelectedDrivers([]);
     setIsVehicleModalOpen(false);
@@ -272,9 +332,10 @@ export default function PolicySetupForm() {
     setIsGroupModalOpen(true);
   };
 
-  const handleGroupModalSave = (selectedItems) => {
+  const handleGroupModalSave = (selectedIds, selectedItems) => {
     // When groups are selected, clear vehicles and drivers
-    setSelectedGroups(selectedItems);
+    // Store complete objects instead of just IDs
+    setSelectedGroups(selectedItems || selectedIds);
     setSelectedVehicles([]);
     setSelectedDrivers([]);
     setIsGroupModalOpen(false);
@@ -285,9 +346,10 @@ export default function PolicySetupForm() {
     setIsDriverModalOpen(true);
   };
 
-  const handleDriverModalSave = (selectedItems) => {
+  const handleDriverModalSave = (selectedIds, selectedItems) => {
     // When drivers are selected, clear vehicles and groups
-    setSelectedDrivers(selectedItems);
+    // Store complete objects instead of just IDs
+    setSelectedDrivers(selectedItems || selectedIds);
     setSelectedVehicles([]);
     setSelectedGroups([]);
     setIsDriverModalOpen(false);
@@ -300,6 +362,84 @@ export default function PolicySetupForm() {
 
   const handleClosePlaceModal = () => {
     setIsPlaceModalOpen(false);
+  };
+
+  const handleConfirmPlaces = (placesData) => {
+    setSelectedPlaces(placesData);
+  };
+
+  // Review handlers
+  const handleEditFromReview = (section) => {
+    switch (section) {
+      case "basic":
+        handleEditModalOpen();
+        break;
+      case "vehicle":
+        setActiveTab("vehicle");
+        break;
+      case "time":
+        setActiveTab("time");
+        break;
+      case "recipients":
+        setActiveTab("recipients");
+        break;
+      default:
+        setActiveTab("vehicle");
+    }
+  };
+
+  const handleSavePolicy = () => {
+    // Here you would typically save the policy to your backend
+    // console.log("Saving policy with data:", {
+    //   policyName,
+    //   alertType,
+    //   selectedVehicles,
+    //   selectedGroups,
+    //   selectedDrivers,
+    //   entireFleetEnabled,
+    //   selectedLocationOption,
+    //   selectedIdlingOption,
+    //   excessIdleMinutes,
+    //   geofenceOption,
+    //   geofenceTime,
+    //   geofenceDuration,
+    //   interruptionOption,
+    //   longStopOption,
+    //   seatBeltOption,
+    //   ignoreSeatbeltActivity,
+    //   speedExceedingFrom,
+    //   speedExceedingTo,
+    //   speedExceedingTime,
+    //   speedExceedingOption,
+    //   speedingThreshold,
+    //   speedingType,
+    //   speedingCount,
+    //   speedingPlaceChecked,
+    //   tempRangeType,
+    //   tempStart,
+    //   tempEnd,
+    //   tempDuration,
+    //   unAssignedDriverMinutes,
+    //   gpsDistanceKm,
+    //   selectedPlaces,
+    //   timeRange,
+    //   customDaysChecked,
+    //   customDaysStart,
+    //   customDaysEnd,
+    //   alertFrequency,
+    //   limitAlertsPerDriver,
+    //   additionalEmails,
+    //   smsDeliveryOption,
+    //   customizeEmailIntro,
+    //   customEmailText,
+    //   onlyIncludeDrivers,
+    //   controlGroupOption,
+    //   userSelections,
+    // });
+
+    // Show success message and redirect
+    alert("Policy saved successfully!");
+    navigate("/alerts/policies");
   };
 
   // AlertTriggers functionality has been moved to separate component
@@ -470,6 +610,7 @@ export default function PolicySetupForm() {
           gpsDistanceKm={gpsDistanceKm}
           setGpsDistanceKm={setGpsDistanceKm}
           onOpenPlaceModal={handleOpenPlaceModal}
+          selectedPlaces={selectedPlaces}
         />
       </div>
     </div>
@@ -777,7 +918,15 @@ export default function PolicySetupForm() {
           Specify the frequency you would like to receive alerts:
         </h3>
         {/* Show radio group for Activity alert type */}
-        {alertType === "Activity" && (
+
+        {/* Show radio group for Excess Idling alert type */}
+        {alertType === "Excess Idling" ||
+        alertType === "Activity" ||
+        alertType === "Late Start" ||
+        alertType === "Long Stop" ||
+        alertType === "Seat belt Alert" ||
+        alertType === "Speeding" ||
+        alertType === "Towing" ? (
           <div className="mb-6">
             <label
               className="block text-sm font-medium mb-2"
@@ -788,12 +937,10 @@ export default function PolicySetupForm() {
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
-                name="activityTrigger"
+                name="idlingTrigger"
                 value="At the Start of the event."
-                checked={activityTrigger === "At the Start of the event."}
-                onChange={() =>
-                  setActivityTrigger("At the Start of the event.")
-                }
+                checked={idlingTrigger === "At the Start of the event."}
+                onChange={() => setIdlingTrigger("At the Start of the event.")}
                 className="h-4 w-4 rounded-full transition-colors cursor-pointer"
                 style={{ accentColor: "var(--primary-color)" }}
               />
@@ -801,107 +948,53 @@ export default function PolicySetupForm() {
                 At the Start of the event.
               </span>
             </label>
+
+            {alertType === "Activity" || alertType === "Late Start" ? (
+              <></>
+            ) : (
+              <>
+                <label className="flex items-center gap-2 cursor-pointer mt-2">
+                  <input
+                    type="radio"
+                    name="idlingTrigger"
+                    value="At the end of the event."
+                    checked={idlingTrigger === "At the end of the event."}
+                    onChange={() =>
+                      setIdlingTrigger("At the end of the event.")
+                    }
+                    className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+                    style={{ accentColor: "var(--primary-color)" }}
+                  />
+                  <span
+                    className="text-sm"
+                    style={{ color: "var(--text-color)" }}
+                  >
+                    At the end of the event.
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer mt-2">
+                  <input
+                    type="radio"
+                    name="idlingTrigger"
+                    value="At both of the event."
+                    checked={idlingTrigger === "At both of the event."}
+                    onChange={() => setIdlingTrigger("At both of the event.")}
+                    className="h-4 w-4 rounded-full transition-colors cursor-pointer"
+                    style={{ accentColor: "var(--primary-color)" }}
+                  />
+                  <span
+                    className="text-sm"
+                    style={{ color: "var(--text-color)" }}
+                  >
+                    At both of the event.
+                  </span>
+                </label>
+              </>
+            )}
           </div>
+        ) : (
+          ""
         )}
-
-        {alertType === "Activity" ||
-          (alertType === "Late Start" && (
-            <div className="mb-6">
-              <label
-                className="block text-sm font-medium mb-2"
-                style={{ color: "var(--text-color)" }}
-              >
-                Which message trigger the alert?
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="activityTrigger"
-                  value="At the Start of the event."
-                  checked={activityTrigger === "At the Start of the event."}
-                  onChange={() =>
-                    setActivityTrigger("At the Start of the event.")
-                  }
-                  className="h-4 w-4 rounded-full transition-colors cursor-pointer"
-                  style={{ accentColor: "var(--primary-color)" }}
-                />
-                <span
-                  className="text-sm"
-                  style={{ color: "var(--text-color)" }}
-                >
-                  At the Start of the event.
-                </span>
-              </label>
-            </div>
-          ))}
-
-        {/* Show radio group for Excess Idling alert type */}
-        {alertType === "Excess Idling" ||
-          alertType === "Long Stop" ||
-          alertType === "Seat belt Alert" ||
-          (alertType === "Speeding" || alertType === "Towing" && (
-            <div className="mb-6">
-              <label
-                className="block text-sm font-medium mb-2"
-                style={{ color: "var(--text-color)" }}
-              >
-                Which message trigger the alert?
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="idlingTrigger"
-                  value="At the Start of the event."
-                  checked={idlingTrigger === "At the Start of the event."}
-                  onChange={() =>
-                    setIdlingTrigger("At the Start of the event.")
-                  }
-                  className="h-4 w-4 rounded-full transition-colors cursor-pointer"
-                  style={{ accentColor: "var(--primary-color)" }}
-                />
-                <span
-                  className="text-sm"
-                  style={{ color: "var(--text-color)" }}
-                >
-                  At the Start of the event.
-                </span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer mt-2">
-                <input
-                  type="radio"
-                  name="idlingTrigger"
-                  value="At the end of the event."
-                  checked={idlingTrigger === "At the end of the event."}
-                  onChange={() => setIdlingTrigger("At the end of the event.")}
-                  className="h-4 w-4 rounded-full transition-colors cursor-pointer"
-                  style={{ accentColor: "var(--primary-color)" }}
-                />
-                <span
-                  className="text-sm"
-                  style={{ color: "var(--text-color)" }}
-                >
-                  At the end of the event.
-                </span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer mt-2">
-                <input
-                  type="radio"
-                  name="idlingTrigger"
-                  value="At both of the event."
-                  checked={idlingTrigger === "At both of the event."}
-                  onChange={() => setIdlingTrigger("At both of the event.")}
-                  className="h-4 w-4 rounded-full transition-colors cursor-pointer"
-                  style={{ accentColor: "var(--primary-color)" }}
-                />
-                <span
-                  className="text-sm"
-                  style={{ color: "var(--text-color)" }}
-                >
-                  At both of the event.
-                </span>
-              </label>
-            </div>
-          ))}
 
         <div className="space-y-4">
           <label
@@ -1268,7 +1361,8 @@ export default function PolicySetupForm() {
               <select
                 className="ml-2 px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:border-transparent outline-none transition-all duration-200"
                 style={{ color: "var(--text-color)" }}
-                defaultValue="all"
+                value={controlGroupOption}
+                onChange={(e) => setControlGroupOption(e.target.value)}
               >
                 <option value="all">All Groups for that user</option>
                 <option value="admin">Only the admin control group</option>
@@ -1356,6 +1450,8 @@ export default function PolicySetupForm() {
               {customizeEmailIntro && (
                 <textarea
                   placeholder="Enter a message..."
+                  value={customEmailText}
+                  onChange={(e) => setCustomEmailText(e.target.value)}
                   rows={4}
                   className="block w-full mt-2 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:border-transparent outline-none transition-all duration-200 text-sm resize-none"
                   style={{
@@ -1370,20 +1466,6 @@ export default function PolicySetupForm() {
       </div>
     </div>
   );
-
-  // Get route data from props
-  const { routePolicyData = {} } = arguments[0] || {};
-  // State for modal visibility and editing
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [policyInfo, setPolicyInfo] = useState({
-    policyName: routePolicyData.policyName || "",
-    alertType: routePolicyData.alertType || "",
-    highPriority: routePolicyData.highPriority || false,
-  });
-
-  // Update header values from state
-  const policyName = policyInfo.policyName;
-  const alertType = policyInfo.alertType;
 
   // Edit modal handlers
   const handleEditModalOpen = () => {
@@ -1423,49 +1505,55 @@ export default function PolicySetupForm() {
 
         {/* Tab Navigation */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          {/* Tabs */}
-          <div className="hidden sm:block flex-col sm:flex-row bg-gray-100 rounded-lg p-1 gap-1 sm:gap-0">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => handleTabClick(tab.id)}
-                className={`px-4 py-2 rounded-md  cursor-pointer text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? "text-white shadow-sm"
-                    : "text-gray-600 hover:text-gray-800 hover:bg-gray-200"
-                }`}
-                style={{
-                  backgroundColor:
+          {/* Tabs - Hide when in review mode */}
+          {activeTab !== "review" && (
+            <div className="hidden sm:block flex-col sm:flex-row bg-gray-100 rounded-lg p-1 gap-1 sm:gap-0">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabClick(tab.id)}
+                  className={`px-4 py-2 rounded-md  cursor-pointer text-sm font-medium transition-all duration-200 whitespace-nowrap ${
                     activeTab === tab.id
-                      ? "var(--primary-color)"
-                      : "transparent",
-                }}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+                      ? "text-white shadow-sm"
+                      : "text-gray-600 hover:text-gray-800 hover:bg-gray-200"
+                  }`}
+                  style={{
+                    backgroundColor:
+                      activeTab === tab.id
+                        ? "var(--primary-color)"
+                        : "transparent",
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center gap-4 justify-end">
-            <button
-              onClick={handleCancel}
-              className="text-sm  font-medium cursor-pointer transition-colors hover:opacity-80"
-              style={{ color: "var(--primary-color)" }}
-            >
-              Cancel
-            </button>
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleNext}
-              className="px-4 py-2 text-sm cursor-pointer font-medium text-white rounded-md shadow-sm hover:shadow-md transition-all duration-200"
-              style={{ backgroundColor: "var(--accent-red)" }}
-            >
-              {activeTab === "vehicle" && "Next : Time & Frequency"}
-              {activeTab === "time" && "Next : Alert Recipients"}
-              {activeTab === "recipients" && "Next : Review"}
-            </motion.button>
+            {activeTab !== "review" && (
+              <button
+                onClick={handleCancel}
+                className="text-sm  font-medium cursor-pointer transition-colors hover:opacity-80"
+                style={{ color: "var(--primary-color)" }}
+              >
+                Cancel
+              </button>
+            )}
+            {activeTab !== "review" && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleNext}
+                className="px-4 py-2 text-sm cursor-pointer font-medium text-white rounded-md shadow-sm hover:shadow-md transition-all duration-200"
+                style={{ backgroundColor: "var(--accent-red)" }}
+              >
+                {activeTab === "vehicle" && "Next : Time & Frequency"}
+                {activeTab === "time" && "Next : Alert Recipients"}
+                {activeTab === "recipients" && "Next : Review"}
+              </motion.button>
+            )}
           </div>
         </div>
       </div>
@@ -1487,6 +1575,60 @@ export default function PolicySetupForm() {
         {activeTab === "vehicle" && renderVehicleAndAlertOptions()}
         {activeTab === "time" && renderTimeAndFrequency()}
         {activeTab === "recipients" && renderAlertRecipients()}
+        {activeTab === "review" && (
+          <PolicyReview
+            policyData={{
+              policyName,
+              alertType,
+              selectedVehicles,
+              selectedGroups,
+              selectedDrivers,
+              entireFleetEnabled,
+              selectedLocationOption,
+              selectedIdlingOption,
+              excessIdleMinutes,
+              geofenceOption,
+              geofenceTime,
+              geofenceDuration,
+              interruptionOption,
+              longStopOption,
+              seatBeltOption,
+              ignoreSeatbeltActivity,
+              speedExceedingFrom,
+              speedExceedingTo,
+              speedExceedingTime,
+              speedExceedingOption,
+              speedingThreshold,
+              speedingType,
+              speedingCount,
+              speedingPlaceChecked,
+              tempRangeType,
+              tempStart,
+              tempEnd,
+              tempDuration,
+              unAssignedDriverMinutes,
+              gpsDistanceKm,
+              selectedPlaces,
+              timeRange,
+              customDaysChecked,
+              customDaysStart,
+              customDaysEnd,
+              alertFrequency,
+              limitAlertsPerDriver,
+              additionalEmails,
+              smsDeliveryOption,
+              customizeEmailIntro,
+              customEmailText,
+              onlyIncludeDrivers,
+              controlGroupOption,
+              userSelections,
+              idlingTrigger,
+            }}
+            onEdit={handleEditFromReview}
+            onSave={handleSavePolicy}
+            onCancel={handleCancel}
+          />
+        )}
       </div>
 
       {/* Vehicle Selection Modal */}
@@ -1523,6 +1665,8 @@ export default function PolicySetupForm() {
       <SelectedPlaceModal
         isOpen={isPlaceModalOpen}
         onClose={handleClosePlaceModal}
+        onConfirm={handleConfirmPlaces}
+        initialSelections={selectedPlaces}
       />
     </div>
   );

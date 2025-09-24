@@ -50,8 +50,19 @@ const AlertTriggers = ({
   gpsDistanceKm,
   setGpsDistanceKm,
   onOpenPlaceModal,
+  selectedPlaces,
 }) => {
   const alertTypeLower = alertType?.toLowerCase() || "";
+
+  // Calculate total selected places count
+  const getTotalSelectedCount = () => {
+    if (!selectedPlaces) return 0;
+    return (
+      (selectedPlaces.geofences?.length || 0) +
+      (selectedPlaces.categories?.length || 0) +
+      (selectedPlaces.routes?.length || 0)
+    );
+  };
 
   if (alertTypeLower === "activity") {
     // Urdu Roman: Reset Selection button ka handler
@@ -228,10 +239,15 @@ const AlertTriggers = ({
             {selectedLocationOption === "onlyCheckActivity" && (
               <button
                 onClick={onOpenPlaceModal}
-                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-1"
                 style={{ color: "var(--primary-color)" }}
               >
                 Select places
+                {getTotalSelectedCount() > 0 && (
+                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                    {getTotalSelectedCount()}
+                  </span>
+                )}
               </button>
             )}
           </div>
@@ -263,10 +279,15 @@ const AlertTriggers = ({
             {selectedLocationOption === "ignoreActivity" && (
               <button
                 onClick={onOpenPlaceModal}
-                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-1"
                 style={{ color: "var(--primary-color)" }}
               >
                 Select places
+                {getTotalSelectedCount() > 0 && (
+                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                    {getTotalSelectedCount()}
+                  </span>
+                )}
               </button>
             )}
           </div>
@@ -377,10 +398,15 @@ const AlertTriggers = ({
           {selectedIdlingOption === "ignoreIdling" && (
             <button
               onClick={onOpenPlaceModal}
-              className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+              className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-1"
               style={{ color: "var(--primary-color)" }}
             >
               Select Places
+              {getTotalSelectedCount() > 0 && (
+                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                  {getTotalSelectedCount()}
+                </span>
+              )}
             </button>
           )}
           <label className="flex items-center cursor-pointer">
@@ -408,10 +434,15 @@ const AlertTriggers = ({
           {selectedIdlingOption === "includeIdling" && (
             <button
               onClick={onOpenPlaceModal}
-              className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+              className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-1"
               style={{ color: "var(--primary-color)" }}
             >
               Select Places
+              {getTotalSelectedCount() > 0 && (
+                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                  {getTotalSelectedCount()}
+                </span>
+              )}
             </button>
           )}
         </div>
@@ -704,10 +735,15 @@ const AlertTriggers = ({
           <br />
           <button
             onClick={onOpenPlaceModal}
-            className="mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+            className="mt-2 text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-1"
             style={{ color: "var(--primary-color)" }}
           >
             Select Places
+            {getTotalSelectedCount() > 0 && (
+              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                {getTotalSelectedCount()}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -887,10 +923,15 @@ const AlertTriggers = ({
             {interruptionOption === "onlyCheck" && (
               <button
                 onClick={onOpenPlaceModal}
-                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-1"
                 style={{ color: "var(--primary-color)" }}
               >
                 Select Places
+                {getTotalSelectedCount() > 0 && (
+                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                    {getTotalSelectedCount()}
+                  </span>
+                )}
               </button>
             )}
           </div>
@@ -915,10 +956,15 @@ const AlertTriggers = ({
             {interruptionOption === "ignoreActivity" && (
               <button
                 onClick={onOpenPlaceModal}
-                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-1"
                 style={{ color: "var(--primary-color)" }}
               >
                 Select Places
+                {getTotalSelectedCount() > 0 && (
+                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                    {getTotalSelectedCount()}
+                  </span>
+                )}
               </button>
             )}
           </div>
@@ -1188,10 +1234,15 @@ const AlertTriggers = ({
           {ignoreSeatbeltActivity && (
             <button
               onClick={onOpenPlaceModal}
-              className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+              className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-1"
               style={{ color: "var(--primary-color)" }}
             >
               Select Places
+              {getTotalSelectedCount() > 0 && (
+                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                  {getTotalSelectedCount()}
+                </span>
+              )}
             </button>
           )}
         </div>
@@ -1294,11 +1345,16 @@ const AlertTriggers = ({
             {speedExceedingOption === "onlySend" && (
               <button
                 onClick={onOpenPlaceModal}
-                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-1"
                 style={{ color: "var(--primary-color)" }}
                 type="button"
               >
                 Select Places
+                {getTotalSelectedCount() > 0 && (
+                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                    {getTotalSelectedCount()}
+                  </span>
+                )}
               </button>
             )}
           </div>
@@ -1324,11 +1380,16 @@ const AlertTriggers = ({
             {speedExceedingOption === "ignoreSend" && (
               <button
                 onClick={onOpenPlaceModal}
-                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer"
+                className="ml-6 mt-2 text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-1"
                 style={{ color: "var(--primary-color)" }}
                 type="button"
               >
                 Select Places
+                {getTotalSelectedCount() > 0 && (
+                  <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                    {getTotalSelectedCount()}
+                  </span>
+                )}
               </button>
             )}
           </div>
@@ -1426,11 +1487,16 @@ const AlertTriggers = ({
           {speedingPlaceChecked && (
             <button
               onClick={onOpenPlaceModal}
-              className="ml-6 text-blue-600 text-sm hover:underline cursor-pointer"
+              className="ml-6 text-blue-600 text-sm hover:underline cursor-pointer flex items-center gap-1"
               style={{ color: "var(--primary-color)" }}
               type="button"
             >
               Select places
+              {getTotalSelectedCount() > 0 && (
+                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                  {getTotalSelectedCount()}
+                </span>
+              )}
             </button>
           )}
         </div>

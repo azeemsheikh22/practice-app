@@ -5,12 +5,12 @@ import { X } from "lucide-react";
 import { useSelector } from "react-redux";
 import { createPortal } from "react-dom";
 
-const SelectedPlaceModal = ({ isOpen, onClose }) => {
+const SelectedPlaceModal = ({ isOpen, onClose, onConfirm, initialSelections = {} }) => {
   const [activeTab, setActiveTab] = useState("geofence");
-  const [selectedGeofenceIds, setSelectedGeofenceIds] = useState(new Set());
-  const [selectedCategories, setSelectedCategories] = useState(new Set());
+  const [selectedGeofenceIds, setSelectedGeofenceIds] = useState(new Set(initialSelections.geofences || []));
+  const [selectedCategories, setSelectedCategories] = useState(new Set(initialSelections.categories || []));
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRoutes, setSelectedRoutes] = useState(new Set());
+  const [selectedRoutes, setSelectedRoutes] = useState(new Set(initialSelections.routes || []));
   const { geofences } = useSelector((state) => state.replay);
   const { categories } = useSelector((state) => state.replay);
   const { geofenceCatList } = useSelector((state) => state.geofence);
@@ -58,13 +58,13 @@ const SelectedPlaceModal = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
-      // By default, deselect all geofences, categories, and routes
-      setSelectedGeofenceIds(new Set());
-      setSelectedCategories(new Set());
-      setSelectedRoutes(new Set());
+      // Initialize with passed selections
+      setSelectedGeofenceIds(new Set(initialSelections.geofences || []));
+      setSelectedCategories(new Set(initialSelections.categories || []));
+      setSelectedRoutes(new Set(initialSelections.routes || []));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, initialSelections]);
 
   const handleSelectAll = () => {
     if (activeTab === "geofence") {
@@ -453,7 +453,18 @@ const SelectedPlaceModal = ({ isOpen, onClose }) => {
               </button>
 
               <button
-       
+                onClick={() => {
+                  const selectedData = {
+                    geofences: Array.from(selectedGeofenceIds),
+                    categories: Array.from(selectedCategories), 
+                    routes: Array.from(selectedRoutes),
+                    geofenceNames: geofenceData.filter(g => selectedGeofenceIds.has(g.id)).map(g => g.geofenceName),
+                    categoryNames: Array.from(selectedCategories),
+                    routeNames: Array.from(selectedRoutes)
+                  };
+                  onConfirm && onConfirm(selectedData);
+                  onClose();
+                }}
                 className="px-4 py-2 text-sm cursor-pointer font-medium text-white border border-transparent rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors"
                 style={{ background: "#25689f" }}
               >
