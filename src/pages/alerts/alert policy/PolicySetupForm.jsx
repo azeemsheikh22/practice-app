@@ -445,7 +445,7 @@ export default function PolicySetupForm() {
   // AlertTriggers functionality has been moved to separate component
 
   const renderVehicleAndAlertOptions = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
       {/* Left Column - 4 columns */}
       <div className="lg:col-span-5 space-y-6">
         <div>
@@ -617,7 +617,7 @@ export default function PolicySetupForm() {
   );
 
   const renderTimeAndFrequency = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
       {/* Left Section - Time Range Selection */}
       <div className="space-y-6">
         <h3
@@ -1048,7 +1048,7 @@ export default function PolicySetupForm() {
   );
 
   const renderAlertRecipients = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
       {/* Left Section - User Selection */}
       <div className="space-y-6">
         <h3
@@ -1485,7 +1485,7 @@ export default function PolicySetupForm() {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
       {/* Header */}
-      <div className="mb-6">
+      <div >
         <div className="flex items-center gap-3 mb-4">
           <h1
             className="text-xl sm:text-2xl font-bold"
@@ -1571,7 +1571,7 @@ export default function PolicySetupForm() {
       />
 
       {/* Content Area */}
-      <div className="mt-8">
+      <div>
         {activeTab === "vehicle" && renderVehicleAndAlertOptions()}
         {activeTab === "time" && renderTimeAndFrequency()}
         {activeTab === "recipients" && renderAlertRecipients()}

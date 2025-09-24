@@ -1,4 +1,3 @@
-
 import { Edit2, Users, Clock, Bell, MapPin } from "lucide-react";
 
 const PolicyReview = ({ policyData, onEdit, onSave, onCancel }) => {
@@ -108,11 +107,11 @@ const PolicyReview = ({ policyData, onEdit, onSave, onCancel }) => {
   };
 
   const InfoCard = ({ title, children, editAction }) => (
-    <div className="bg-white rounded-lg border mt-5 border-gray-200 p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
+      <div className="flex items-center justify-between p-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <h3
-            className="text-lg font-semibold"
+            className="text-base font-semibold"
             style={{ color: "var(--text-color)" }}
           >
             {title}
@@ -120,30 +119,30 @@ const PolicyReview = ({ policyData, onEdit, onSave, onCancel }) => {
         </div>
         <button
           onClick={() => onEdit(editAction)}
-          className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border hover:bg-gray-50 transition-colors"
+          className="flex items-center cursor-pointer gap-2 px-2 py-1 text-xs rounded border hover:bg-gray-50 transition-colors"
           style={{
             color: "var(--primary-color)",
-            borderColor: "var(--border-color)",
+            borderColor: "var(--primary-color)",
           }}
         >
-          <Edit2 size={14} />
+          <Edit2 size={12} />
           Edit
         </button>
       </div>
-      <div className="space-y-3">{children}</div>
+      <div className="p-4">{children}</div>
     </div>
   );
 
   const InfoRow = ({ label, value }) => (
-    <div className="flex justify-between items-center py-2  border-gray-100 last:border-0">
+    <div className="flex justify-between items-start py-1">
       <span
-        className="text-sm font-medium"
+        className="text-xs font-medium text-gray-600"
         style={{ color: "var(--text-secondary)" }}
       >
         {label}:
       </span>
       <span
-        className="text-sm font-semibold text-right max-w-xs"
+        className="text-xs font-semibold text-right max-w-xs ml-4"
         style={{ color: "var(--text-color)" }}
       >
         {value}
@@ -153,35 +152,35 @@ const PolicyReview = ({ policyData, onEdit, onSave, onCancel }) => {
 
   return (
     <div
-      className="min-h-screen px-6"
+      className="min-h-screen p-4"
       style={{ backgroundColor: "var(--background-color)" }}
     >
       <div>
         {/* Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
           {/* Resources */}
           <InfoCard icon={Users} title="Resources" editAction="vehicle">
             {entireFleetEnabled ? (
-              <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+              <div className="bg-green-50 p-2 rounded border border-green-200">
                 <span
-                  className="text-sm font-medium"
+                  className="text-xs font-medium"
                   style={{ color: "var(--primary-color)" }}
                 >
                   Entire Fleet Enabled
                 </span>
               </div>
             ) : (
-              <>
+              <div className="space-y-2">
                 {selectedVehicles?.length > 0 && (
                   <div>
                     <span
-                      className="text-sm font-medium block mb-2"
+                      className="text-xs font-medium block mb-1"
                       style={{ color: "var(--text-secondary)" }}
                     >
                       Vehicles ({selectedVehicles.length}):
                     </span>
                     <div className="flex flex-wrap gap-1">
-                      {selectedVehicles.map((vehicle, index) => (
+                      {selectedVehicles.slice(0, 15).map((vehicle, index) => (
                         <span
                           key={index}
                           className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs border border-blue-200"
@@ -194,19 +193,24 @@ const PolicyReview = ({ policyData, onEdit, onSave, onCancel }) => {
                             vehicle}
                         </span>
                       ))}
+                      {selectedVehicles.length > 15 && (
+                        <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                          +{selectedVehicles.length - 3} more
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
                 {selectedGroups?.length > 0 && (
                   <div>
                     <span
-                      className="text-sm font-medium block mb-2"
+                      className="text-xs font-medium block mb-1"
                       style={{ color: "var(--text-secondary)" }}
                     >
                       Groups ({selectedGroups.length}):
                     </span>
                     <div className="flex flex-wrap gap-1">
-                      {selectedGroups.map((group, index) => (
+                      {selectedGroups.slice(0, 3).map((group, index) => (
                         <span
                           key={index}
                           className="bg-green-50 text-green-700 px-2 py-1 rounded text-xs border border-green-200"
@@ -214,19 +218,24 @@ const PolicyReview = ({ policyData, onEdit, onSave, onCancel }) => {
                           {group.text || group.name || group.groupName || group}
                         </span>
                       ))}
+                      {selectedGroups.length > 3 && (
+                        <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                          +{selectedGroups.length - 3} more
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
                 {selectedDrivers?.length > 0 && (
                   <div>
                     <span
-                      className="text-sm font-medium block mb-2"
+                      className="text-xs font-medium block mb-1"
                       style={{ color: "var(--text-secondary)" }}
                     >
                       Drivers ({selectedDrivers.length}):
                     </span>
                     <div className="flex flex-wrap gap-1">
-                      {selectedDrivers.map((driver, index) => (
+                      {selectedDrivers.slice(0, 3).map((driver, index) => (
                         <span
                           key={index}
                           className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs border border-purple-200"
@@ -238,17 +247,22 @@ const PolicyReview = ({ policyData, onEdit, onSave, onCancel }) => {
                             driver}
                         </span>
                       ))}
+                      {selectedDrivers.length > 3 && (
+                        <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs">
+                          +{selectedDrivers.length - 3} more
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
                 {!selectedVehicles?.length &&
                   !selectedGroups?.length &&
                   !selectedDrivers?.length && (
-                    <div className="text-center py-4 text-gray-500">
+                    <div className="text-center py-2 text-gray-500 text-xs">
                       No resources selected
                     </div>
                   )}
-              </>
+              </div>
             )}
           </InfoCard>
 
@@ -268,7 +282,7 @@ const PolicyReview = ({ policyData, onEdit, onSave, onCancel }) => {
             />
 
             {/* Alert Frequency Section */}
-            <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
               {/* Alert Trigger Information */}
               {alertType === "Excess Idling" ||
               alertType === "Activity" ||
@@ -290,147 +304,163 @@ const PolicyReview = ({ policyData, onEdit, onSave, onCancel }) => {
           </InfoCard>
         </div>
 
-        {/* Alert Recipients - Full Width */}
-        <InfoCard icon={Bell} title="Alert Recipients" editAction="recipients">
-          {userSelections && Object.keys(userSelections).length > 0 ? (
-            <div>
-              <span
-                className="text-sm font-medium block mb-3"
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+          <InfoCard
+            icon={Bell}
+            title="Alert Recipients"
+            editAction="recipients"
+          >
+            {userSelections && Object.keys(userSelections).length > 0 ? (
+              <div>
+                <span
+                  className="text-xs font-medium block mb-2"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Selected Recipients ({getRecipientCount()} notifications):
+                </span>
+                <div className="space-y-1">
+                  {Object.entries(userSelections)
+                    .filter(([userId, user]) => user.display || user.email)
+                    .slice(0, 3)
+                    .map(([userId, user]) => (
+                      <div
+                        key={userId}
+                        className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                      >
+                        <span
+                          className="text-xs font-medium"
+                          style={{ color: "var(--text-color)" }}
+                        >
+                          {user.userInfo?.fullName ||
+                            user.userInfo?.name ||
+                            userId}
+                        </span>
+                        <div className="flex gap-1">
+                          {user.display && (
+                            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">
+                              Display
+                            </span>
+                          )}
+                          {user.email && (
+                            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">
+                              Email
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  {Object.keys(userSelections).filter(
+                    ([userId, user]) => user.display || user.email
+                  ).length > 3 && (
+                    <div className="text-xs text-gray-500 text-center py-1">
+                      +
+                      {Object.keys(userSelections).filter(
+                        ([userId, user]) => user.display || user.email
+                      ).length - 3}{" "}
+                      more recipients
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-2 text-gray-500 text-xs">
+                No recipients selected
+              </div>
+            )}
+
+            {/* Delivery Options Section */}
+            <div className="mt-2 pt-2 border-t border-gray-100">
+              <h4
+                className="text-xs font-medium mb-2"
                 style={{ color: "var(--text-secondary)" }}
               >
-                Selected Recipients ({getRecipientCount()} notifications):
-              </span>
-              <div className="space-y-2">
-                {Object.entries(userSelections)
-                  .filter(([userId, user]) => user.display || user.email) // Only show users with at least one notification method selected
-                  .map(([userId, user]) => (
-                    <div
-                      key={userId}
-                      className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                Delivery Options:
+              </h4>
+
+              <div className="space-y-1">
+                <InfoRow label="SMS Delivery" value={getSmsDeliveryText()} />
+
+                {additionalEmails && additionalEmails.trim() && (
+                  <div>
+                    <span
+                      className="text-xs font-medium block mb-1"
+                      style={{ color: "var(--text-secondary)" }}
                     >
-                      <span
-                        className="text-sm font-medium"
+                      Additional Emails:
+                    </span>
+                    <div className="bg-gray-50 p-2 rounded border border-gray-200">
+                      <p
+                        className="text-xs"
                         style={{ color: "var(--text-color)" }}
                       >
-                        {user.userInfo?.fullName ||
-                          user.userInfo?.name ||
-                          userId}
-                      </span>
-                      <div className="flex gap-1">
-                        {user.display && (
-                          <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
-                            Display
-                          </span>
-                        )}
-                        {user.email && (
-                          <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs">
-                            Email
-                          </span>
-                        )}
-                      </div>
+                        {additionalEmails}
+                      </p>
                     </div>
-                  ))}
+                  </div>
+                )}
+
+                <InfoRow
+                  label="Customize Email Introduction"
+                  value={customizeEmailIntro ? "Yes" : "No"}
+                />
+
+                {customizeEmailIntro && (
+                  <div>
+                    <span
+                      className="text-xs font-medium block mb-1"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Custom Email Message:
+                    </span>
+                    <div className="bg-gray-50 p-2 rounded border border-gray-200">
+                      <p
+                        className="text-xs whitespace-pre-wrap"
+                        style={{ color: "var(--text-color)" }}
+                      >
+                        {customEmailText || "No custom message entered"}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <InfoRow
+                  label="Only Include Drivers with Access"
+                  value={
+                    onlyIncludeDrivers
+                      ? `Yes - Using ${
+                          controlGroupOption === "all"
+                            ? "All Groups for that user"
+                            : "Only the admin control group"
+                        }`
+                      : "No"
+                  }
+                />
               </div>
             </div>
-          ) : (
-            <div className="text-center py-4 text-gray-500">
-              No recipients selected
+          </InfoCard>
+
+          {/* Alert Option - Full Width */}
+          <InfoCard icon={MapPin} title="Alert Option" editAction="alerts">
+            <div className="space-y-1">
+              <InfoRow label="Alert Type" value={alertType} />
             </div>
-          )}
 
-          {/* Delivery Options Section */}
-          <div className="mt-4 pt-4 border-t border-gray-100">
-            <h4
-              className="text-sm font-medium mb-3"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              Delivery Options:
-            </h4>
-
-            <div className="space-y-2">
-              <InfoRow label="SMS Delivery" value={getSmsDeliveryText()} />
-
-              {additionalEmails && additionalEmails.trim() && (
-                <div>
-                  <span
-                    className="text-sm font-medium block mb-2"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    Additional Emails:
-                  </span>
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <p
-                      className="text-sm"
-                      style={{ color: "var(--text-color)" }}
-                    >
-                      {additionalEmails}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <InfoRow
-                label="Customize Email Introduction"
-                value={customizeEmailIntro ? "Yes" : "No"}
-              />
-
-              {customizeEmailIntro && (
-                <div>
-                  <span
-                    className="text-sm font-medium block mb-2"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    Custom Email Message:
-                  </span>
-                  <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                    <p
-                      className="text-sm whitespace-pre-wrap"
-                      style={{ color: "var(--text-color)" }}
-                    >
-                      {customEmailText || "No custom message entered"}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <InfoRow
-                label="Only Include Drivers with Access"
-                value={
-                  onlyIncludeDrivers
-                    ? `Yes - Using ${
-                        controlGroupOption === "all"
-                          ? "All Groups for that user"
-                          : "Only the admin control group"
-                      }`
-                    : "No"
-                }
-              />
+            {/* More Details Button */}
+            <div className="mt-2 pt-2 border-t border-gray-100 text-center">
+              <button
+                onClick={() => onEdit("alerts")}
+                className="flex items-center  gap-1 px-3 py-1 text-xs rounded border hover:bg-gray-50 transition-colors mx-auto cursor-pointer"
+                style={{
+                  color: "var(--primary-color)",
+                  borderColor: "var(--primary-color)",
+                }}
+              >
+                More Details
+              </button>
             </div>
-          </div>
-        </InfoCard>
 
-        {/* Alert Option - Full Width */}
-        <InfoCard icon={MapPin} title="Alert Option" editAction="alerts">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 ">
-            <InfoRow label="Alert Type" value={alertType} />
-          </div>
-
-          {/* More Details Button */}
-          <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-            <button
-              onClick={() => onEdit("alerts")}
-              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg border hover:bg-gray-50 transition-colors mx-auto"
-              style={{
-                color: "var(--primary-color)",
-                borderColor: "var(--primary-color)",
-              }}
-            >
-              More Details
-            </button>
-          </div>
-
-          {/* Selected Places */}
-          {/* {getTotalSelectedCount() > 0 && (
+            {/* Selected Places */}
+            {/* {getTotalSelectedCount() > 0 && (
             <div className="mt-6 pt-4 border-t border-gray-100">
               <h4
                 className="text-sm font-medium mb-3"
@@ -457,19 +487,20 @@ const PolicyReview = ({ policyData, onEdit, onSave, onCancel }) => {
               </div>
             </div>
           )} */}
-        </InfoCard>
+          </InfoCard>
+        </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center gap-4 mt-8 pt-6 border-t border-gray-200">
+        <div className="flex justify-center gap-3 mt-6 pt-4">
           <button
             onClick={onCancel}
-            className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 border border-gray-300 rounded font-medium text-gray-700 bg-white cursor-pointer hover:bg-gray-50 transition-colors text-sm"
           >
             Cancel
           </button>
           <button
             onClick={onSave}
-            className="px-6 py-3 text-white rounded-lg font-medium transition-colors hover:opacity-90"
+            className="px-4 py-2 cursor-pointer text-white rounded font-medium transition-colors hover:opacity-90 text-sm"
             style={{ backgroundColor: "var(--primary-color)" }}
           >
             Save Policy
