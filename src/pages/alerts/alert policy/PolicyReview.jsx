@@ -32,7 +32,7 @@ const PolicyReview = ({ policyData, onEdit, onSave, onCancel }) => {
     // tempDuration,
     // unAssignedDriverMinutes,
     // gpsDistanceKm,
-    selectedPlaces,
+    // selectedPlaces,
     timeRange,
     customDaysChecked,
     customDaysStart,
